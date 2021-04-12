@@ -1,0 +1,4 @@
+[wrap-git]
+url = git@gitlab.rachelmant.com:Media/libAudio.git
+revision = head
+clone-recursive = false
