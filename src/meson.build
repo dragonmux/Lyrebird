@@ -14,6 +14,13 @@ substrate = dependency(
 	]
 )
 
+rSON = dependency(
+	'rSON',
+	required: true,
+	version: '>=0.4.1',
+	fallback: ['rSON', 'rSON_dep']
+)
+
 libAudio = dependency(
 	'libAudio',
 	required: true,
@@ -25,5 +32,9 @@ lyrebird = executable(
 	'lyrebird',
 	lyrebirdSrcs,
 	include_directories: lyrebirdInclude,
-	dependencies: [substrate, libAudio]
+	dependencies: [substrate, rSON, libAudio],
+	gnu_symbol_visibility: 'inlineshidden',
+	implicit_include_directories: false,
+	pic: true,
+	install: true
 )
