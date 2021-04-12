@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 lyrebirdSrcs = [
-	'lyrebird.cxx'
+	'playlist/playlist.cxx', 'playlist/entry.cxx', 'playlist/fromJSON.cxx', 'playlist/toJSON.cxx',
+	'playback.cxx', 'lyrebird.cxx'
 ]
 
 substrate = dependency(
