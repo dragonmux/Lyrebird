@@ -1,5 +1,5 @@
 from urwid import MainLoop, ExitMainLoop
-from .window import mainWindow
+from .window import MainWindow
 
 def quitHandler(key):
 	if key in ('q', 'Q'):
@@ -13,6 +13,9 @@ lyrebirdPalette = (
 	('footer', 'dark blue', 'black'),
 )
 
-loop = MainLoop(mainWindow, palette = lyrebirdPalette, unhandled_input = quitHandler)
-
-loop.run()
+mainWindow = MainWindow()
+MainLoop(
+	mainWindow,
+	palette = lyrebirdPalette,
+	unhandled_input = quitHandler
+).run()

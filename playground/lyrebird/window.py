@@ -1,30 +1,33 @@
 from urwid import *
+from .widgets import LyrebirdButton
 
 __all__ = ('mainWindow',)
 
-header = AttrMap(
-	Columns(
-		(
-			Text(('headerEntry', ' Lyrebird'), wrap = 'clip'),
-			Button([('headerNumber', '1'), ('headerEntry', ' Tree')]),
-			Button([('headerNumber', '2'), ('headerEntry', ' Artists')]),
-			Button([('headerNumber', '3'), ('headerEntry', ' Albums')]),
-			Button([('headerNumber', '4'), ('headerEntry', ' Options')]),
-			Button([('headerNumber', '5'), ('headerEntry', ' Playlist')]),
-		),
-		dividechars = 1),
-	'header'
-)
-
-footer = AttrMap(
-	Columns(
-		(
-			Text(' Nothing playing', wrap = 'ellipsis'),
-			Text('??:??/??:??', align = 'center', wrap = 'clip'),
-			Text('No errors', wrap = 'ellipsis'),
+class MainWindow(Frame):
+	def __init__(self):
+		self._header = AttrMap(
+			Columns(
+				(
+					Text(('headerEntry', ' Lyrebird'), wrap = 'clip'),
+					LyrebirdButton([('headerNumber', '1'), ('headerEntry', ' Tree')]),
+					LyrebirdButton([('headerNumber', '2'), ('headerEntry', ' Artists')]),
+					LyrebirdButton([('headerNumber', '3'), ('headerEntry', ' Albums')]),
+					LyrebirdButton([('headerNumber', '4'), ('headerEntry', ' Options')]),
+					LyrebirdButton([('headerNumber', '5'), ('headerEntry', ' Playlist')]),
+				),
+				dividechars = 1),
+			'header'
 		)
-	),
-	'footer'
-)
 
-mainWindow = Frame(LineBox(Columns(())), header = header, footer = footer)
+		self._footer = AttrMap(
+			Columns(
+				(
+					('weight', 6, Text(' Nothing playing', wrap = 'ellipsis')),
+					('weight', 1, Text('??:??/??:??', align = 'center', wrap = 'clip')),
+					('weight', 5, Text('No errors', wrap = 'ellipsis')),
+				),
+				dividechars = 1),
+			'footer'
+		)
+
+		super().__init__(LineBox(Columns(())), header = self.header, footer = self.footer)
