@@ -2,8 +2,11 @@
 
 lyrebirdSrcs = [
 	'playlist/playlist.cxx', 'playlist/entry.cxx', 'playlist/fromJSON.cxx', 'playlist/toJSON.cxx',
-	'playback.cxx', 'lyrebird.cxx'
+	'library/library.cxx', 'library/fromJSON.cxx', 'library/toJSON.cxx',
+	'config.cxx', 'playback.cxx', 'lyrebird.cxx'
 ]
+
+threading = dependency('threads')
 
 substrate = dependency(
 	'substrate',
@@ -33,9 +36,8 @@ lyrebird = executable(
 	'lyrebird',
 	lyrebirdSrcs,
 	include_directories: lyrebirdInclude,
-	dependencies: [substrate, rSON, libAudio],
+	dependencies: [threading, substrate, rSON, libAudio],
 	gnu_symbol_visibility: 'inlineshidden',
 	implicit_include_directories: false,
-	pic: true,
 	install: true
 )
