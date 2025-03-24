@@ -2,7 +2,7 @@
 
 project(
 	'lyrebird',
-	'cpp',
+	'rust', 'cpp',
 	default_options: [
 		'cpp_std=c++17',
 		'warning_level=3',
@@ -18,6 +18,7 @@ project(
 )
 
 cxx = meson.get_compiler('cpp')
+rustc = meson.get_compiler('rust')
 
 extendedWarnings = [
 	'-Wdouble-promotion',
@@ -61,3 +62,5 @@ extendedWarnings = [
 	'-Wunsuffixed-float-constant',
 	'-Wimplicit-fallthrough'
 ]
+
+subdir('src')
