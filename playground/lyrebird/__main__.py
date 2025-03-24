@@ -10,6 +10,8 @@ lyrebirdPalette = (
 	('headerEntry', 'dark blue', 'black', None, 'dark green', 'black'),
 	('headerNumber', 'light blue', 'black'),
 
+	('activeEntry', 'light blue', 'default'),
+
 	('footer', 'dark blue', 'black'),
 )
 
