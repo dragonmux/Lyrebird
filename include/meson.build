@@ -1,1 +1,0 @@
-lyrebirdInclude = include_directories('.')

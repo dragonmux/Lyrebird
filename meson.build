@@ -61,6 +61,3 @@ extendedWarnings = [
 	'-Wunsuffixed-float-constant',
 	'-Wimplicit-fallthrough'
 ]
-
-subdir('include')
-subdir('src')
