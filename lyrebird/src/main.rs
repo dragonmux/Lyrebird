@@ -7,6 +7,7 @@ use color_eyre::Result;
 use window::MainWindow;
 
 mod window;
+mod libraryTree;
 
 fn main() -> Result<()>
 {
