@@ -6,6 +6,8 @@
 use color_eyre::{eyre, Result};
 use config::Config;
 use directories::ProjectDirs;
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use window::MainWindow;
 
 mod config;
@@ -15,6 +17,11 @@ mod window;
 
 fn main() -> Result<()>
 {
+	tracing_subscriber::registry()
+		.with(tracing_subscriber::fmt::layer())
+		.with(LevelFilter::INFO)
+		.init();
+
 	// Try to get the application paths available
 	let paths = ProjectDirs::from("com", "rachelmant", "Lyrebird").
 		ok_or(eyre::eyre!("Failed to get program working paths"))?;
