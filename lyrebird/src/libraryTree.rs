@@ -1,3 +1,4 @@
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::Style;
@@ -7,6 +8,14 @@ use ratatui::widgets::{Block, BorderType, Widget};
 pub struct LibraryTree
 {
 	activeEntry: Style,
+	activeSide: Side,
+}
+
+#[derive(Clone, Copy)]
+enum Side
+{
+	DirectoryTree,
+	Files,
 }
 
 impl LibraryTree
@@ -16,7 +25,31 @@ impl LibraryTree
 		LibraryTree
 		{
 			activeEntry: activeEntry,
+			activeSide: Side::DirectoryTree,
 		}
+	}
+
+	pub fn handleKeyEvent(&mut self, key: KeyEvent)
+	{
+		if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
+		{
+			match key.code
+			{
+				KeyCode::Left => self.moveLeft(),
+				KeyCode::Right => self.moveRight(),
+				_ => {},
+			}
+		}
+	}
+
+	fn moveLeft(&mut self)
+	{
+		self.activeSide = Side::DirectoryTree
+	}
+
+	fn moveRight(&mut self)
+	{
+		self.activeSide = Side::Files
 	}
 }
 
