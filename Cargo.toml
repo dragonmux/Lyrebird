@@ -1,2 +1,5 @@
 [workspace]
+resolver = "2"
 members = ["libAudio-rs", "lyrebird"]
+package.rust-version = "1.85.1"
+package.repository = "https://gitlab.rachelmant.com/Media/lyrebird"

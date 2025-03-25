@@ -2,7 +2,6 @@
 name = "lyrebird"
 version = "0.1.0"
 description = "Music player written in Rust based on libAudio"
-repository = "https://gitlab.rachelmant.com/Media/lyrebird"
 license = "BSD-3-Clause"
 authors = ["Rachel Mant <git@dragonmux.network>"]
 edition = "2021"
