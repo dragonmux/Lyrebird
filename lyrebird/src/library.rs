@@ -172,15 +172,19 @@ impl MusicLibrary
 
 	pub fn directories(&self) -> impl Iterator<Item = ListItem>
 	{
+		// Chain together the base library path, and the directories found within the library
 		[&self.basePath]
 			.into_iter()
 			.chain(self.dirs.iter())
 			.map
 			(
+				// Turn the directories into ListItem's
 				|directory|
 				{
+					// If the directory is absolute, it's the base path
 					if directory.is_absolute()
 					{
+						// Display that with the tree node icon and be done
 						let text: Vec<_> = [self.treeNodeIcon.clone(), directory.to_string_lossy().to_string()]
 							.into_iter()
 							.map(|value| Span::from(value))
@@ -189,9 +193,12 @@ impl MusicLibrary
 					}
 					else
 					{
+						// Otherwise, figure out how deep this entry is in the tree
 						let indentLevel = directory.iter().count();
+						// Build the prefix of pipes from that
 						let mut prefix = "│ ".repeat(indentLevel - 1);
 						prefix.insert(0, ' ');
+						// Turn the whole lot into a set of Span's
 						let text: Vec<_> =
 						[
 							prefix,
@@ -201,6 +208,7 @@ impl MusicLibrary
 							.into_iter()
 							.map(|value| Span::from(value))
 							.collect();
+						// And finally turn that unholy mess into a nice line and a list item
 						ListItem::new(Line::from(text))
 					}
 				}
