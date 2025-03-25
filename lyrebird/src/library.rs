@@ -2,6 +2,7 @@ use std::{collections::BTreeMap, fs::{create_dir_all, File}, path::{Path, PathBu
 
 use color_eyre::eyre::{self, OptionExt, Result};
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 #[derive(Serialize, Deserialize)]
 pub struct MusicLibrary
@@ -24,6 +25,14 @@ impl MusicLibrary
 		if cacheFile.exists()
 		{
 			MusicLibrary::fromCache(cacheFile)
+				.or_else
+				(
+					|report|
+					{
+						error!("Reading library cache failed: {}", report);
+						MusicLibrary::fromPath(cacheFile, basePath)
+					}
+				)
 		}
 		else
 		{
