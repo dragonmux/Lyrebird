@@ -69,12 +69,32 @@ impl MainWindow
 
 	fn handleEvents(&mut self) -> Result<()>
 	{
+		// See if we got any events
 		match event::read()?
 		{
-			Event::Key(key) if key.kind == KeyEventKind::Press => match key.code
+			// Key change event?
+			Event::Key(key) =>
 			{
-				KeyCode::Char('q') | KeyCode::Char('Q') => self.quit(),
-				_ => {}
+				// Key press?
+				if key.kind == KeyEventKind::Press
+				{
+					// Check to see if the event is for quitting
+					match key.code
+					{
+						KeyCode::Char('q') | KeyCode::Char('Q') =>
+						{
+							self.quit();
+							return Ok(())
+						},
+						_ => {}
+					}
+				}
+				// It's some other kind of event, so figure out which is the active
+				// tab and ask it what it thinks of this
+				match self.activeTab
+				{
+					Tab::LibraryTree => self.libraryTree.handleKeyEvent(key),
+				}
 			},
 			_ => {}
 		}
