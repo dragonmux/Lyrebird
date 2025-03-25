@@ -1,31 +1,18 @@
+// SPDX-License-Identifier: BSD-3-Clause
 #![warn(clippy::unwrap_used)]
 #![allow(clippy::upper_case_acronyms)]
+#![allow(non_snake_case)]
 
 use color_eyre::Result;
-use crossterm::event::{self, Event};
-use ratatui::{DefaultTerminal, Frame};
+use window::MainWindow;
+
+mod window;
 
 fn main() -> Result<()>
 {
 	let terminal = ratatui::init();
-	let result = run(terminal);
+	let mainWindow = MainWindow::new();
+	let result = mainWindow.run(terminal);
 	ratatui::restore();
 	result
-}
-
-fn run(mut terminal: DefaultTerminal) -> Result<()>
-{
-	loop
-	{
-		terminal.draw(draw)?;
-		if matches!(event::read()?, Event::Key(_))
-		{
-			break Ok(());
-		}
-	}
-}
-
-fn draw(frame: &mut Frame)
-{
-	frame.render_widget("Lyrebird", frame.area());
 }
