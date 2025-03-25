@@ -9,6 +9,7 @@ use directories::ProjectDirs;
 use window::MainWindow;
 
 mod config;
+mod library;
 mod libraryTree;
 mod window;
 
