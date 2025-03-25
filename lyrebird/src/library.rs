@@ -1,6 +1,7 @@
-use std::{collections::BTreeMap, fs::{create_dir_all, File}, path::{Path, PathBuf}, sync::Arc};
+use std::{collections::{BTreeMap, BTreeSet}, ffi::OsStr, fs::{create_dir_all, File}, path::{Path, PathBuf}, sync::Arc};
 
 use color_eyre::eyre::{self, OptionExt, Result};
+use ratatui::{text::{Line, Span}, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use tokio::spawn;
 use tokio::sync::RwLock;
@@ -16,11 +17,26 @@ pub struct MusicLibrary
 	#[serde(skip)]
 	cacheFile: PathBuf,
 	/// Paths to directories containing music relative to the root
-	dirs: Vec<PathBuf>,
+	dirs: BTreeSet<PathBuf>,
 	/// Map of directories to a list of files in that directory which are music
 	files: BTreeMap<PathBuf, Vec<PathBuf>>,
 	#[serde(skip)]
 	discoveryCancellation: CancellationToken,
+
+	#[serde(skip, default = "defaultTreeIcon")]
+	treeNodeIcon: String,
+	#[serde(skip, default = "defaultLeafIcon")]
+	treeLeafIcon: String,
+}
+
+fn defaultTreeIcon() -> String
+{
+	"╰ ".to_string()
+}
+
+fn defaultLeafIcon() -> String
+{
+	"├ ".to_string()
 }
 
 impl MusicLibrary
@@ -70,9 +86,12 @@ impl MusicLibrary
 				{
 					basePath: basePath.clone(),
 					cacheFile: cacheFile.to_path_buf(),
-					dirs: Vec::new(),
+					dirs: BTreeSet::new(),
 					files: BTreeMap::new(),
 					discoveryCancellation: CancellationToken::new(),
+
+					treeNodeIcon: defaultTreeIcon(),
+					treeLeafIcon: defaultLeafIcon(),
 				}
 			)
 		);
@@ -119,7 +138,8 @@ impl MusicLibrary
 			// If it's a directory, add it to the set discovered and recurse
 			if path.is_dir()
 			{
-				library.write().await.dirs.push(path.clone());
+				let relativePath = path.strip_prefix(&library.read().await.basePath)?.to_path_buf();
+				library.write().await.dirs.insert(relativePath);
 				Box::pin(MusicLibrary::discover(&library, &path)).await?;
 			}
 			// Else if it's a file, see if it's audio
@@ -148,5 +168,42 @@ impl MusicLibrary
 
 		// We done? good!
 		Ok(())
+	}
+
+	pub fn directories(&self) -> impl Iterator<Item = ListItem>
+	{
+		[&self.basePath]
+			.into_iter()
+			.chain(self.dirs.iter())
+			.map
+			(
+				|directory|
+				{
+					if directory.is_absolute()
+					{
+						let text: Vec<_> = [self.treeNodeIcon.clone(), directory.to_string_lossy().to_string()]
+							.into_iter()
+							.map(|value| Span::from(value))
+							.collect();
+						ListItem::new(Line::from(text))
+					}
+					else
+					{
+						let indentLevel = directory.iter().count();
+						let mut prefix = "│ ".repeat(indentLevel - 1);
+						prefix.insert(0, ' ');
+						let text: Vec<_> =
+						[
+							prefix,
+							self.treeLeafIcon.clone(),
+							directory.file_name().unwrap_or(OsStr::new("")).to_string_lossy().to_string(),
+						]
+							.into_iter()
+							.map(|value| Span::from(value))
+							.collect();
+						ListItem::new(Line::from(text))
+					}
+				}
+			)
 	}
 }
