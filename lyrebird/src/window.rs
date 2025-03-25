@@ -15,9 +15,23 @@ pub struct MainWindow
 	footer: Style,
 
 	exit: bool,
-	activeTab: usize,
+	activeTab: Tab,
 
 	libraryTree: LibraryTree
+}
+
+#[derive(Clone, Copy)]
+enum Tab
+{
+	LibraryTree,
+}
+
+impl Tab
+{
+	fn value(&self) -> usize
+	{
+		*self as usize
+	}
 }
 
 impl MainWindow
@@ -36,7 +50,7 @@ impl MainWindow
 			footer: Style::new().blue().on_black(),
 
 			exit: false,
-			activeTab: 0,
+			activeTab: Tab::LibraryTree,
 
 			libraryTree: LibraryTree::new(activeEntry)
 		}
@@ -116,14 +130,13 @@ impl Widget for &MainWindow
 		Tabs::new(headerTabs)
 			.style(self.headerEntry)
 			.highlight_style(self.activeEntry)
-			.select(self.activeTab)
+			.select(self.activeTab.value())
 			.divider("│")
 			.render(headerLayout[1], buf);
 
 		match self.activeTab
 		{
-			0 => self.libraryTree.render(areas[1], buf),
-			_ => {},
+			Tab::LibraryTree => self.libraryTree.render(areas[1], buf),
 		}
 	}
 }
