@@ -1,0 +1,14 @@
+[package]
+name = "libAudio-rs"
+version = "0.1.0"
+description = "Rust bindings for libAudio"
+repository = "https://gitlab.rachelmant.com/Media/lyrebird"
+license = "BSD-3-Clause"
+authors = ["Rachel Mant <git@dragonmux.network>"]
+edition = "2021"
+
+[lib]
+name = "libAudio"
+path = "src/lib.rs"
+
+[dependencies]

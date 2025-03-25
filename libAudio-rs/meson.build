@@ -13,7 +13,7 @@ project(
 	],
 	version: '0.0.1',
 	license: 'BSD-3-Clause',
-	meson_version: '>= 0.53',
+	meson_version: '>= 1.3.0',
 	subproject_dir: 'deps'
 )
 
