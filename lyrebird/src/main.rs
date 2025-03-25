@@ -10,9 +10,9 @@ mod window;
 
 fn main() -> Result<()>
 {
-	let terminal = ratatui::init();
+	let mut terminal = ratatui::init();
 	let mainWindow = MainWindow::new();
-	let result = mainWindow.run(terminal);
+	let result = mainWindow.run(&mut terminal);
 	ratatui::restore();
 	result
 }
