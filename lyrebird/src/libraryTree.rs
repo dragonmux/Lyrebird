@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
@@ -6,8 +7,9 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::Style;
 use ratatui::widgets::{Block, BorderType, Widget};
+use tokio::sync::RwLock;
 
-use crate::library::{self, MusicLibrary};
+use crate::library::MusicLibrary;
 
 // SPDX-License-Identifier: BSD-3-Clause
 pub struct LibraryTree
@@ -15,7 +17,7 @@ pub struct LibraryTree
 	activeEntry: Style,
 	activeSide: Side,
 
-	library: MusicLibrary,
+	library: Arc<RwLock<MusicLibrary>>,
 }
 
 #[derive(Clone, Copy)]
@@ -40,7 +42,7 @@ impl LibraryTree
 
 	pub fn writeCache(&self) -> Result<()>
 	{
-		self.library.writeCache()
+		self.library.blocking_read().writeCache()
 	}
 
 	pub fn handleKeyEvent(&mut self, key: KeyEvent)

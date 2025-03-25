@@ -7,21 +7,31 @@ use color_eyre::{eyre, Result};
 use config::Config;
 use directories::ProjectDirs;
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 use window::MainWindow;
+use tokio::{self, task::spawn_blocking};
 
 mod config;
 mod library;
 mod libraryTree;
 mod window;
 
-fn main() -> Result<()>
+#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
+async fn main() -> Result<()>
 {
 	tracing_subscriber::registry()
-		.with(tracing_subscriber::fmt::layer())
-		.with(LevelFilter::INFO)
+		.with
+		(
+			tracing_subscriber::fmt::layer()
+				.with_filter(LevelFilter::INFO)
+		)
 		.init();
 
+	spawn_blocking(run).await?
+}
+
+fn run() -> Result<()>
+{
 	// Try to get the application paths available
 	let paths = ProjectDirs::from("com", "rachelmant", "Lyrebird").
 		ok_or(eyre::eyre!("Failed to get program working paths"))?;
