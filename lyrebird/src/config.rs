@@ -1,0 +1,68 @@
+use std::{fs::File, path::PathBuf};
+
+use color_eyre::eyre::Result;
+use directories::{ProjectDirs, UserDirs};
+use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
+
+#[derive(Serialize, Deserialize)]
+pub struct Config
+{
+	version: ConfigVersion,
+	libraryPath: PathBuf,
+}
+
+#[derive(Serialize_repr, Deserialize_repr, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum ConfigVersion
+{
+	Version1 = 1,
+}
+
+impl Config
+{
+	pub fn read(paths: ProjectDirs) -> Result<Config>
+	{
+		let mut configPath = paths.cache_dir().to_path_buf();
+		configPath.push("config.json");
+
+		if configPath.exists()
+		{
+			let configFile = File::open(configPath)?;
+			let config: Config = serde_json::from_reader(configFile)?;
+
+			Ok(config)
+		}
+		else
+		{
+			Ok(Config::default())
+		}
+	}
+}
+
+impl Default for Config
+{
+	fn default() -> Self
+	{
+		// Try to get the user directories
+		let userDirs = UserDirs::new().expect("Failed to get user directories");
+		// See if we can get the user's music directory
+		let musicDir = userDirs.audio_dir();
+		let musicDir = if let Some(dir) = musicDir
+		{
+			dir
+		}
+		else
+		{
+			// If we could not, default it to their homedir
+			userDirs.home_dir()
+		};
+
+		// Generate a configuration with this data
+		Config
+		{
+			version: ConfigVersion::Version1,
+			libraryPath: musicDir.to_path_buf(),
+		}
+	}
+}
