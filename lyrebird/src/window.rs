@@ -25,18 +25,20 @@ impl MainWindow
 	/// Set up a new main window, building the style pallet needed
 	pub fn new() -> Self
 	{
+		let activeEntry = Style::new().light_blue();
+
 		MainWindow
 		{
 			header: Style::new().blue().on_black(),
 			headerEntry: Style::new().blue().on_black(),
 			headerNumber: Style::new().light_blue().on_black(),
-			activeEntry: Style::new().light_blue(),
+			activeEntry: activeEntry,
 			footer: Style::new().blue().on_black(),
 
 			exit: false,
 			activeTab: 0,
 
-			libraryTree: LibraryTree::new()
+			libraryTree: LibraryTree::new(activeEntry)
 		}
 	}
 
@@ -110,7 +112,7 @@ impl Widget for &MainWindow
 			.split(areas[0]);
 
 		// Display the program header - starting with the program name, followed by the tabs
-		Line::styled("Lyrebird", self.header).render(headerLayout[0], buf);
+		Line::styled(" Lyrebird", self.header).render(headerLayout[0], buf);
 		Tabs::new(headerTabs)
 			.style(self.headerEntry)
 			.highlight_style(self.activeEntry)
