@@ -3,6 +3,8 @@ use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{buffer::Buffer, layout::{Constraint, Flex, Layout, Rect}, style::{Style, Stylize}, text::{Line, Span}, widgets::{Tabs, Widget}, DefaultTerminal, Frame};
 
+use crate::libraryTree::LibraryTree;
+
 /// Represents the main window of Lyrebird
 pub struct MainWindow
 {
@@ -13,6 +15,9 @@ pub struct MainWindow
 	footer: Style,
 
 	exit: bool,
+	activeTab: usize,
+
+	libraryTree: LibraryTree
 }
 
 impl MainWindow
@@ -27,7 +32,11 @@ impl MainWindow
 			headerNumber: Style::new().light_blue().on_black(),
 			activeEntry: Style::new().light_blue(),
 			footer: Style::new().blue().on_black(),
+
 			exit: false,
+			activeTab: 0,
+
+			libraryTree: LibraryTree::new()
 		}
 	}
 
@@ -105,8 +114,14 @@ impl Widget for &MainWindow
 		Tabs::new(headerTabs)
 			.style(self.headerEntry)
 			.highlight_style(self.activeEntry)
-			.select(0)
+			.select(self.activeTab)
 			.divider("│")
 			.render(headerLayout[1], buf);
+
+		match self.activeTab
+		{
+			0 => self.libraryTree.render(areas[1], buf),
+			_ => {},
+		}
 	}
 }
