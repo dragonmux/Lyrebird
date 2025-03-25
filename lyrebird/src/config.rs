@@ -1,4 +1,4 @@
-use std::{fs::File, path::PathBuf};
+use std::{fs::{create_dir_all, File}, path::PathBuf};
 
 use color_eyre::eyre::Result;
 use directories::{ProjectDirs, UserDirs};
@@ -23,8 +23,7 @@ impl Config
 {
 	pub fn read(paths: &ProjectDirs) -> Result<Config>
 	{
-		let mut configPath = paths.cache_dir().to_path_buf();
-		configPath.push("config.json");
+		let configPath = paths.cache_dir().with_file_name("config.json");
 
 		if configPath.exists()
 		{
@@ -42,6 +41,10 @@ impl Config
 	pub fn write(&self, paths: &ProjectDirs) -> Result<()>
 	{
 		let mut configPath = paths.cache_dir().to_path_buf();
+		if !configPath.exists()
+		{
+			create_dir_all(&configPath)?;
+		}
 		configPath.push("config.json");
 		let configFile = File::create(configPath)?;
 		Ok(serde_json::to_writer(configFile, self)?)
