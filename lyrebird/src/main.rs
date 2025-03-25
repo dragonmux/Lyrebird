@@ -11,7 +11,7 @@ mod window;
 fn main() -> Result<()>
 {
 	let mut terminal = ratatui::init();
-	let mainWindow = MainWindow::new();
+	let mut mainWindow = MainWindow::new();
 	let result = mainWindow.run(&mut terminal);
 	ratatui::restore();
 	result

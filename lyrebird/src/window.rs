@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use color_eyre::Result;
-use crossterm::event::{self, Event};
+use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{buffer::Buffer, layout::{Constraint, Flex, Layout, Rect}, style::{Style, Stylize}, text::{Line, Span}, widgets::{Tabs, Widget}, DefaultTerminal, Frame};
 
+/// Represents the main window of Lyrebird
 pub struct MainWindow
 {
 	header: Style,
@@ -10,10 +11,13 @@ pub struct MainWindow
 	headerNumber: Style,
 	activeEntry: Style,
 	footer: Style,
+
+	exit: bool,
 }
 
 impl MainWindow
 {
+	/// Set up a new main window, building the style pallet needed
 	pub fn new() -> Self
 	{
 		MainWindow
@@ -23,21 +27,41 @@ impl MainWindow
 			headerNumber: Style::new().light_blue().on_black(),
 			activeEntry: Style::new().light_blue(),
 			footer: Style::new().blue().on_black(),
+			exit: false,
 		}
 	}
 
-	pub fn run(&self, terminal: &mut DefaultTerminal) -> Result<()>
+	/// Run the program window until an exit-causing event occurs
+	pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()>
 	{
-		loop
+		while !self.exit
 		{
 			terminal.draw(|frame| self.draw(frame))?;
-			if matches!(event::read()?, Event::Key(_))
-			{
-				break Ok(());
-			}
+			self.handleEvents()?;
 		}
+		Ok(())
 	}
 
+	fn handleEvents(&mut self) -> Result<()>
+	{
+		match event::read()?
+		{
+			Event::Key(key) if key.kind == KeyEventKind::Press => match key.code
+			{
+				KeyCode::Char('q') | KeyCode::Char('Q') => self.quit(),
+				_ => {}
+			},
+			_ => {}
+		}
+		Ok(())
+	}
+
+	fn quit(&mut self)
+	{
+		self.exit = true
+	}
+
+	// Draw the program window to the terminal
 	fn draw(&self, frame: &mut Frame)
 	{
 		frame.render_widget(self, frame.area());
