@@ -21,7 +21,7 @@ pub enum ConfigVersion
 
 impl Config
 {
-	pub fn read(paths: ProjectDirs) -> Result<Config>
+	pub fn read(paths: &ProjectDirs) -> Result<Config>
 	{
 		let mut configPath = paths.cache_dir().to_path_buf();
 		configPath.push("config.json");
@@ -37,6 +37,14 @@ impl Config
 		{
 			Ok(Config::default())
 		}
+	}
+
+	pub fn write(&self, paths: &ProjectDirs) -> Result<()>
+	{
+		let mut configPath = paths.cache_dir().to_path_buf();
+		configPath.push("config.json");
+		let configFile = File::create(configPath)?;
+		Ok(serde_json::to_writer(configFile, self)?)
 	}
 }
 
