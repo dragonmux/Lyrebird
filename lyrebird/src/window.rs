@@ -109,14 +109,14 @@ impl MainWindow
 	}
 
 	// Draw the program window to the terminal
-	fn draw(&self, frame: &mut Frame)
+	fn draw(&mut self, frame: &mut Frame)
 	{
 		frame.render_widget(self, frame.area());
 	}
 }
 
 // Turn the window into a widget for rendering to make the rendering phase simpler
-impl Widget for &MainWindow
+impl Widget for &mut MainWindow
 {
 	fn render(self, area: Rect, buf: &mut Buffer)
 		where Self: Sized
