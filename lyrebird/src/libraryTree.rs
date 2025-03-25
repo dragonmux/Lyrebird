@@ -55,6 +55,8 @@ impl LibraryTree
 			{
 				KeyCode::Left => self.moveLeft(),
 				KeyCode::Right => self.moveRight(),
+				KeyCode::Up => self.moveUp(),
+				KeyCode::Down => self.moveDown(),
 				_ => {},
 			}
 		}
@@ -68,6 +70,24 @@ impl LibraryTree
 	fn moveRight(&mut self)
 	{
 		self.activeSide = Side::Files
+	}
+
+	fn moveUp(&mut self)
+	{
+		match self.activeSide
+		{
+			Side::DirectoryTree => { self.dirListState.select_previous(); }
+			Side::Files => {}
+		}
+	}
+
+	fn moveDown(&mut self)
+	{
+		match self.activeSide
+		{
+			Side::DirectoryTree => { self.dirListState.select_next(); }
+			Side::Files => {}
+		}
 	}
 }
 
