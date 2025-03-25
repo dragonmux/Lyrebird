@@ -9,7 +9,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 pub struct Config
 {
 	version: ConfigVersion,
-	libraryPath: PathBuf,
+	pub libraryPath: PathBuf,
 }
 
 #[derive(Serialize_repr, Deserialize_repr, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use directories::ProjectDirs;
 use ratatui::{buffer::Buffer, layout::{Constraint, Flex, Layout, Rect}, style::{Style, Stylize}, text::{Line, Span}, widgets::{Tabs, Widget}, DefaultTerminal, Frame};
 
-use crate::libraryTree::LibraryTree;
+use crate::{config::Config, libraryTree::LibraryTree};
 
 /// Represents the main window of Lyrebird
 pub struct MainWindow
@@ -37,11 +38,11 @@ impl Tab
 impl MainWindow
 {
 	/// Set up a new main window, building the style pallet needed
-	pub fn new() -> Self
+	pub fn new(paths: &ProjectDirs, config: &mut Config) -> Result<Self>
 	{
 		let activeEntry = Style::new().light_blue();
 
-		MainWindow
+		Ok(MainWindow
 		{
 			header: Style::new().blue().on_black(),
 			headerEntry: Style::new().blue().on_black(),
@@ -52,8 +53,11 @@ impl MainWindow
 			exit: false,
 			activeTab: Tab::LibraryTree,
 
-			libraryTree: LibraryTree::new(activeEntry)
-		}
+			libraryTree: LibraryTree::new
+			(
+				activeEntry, paths.cache_dir().join("library.json"), &config.libraryPath
+			)?
+		})
 	}
 
 	/// Run the program window until an exit-causing event occurs
@@ -82,10 +86,7 @@ impl MainWindow
 					match key.code
 					{
 						KeyCode::Char('q') | KeyCode::Char('Q') =>
-						{
-							self.quit();
-							return Ok(())
-						},
+							{ return self.quit(); },
 						_ => {}
 					}
 				}
@@ -101,9 +102,10 @@ impl MainWindow
 		Ok(())
 	}
 
-	fn quit(&mut self)
+	fn quit(&mut self) -> Result<()>
 	{
-		self.exit = true
+		self.exit = true;
+		self.libraryTree.writeCache()
 	}
 
 	// Draw the program window to the terminal

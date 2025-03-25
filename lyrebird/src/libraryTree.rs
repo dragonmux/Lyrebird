@@ -1,14 +1,21 @@
+use std::path::PathBuf;
+
+use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::Style;
 use ratatui::widgets::{Block, BorderType, Widget};
 
+use crate::library::{self, MusicLibrary};
+
 // SPDX-License-Identifier: BSD-3-Clause
 pub struct LibraryTree
 {
 	activeEntry: Style,
 	activeSide: Side,
+
+	library: MusicLibrary,
 }
 
 #[derive(Clone, Copy)]
@@ -20,13 +27,20 @@ enum Side
 
 impl LibraryTree
 {
-	pub fn new(activeEntry: Style) -> Self
+	pub fn new(activeEntry: Style, cacheFile: PathBuf, libraryPath: &PathBuf) -> Result<Self>
 	{
-		LibraryTree
+		Ok(LibraryTree
 		{
 			activeEntry: activeEntry,
 			activeSide: Side::DirectoryTree,
-		}
+
+			library: MusicLibrary::new(&cacheFile, libraryPath)?,
+		})
+	}
+
+	pub fn writeCache(&self) -> Result<()>
+	{
+		self.library.writeCache()
 	}
 
 	pub fn handleKeyEvent(&mut self, key: KeyEvent)

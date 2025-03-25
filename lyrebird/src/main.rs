@@ -23,7 +23,7 @@ fn main() -> Result<()>
 
 	// Aquire the terminal to use and set up the main window w/ the configuration
 	let mut terminal = ratatui::init();
-	let mut mainWindow = MainWindow::new();
+	let mut mainWindow = MainWindow::new(&paths, &mut config)?;
 	// Now run the main window of Lyrebird till the user exits the program
 	let result = mainWindow.run(&mut terminal);
 	// Give the terminal back and return the result of running the main window
