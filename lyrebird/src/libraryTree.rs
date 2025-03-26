@@ -33,7 +33,7 @@ impl LibraryTree
 {
 	pub fn new(activeEntry: Style, cacheFile: &Path, libraryPath: &Path) -> Result<Self>
 	{
-		Ok(LibraryTree
+		Ok(Self
 		{
 			activeEntry,
 			activeSide: Side::DirectoryTree,
@@ -64,12 +64,12 @@ impl LibraryTree
 		}
 	}
 
-	fn moveLeft(&mut self)
+	const fn moveLeft(&mut self)
 	{
 		self.activeSide = Side::DirectoryTree;
 	}
 
-	fn moveRight(&mut self)
+	const fn moveRight(&mut self)
 	{
 		self.activeSide = Side::Files;
 	}

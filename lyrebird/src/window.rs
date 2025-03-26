@@ -41,7 +41,7 @@ enum Tab
 
 impl Tab
 {
-	fn value(self) -> usize
+	const fn value(self) -> usize
 	{
 		self as usize
 	}
@@ -50,11 +50,11 @@ impl Tab
 impl MainWindow
 {
 	/// Set up a new main window, building the style pallet needed
-	pub fn new(paths: &ProjectDirs, config: &mut Config) -> Result<Self>
+	pub fn new(paths: &ProjectDirs, config: &Config) -> Result<Self>
 	{
 		let activeEntry = Style::new().light_blue();
 
-		Ok(MainWindow
+		Ok(Self
 		{
 			header: Style::new().blue().on_black(),
 			headerEntry: Style::new().blue().on_black(),

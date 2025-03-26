@@ -21,21 +21,19 @@ pub enum ConfigVersion
 
 impl Config
 {
-	pub fn read(paths: &ProjectDirs) -> Result<Config>
+	pub fn read(paths: &ProjectDirs) -> Result<Self>
 	{
 		let configPath = paths.config_dir().join("config.json");
 
 		if configPath.exists()
 		{
 			let configFile = File::open(configPath)?;
-			let config: Config = serde_json::from_reader(configFile)?;
+			let config = serde_json::from_reader(configFile)?;
 
-			Ok(config)
+			return Ok(config);
 		}
-		else
-		{
-			Ok(Config::default())
-		}
+		
+		Ok(Self::default())
 	}
 
 	pub fn write(&self, paths: &ProjectDirs) -> Result<()>
@@ -56,18 +54,10 @@ impl Default for Config
 		let userDirs = UserDirs::new().expect("Failed to get user directories");
 		// See if we can get the user's music directory
 		let musicDir = userDirs.audio_dir();
-		let musicDir = if let Some(dir) = musicDir
-		{
-			dir
-		}
-		else
-		{
-			// If we could not, default it to their homedir
-			userDirs.home_dir()
-		};
+		let musicDir = musicDir.map_or_else(|| userDirs.home_dir(), |dir| dir);
 
 		// Generate a configuration with this data
-		Config
+		Self
 		{
 			version: ConfigVersion::Version1,
 			libraryPath: musicDir.to_path_buf(),

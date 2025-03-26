@@ -46,19 +46,19 @@ impl MusicLibrary
 	{
 		if cacheFile.exists()
 		{
-			MusicLibrary::fromCache(cacheFile)
+			Self::fromCache(cacheFile)
 				.or_else
 				(
 					|report|
 					{
 						error!("Reading library cache failed: {}", report);
-						MusicLibrary::fromPath(cacheFile, basePath)
+						Self::fromPath(cacheFile, basePath)
 					}
 				)
 		}
 		else
 		{
-			MusicLibrary::fromPath(cacheFile, basePath)
+			Self::fromPath(cacheFile, basePath)
 		}
 	}
 
@@ -66,7 +66,7 @@ impl MusicLibrary
 	pub fn fromCache(cacheFile: &Path) -> Result<Arc<RwLock<Self>>>
 	{
 		let cache = File::open(cacheFile)?;
-		let mut library: MusicLibrary = serde_json::from_reader(cache)?;
+		let mut library: Self = serde_json::from_reader(cache)?;
 		library.cacheFile = cacheFile.to_path_buf();
 		Ok(Arc::new(RwLock::new(library)))
 	}
@@ -83,7 +83,7 @@ impl MusicLibrary
 		(
 			RwLock::new
 			(
-				MusicLibrary
+				Self
 				{
 					basePath: basePath.to_path_buf(),
 					cacheFile: cacheFile.to_path_buf(),
@@ -97,7 +97,7 @@ impl MusicLibrary
 			)
 		);
 
-		MusicLibrary::asyncDiscover(library.clone(), basePath.to_path_buf());
+		Self::asyncDiscover(library.clone(), basePath.to_path_buf());
 
 		Ok(library)
 	}
@@ -122,7 +122,7 @@ impl MusicLibrary
 	{
 		let task = async move
 		{
-			MusicLibrary::discover(library.as_ref(), currentDirectory.as_path()).await
+			Self::discover(library.as_ref(), currentDirectory.as_path()).await
 		};
 		spawn(task);
 	}
@@ -141,7 +141,7 @@ impl MusicLibrary
 			{
 				let relativePath = path.strip_prefix(&library.read().await.basePath)?.to_path_buf();
 				library.write().await.dirs.insert(relativePath);
-				Box::pin(MusicLibrary::discover(library, &path)).await?;
+				Box::pin(Self::discover(library, &path)).await?;
 			}
 			// Else if it's a file, see if it's audio
 			else
@@ -178,8 +178,7 @@ impl MusicLibrary
 	pub fn directories(&self) -> impl Iterator<Item = ListItem>
 	{
 		// Chain together the base library path, and the directories found within the library
-		[&self.basePath]
-			.into_iter()
+		std::iter::once(&self.basePath)
 			.chain(self.dirs.iter())
 			.map
 			(
@@ -217,7 +216,7 @@ impl MusicLibrary
 	{
 		// Find the entry from the directories that describes the requested index
 		dirIndex
-			.and_then(|index| [&self.basePath].into_iter().chain(self.dirs.iter()).nth(index))
+			.and_then(|index| std::iter::once(&self.basePath).chain(self.dirs.iter()).nth(index))
 			// Extract what files are in that directory
 			.and_then
 			(
