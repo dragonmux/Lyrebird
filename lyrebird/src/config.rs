@@ -41,7 +41,7 @@ impl Config
 	pub fn write(&self, paths: &ProjectDirs) -> Result<()>
 	{
 		let configPath = paths.config_dir();
-		create_dir_all(&configPath)?;
+		create_dir_all(configPath)?;
 		let configPath = configPath.join("config.json");
 		let configFile = File::create(configPath)?;
 		Ok(serde_json::to_writer(configFile, self)?)

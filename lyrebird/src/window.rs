@@ -59,7 +59,7 @@ impl MainWindow
 			header: Style::new().blue().on_black(),
 			headerEntry: Style::new().blue().on_black(),
 			headerNumber: Style::new().light_blue().on_black(),
-			activeEntry: activeEntry,
+			activeEntry,
 			footer: Style::new().blue().on_black(),
 
 			exit: false,
@@ -224,7 +224,7 @@ impl Widget for &mut MainWindow
 		Line::styled(errorState, self.footer).render(footerLayout[2], buf);
 
 		// Render the spacers for all the components of the footer
-		for spacerRect in footerSpacers.into_iter()
+		for spacerRect in footerSpacers.iter()
 		{
 			Line::styled("│", self.footer).render(*spacerRect, buf);
 		}

@@ -42,7 +42,7 @@ fn defaultLeafIcon() -> String
 
 impl MusicLibrary
 {
-	pub fn new(cacheFile: &Path, basePath: &PathBuf) -> Result<Arc<RwLock<Self>>>
+	pub fn new(cacheFile: &Path, basePath: &Path) -> Result<Arc<RwLock<Self>>>
 	{
 		if cacheFile.exists()
 		{
@@ -72,7 +72,7 @@ impl MusicLibrary
 	}
 
 	/// Construct a library from a new base path
-	pub fn fromPath(cacheFile: &Path, basePath: &PathBuf) -> Result<Arc<RwLock<Self>>>
+	pub fn fromPath(cacheFile: &Path, basePath: &Path) -> Result<Arc<RwLock<Self>>>
 	{
 		if !basePath.is_dir()
 		{
@@ -85,7 +85,7 @@ impl MusicLibrary
 			(
 				MusicLibrary
 				{
-					basePath: basePath.clone(),
+					basePath: basePath.to_path_buf(),
 					cacheFile: cacheFile.to_path_buf(),
 					dirs: BTreeSet::new(),
 					files: BTreeMap::new(),
@@ -97,7 +97,7 @@ impl MusicLibrary
 			)
 		);
 
-		MusicLibrary::asyncDiscover(library.clone(), basePath.clone());
+		MusicLibrary::asyncDiscover(library.clone(), basePath.to_path_buf());
 
 		Ok(library)
 	}
@@ -141,7 +141,7 @@ impl MusicLibrary
 			{
 				let relativePath = path.strip_prefix(&library.read().await.basePath)?.to_path_buf();
 				library.write().await.dirs.insert(relativePath);
-				Box::pin(MusicLibrary::discover(&library, &path)).await?;
+				Box::pin(MusicLibrary::discover(library, &path)).await?;
 			}
 			// Else if it's a file, see if it's audio
 			else
@@ -234,14 +234,12 @@ impl MusicLibrary
 					}
 				}
 			)
-			.and_then
+			.map
 			(
 				|files|
 				{
 					let files = BTreeSet::from_iter(files.iter());
-					Some
-					(
-						files
+					files
 							.into_iter()
 							.map
 							(
@@ -253,7 +251,6 @@ impl MusicLibrary
 									)
 								}
 							)
-					)
 				}
 			)
 	}

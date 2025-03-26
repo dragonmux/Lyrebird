@@ -35,7 +35,7 @@ impl LibraryTree
 	{
 		Ok(LibraryTree
 		{
-			activeEntry: activeEntry,
+			activeEntry,
 			activeSide: Side::DirectoryTree,
 			dirListState: ListState::default().with_selected(Some(0)),
 			filesListState: ListState::default(),
@@ -151,8 +151,7 @@ impl Widget for &mut LibraryTree
 		);
 
 		// Build a list of files in the current directory being displayed
-		let filesList = libraryLock.filesFor(self.dirListState.selected())
-			.and_then(|files| Some(List::new(files)))
+		let filesList = libraryLock.filesFor(self.dirListState.selected()).map(List::new)
 			.unwrap_or_default()
 			// Put it in a bordered block for presentation
 			.block
