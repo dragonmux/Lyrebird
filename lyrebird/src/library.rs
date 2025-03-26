@@ -20,7 +20,7 @@ pub struct MusicLibrary
 	/// Paths to directories containing music relative to the root
 	dirs: BTreeSet<PathBuf>,
 	/// Map of directories to a list of files in that directory which are music
-	files: BTreeMap<PathBuf, Vec<PathBuf>>,
+	files: BTreeMap<PathBuf, BTreeSet<PathBuf>>,
 	#[serde(skip)]
 	discoveryCancellation: CancellationToken,
 
@@ -157,12 +157,12 @@ impl MusicLibrary
 					.ok_or_eyre("File does not have a valid path parent")?;
 				if !library.read().await.files.contains_key(filePath)
 				{
-					library.write().await.files.insert(filePath.to_path_buf(), Vec::new());
+					library.write().await.files.insert(filePath.to_path_buf(), BTreeSet::new());
 				}
 				// Now we definitely have a vec to use, look the path up and add the file
 				library.write().await.files.get_mut(filePath)
 					.ok_or_eyre("Failed to look file's path up in file map")?
-					.push(path);
+					.insert(path);
 			}
 			// If we're being asked to stop, stop
 			if library.read().await.discoveryCancellation.is_cancelled()
