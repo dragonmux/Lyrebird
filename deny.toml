@@ -1,0 +1,17 @@
+[advisories]
+ignore = [
+    # ratatui depends on paste that have been marked as unmaintained (https://rustsec.org/advisories/RUSTSEC-2024-0436)
+    # The next release of ratatui will remove dependency on it (see https://github.com/ratatui/ratatui/issues/1712)
+    "RUSTSEC-2024-0436"
+]
+
+[licenses]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "MPL-2.0",
+    "Unicode-3.0",
+    'Zlib'
+]
+exceptions = []
