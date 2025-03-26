@@ -1,5 +1,5 @@
 [package]
-name = "libAudio-rs"
+name = "libAudio"
 version = "0.1.0"
 description = "Rust bindings for libAudio"
 license = "BSD-3-Clause"
