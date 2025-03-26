@@ -1,0 +1,3 @@
+[submodule "libAudio-rs/clib"]
+	path = libAudio-rs/clib
+	url = https://github.com/dragonCodecs/libAudio
