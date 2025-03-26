@@ -203,7 +203,7 @@ impl MusicLibrary
 						[
 							prefix,
 							self.treeLeafIcon.clone(),
-							directory.file_name().unwrap_or(OsStr::new("")).to_string_lossy().to_string(),
+							directory.file_name().unwrap_or_else(|| OsStr::new("")).to_string_lossy().to_string(),
 						]
 							.into_iter()
 							.map(|value| Span::from(value))
@@ -211,6 +211,34 @@ impl MusicLibrary
 						// And finally turn that unholy mess into a nice line and a list item
 						ListItem::new(Line::from(text))
 					}
+				}
+			)
+	}
+
+	pub fn filesFor(&self, dirIndex: Option<usize>) -> Option<impl Iterator<Item = ListItem>>
+	{
+		dirIndex
+			.and_then(|index| [&self.basePath].into_iter().chain(self.dirs.iter()).nth(index))
+			.and_then(|dir| self.files.get(dir))
+			.and_then
+			(
+				|files|
+				{
+					Some
+					(
+						files
+							.iter()
+							.map
+							(
+								|file|
+								{
+									ListItem::new
+									(
+										file.file_name().unwrap_or_else(|| OsStr::new("")).to_string_lossy()
+									)
+								}
+							)
+					)
 				}
 			)
 	}
