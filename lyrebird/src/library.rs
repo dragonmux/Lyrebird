@@ -237,19 +237,18 @@ impl MusicLibrary
 			(
 				|files|
 				{
-					let files = files.iter().collect::<BTreeSet<_>>();
 					files
-							.into_iter()
-							.map
-							(
-								|file|
-								{
-									ListItem::new
-									(
-										file.file_name().unwrap_or_else(|| OsStr::new("")).to_string_lossy()
-									)
-								}
-							)
+						.iter()
+						.map
+						(
+							|file|
+							{
+								ListItem::new
+								(
+									file.file_name().unwrap_or_else(|| OsStr::new("")).to_string_lossy()
+								)
+							}
+						)
 				}
 			)
 	}

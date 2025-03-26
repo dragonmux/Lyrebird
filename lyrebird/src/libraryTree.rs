@@ -151,7 +151,8 @@ impl Widget for &mut LibraryTree
 		);
 
 		// Build a list of files in the current directory being displayed
-		let filesList = libraryLock.filesFor(self.dirListState.selected()).map(List::new)
+		let filesList = libraryLock.filesFor(self.dirListState.selected())
+			.map(List::new)
 			.unwrap_or_default()
 			// Put it in a bordered block for presentation
 			.block
