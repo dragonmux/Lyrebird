@@ -1,4 +1,4 @@
-use std::{collections::{BTreeMap, BTreeSet}, ffi::OsStr, fs::{create_dir_all, File}, path::{Path, PathBuf}, sync::Arc};
+use std::{collections::{BTreeMap, BTreeSet}, ffi::OsStr, fs::{create_dir_all, File}, iter, path::{Path, PathBuf}, sync::Arc};
 
 use color_eyre::eyre::{self, OptionExt, Result};
 use libAudio::audioFile::AudioFile;
@@ -178,7 +178,7 @@ impl MusicLibrary
 	pub fn directories(&self) -> impl Iterator<Item = ListItem>
 	{
 		// Chain together the base library path, and the directories found within the library
-		std::iter::once(&self.basePath)
+		iter::once(&self.basePath)
 			.chain(self.dirs.iter())
 			.map
 			(
@@ -216,7 +216,7 @@ impl MusicLibrary
 	{
 		// Find the entry from the directories that describes the requested index
 		dirIndex
-			.and_then(|index| std::iter::once(&self.basePath).chain(self.dirs.iter()).nth(index))
+			.and_then(|index| iter::once(&self.basePath).chain(self.dirs.iter()).nth(index))
 			// Extract what files are in that directory
 			.and_then
 			(

@@ -36,11 +36,11 @@ fn run() -> Result<()>
 	let paths = ProjectDirs::from("com", "rachelmant", "Lyrebird").
 		ok_or_else(|| eyre::eyre!("Failed to get program working paths"))?;
 	// Now try to get a configuration object so we know where to find things and such
-	let config = Config::read(&paths)?;
+	let mut config = Config::read(&paths)?;
 
 	// Aquire the terminal to use and set up the main window w/ the configuration
 	let mut terminal = ratatui::init();
-	let mut mainWindow = MainWindow::new(&paths, &config)?;
+	let mut mainWindow = MainWindow::new(&paths, &mut config)?;
 	// Now run the main window of Lyrebird till the user exits the program
 	let result = mainWindow.run(&mut terminal);
 	// Give the terminal back and return the result of running the main window

@@ -50,7 +50,7 @@ impl Tab
 impl MainWindow
 {
 	/// Set up a new main window, building the style pallet needed
-	pub fn new(paths: &ProjectDirs, config: &Config) -> Result<Self>
+	pub fn new(paths: &ProjectDirs, config: &mut Config) -> Result<Self>
 	{
 		let activeEntry = Style::new().light_blue();
 
@@ -100,7 +100,8 @@ impl MainWindow
 				if key.kind == KeyEventKind::Press
 				{
 					// Check to see if the event is for quitting
-					match key.code {
+					match key.code
+					{
 						KeyCode::Char('q' | 'Q') => 
 							{ return self.quit(); },
 						_ => {}

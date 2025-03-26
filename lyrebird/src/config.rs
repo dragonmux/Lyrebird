@@ -52,9 +52,8 @@ impl Default for Config
 	{
 		// Try to get the user directories
 		let userDirs = UserDirs::new().expect("Failed to get user directories");
-		// See if we can get the user's music directory
-		let musicDir = userDirs.audio_dir();
-		let musicDir = musicDir.map_or_else(|| userDirs.home_dir(), |dir| dir);
+		// See if we can get the user's music directory; if we can't, default to their homedir.
+		let musicDir = userDirs.audio_dir().map_or_else(|| userDirs.home_dir(), |dir| dir);
 
 		// Generate a configuration with this data
 		Self
