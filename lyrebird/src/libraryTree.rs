@@ -83,7 +83,10 @@ impl LibraryTree
 				self.dirListState.select_previous();
 				self.filesListState = ListState::default();
 			}
-			Side::Files => {}
+			Side::Files =>
+			{
+				self.filesListState.select_previous();
+			}
 		}
 	}
 
@@ -96,7 +99,10 @@ impl LibraryTree
 				self.dirListState.select_next();
 				self.filesListState = ListState::default();
 			}
-			Side::Files => {}
+			Side::Files =>
+			{
+				self.filesListState.select_next();
+			}
 		}
 	}
 }
