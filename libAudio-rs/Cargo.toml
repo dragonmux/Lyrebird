@@ -12,6 +12,7 @@ name = "libAudio"
 path = "src/lib.rs"
 
 [build-dependencies]
+cc = "1.2.17"
 meson-next = "1.2.3"
 
 [dependencies]
