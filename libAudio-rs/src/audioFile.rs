@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::{ffi::CString, os::{raw::c_void, unix::ffi::OsStrExt}, path::Path, ptr::NonNull};
 
-use crate::bindings::{audioCloseFile, audioOpenR, isAudio};
+use crate::{bindings::{audioCloseFile, audioGetFileInfo, audioOpenR, isAudio}, fileInfo::FileInfo};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AudioFile
@@ -33,6 +33,14 @@ impl AudioFile
 			Ok(fileName) => unsafe { isAudio(fileName.as_ptr()) }
 			Err(_) => false
 		}
+	}
+
+	pub fn fileInfo<'a>(&self) -> FileInfo<'a>
+	{
+		FileInfo::new
+		(
+			unsafe { audioGetFileInfo(self.inner.as_ptr()) }
+		)
 	}
 }
 

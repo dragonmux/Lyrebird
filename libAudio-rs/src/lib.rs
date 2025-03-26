@@ -5,3 +5,4 @@
 
 pub mod audioFile;
 mod bindings;
+pub mod fileInfo;
