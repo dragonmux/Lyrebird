@@ -1,8 +1,15 @@
+use std::time::Duration;
+
 // SPDX-License-Identifier: BSD-3-Clause
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use directories::ProjectDirs;
-use ratatui::{buffer::Buffer, layout::{Constraint, Flex, Layout, Rect}, style::{Style, Stylize}, text::{Line, Span}, widgets::{Tabs, Widget}, DefaultTerminal, Frame};
+use ratatui::buffer::Buffer;
+use ratatui::layout::{Constraint, Flex, Layout, Rect};
+use ratatui::style::{Style, Stylize};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Tabs, Widget};
+use ratatui::{DefaultTerminal, Frame};
 
 use crate::{config::Config, libraryTree::LibraryTree};
 
@@ -18,7 +25,12 @@ pub struct MainWindow
 	exit: bool,
 	activeTab: Tab,
 
-	libraryTree: LibraryTree
+	libraryTree: LibraryTree,
+
+	currentlyPlaying: Option<String>,
+	songDuration: Option<Duration>,
+	playedDuration: Option<Duration>,
+	errorState: Option<String>
 }
 
 #[derive(Clone, Copy)]
@@ -56,7 +68,12 @@ impl MainWindow
 			libraryTree: LibraryTree::new
 			(
 				activeEntry, paths.cache_dir().join("library.json"), &config.libraryPath
-			)?
+			)?,
+
+			currentlyPlaying: None,
+			songDuration: None,
+			playedDuration: None,
+			errorState: None,
 		})
 	}
 
@@ -115,6 +132,14 @@ impl MainWindow
 	}
 }
 
+fn durationAsString(duration: Duration) -> String
+{
+	let seconds = duration.as_secs();
+	let minutes = seconds / 60;
+	let seconds = seconds % 60;
+	format!("{minutes:2}:{seconds:02}")
+}
+
 // Turn the window into a widget for rendering to make the rendering phase simpler
 impl Widget for &mut MainWindow
 {
@@ -156,9 +181,52 @@ impl Widget for &mut MainWindow
 			.divider("│")
 			.render(headerLayout[1], buf);
 
+		// Figure out which tab is currently active and draw that
 		match self.activeTab
 		{
 			Tab::LibraryTree => self.libraryTree.render(areas[1], buf),
+		}
+
+		// Build a layout for the footer line
+		let (footerLayout, footerSpacers ) = Layout::horizontal
+		(
+			[Constraint::Percentage(50), Constraint::Fill(1), Constraint::Fill(3)]
+		)
+			.flex(Flex::SpaceBetween)
+			.spacing(1)
+			.split_with_spacers(areas[2]);
+
+		// Figure out what strings are to be displayed in the footer
+		let currentlyPlaying = self.currentlyPlaying.as_ref().map_or_else
+		(
+			|| String::from("Nothing playing"), |playing| playing.clone()
+		);
+		let songDuration = self.songDuration.map_or_else
+		(
+			|| String::from("--:--"), durationAsString
+		);
+		let playedDuration = self.playedDuration.map_or_else
+		(
+			|| String::from("--:--"), durationAsString
+		);
+		let errorState = self.errorState.as_ref().map_or_else
+		(
+			|| String::from("No errors"), |error| error.clone()
+		);
+
+		// Display the program footer - which song is currently playing, song runtime, and whether errors have occured
+		Line::from_iter([String::from(" "), currentlyPlaying])
+			.style(self.footer)
+			.render(footerLayout[0], buf);
+		Line::styled(format!("{songDuration}/{playedDuration}"), self.footer)
+			.centered()
+			.render(footerLayout[1], buf);
+		Line::styled(errorState, self.footer).render(footerLayout[2], buf);
+
+		// Render the spacers for all the components of the footer
+		for spacerRect in footerSpacers.into_iter()
+		{
+			Line::styled("│", self.footer).render(*spacerRect, buf);
 		}
 	}
 }
