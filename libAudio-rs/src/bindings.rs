@@ -64,7 +64,7 @@ extern "C"
 	pub fn audioFileArtist(fileInfo: *const FileInfo) -> *const c_char;
 	pub fn audioFileAlbum(fileInfo: *const FileInfo) -> *const c_char;
 	pub fn audioFileOtherCommentsCount(fileInfo: *const FileInfo) -> usize;
-	pub fn audioFileOtherComment(fileInfo: *const FileInfo) -> *const c_char;
+	pub fn audioFileOtherComment(fileInfo: *const FileInfo, index: usize) -> *const c_char;
 
 	pub static mut ExternalPlayback: u8;
 	pub static mut ToPlayback: u8;

@@ -12,3 +12,6 @@ path = "src/lib.rs"
 
 [build-dependencies]
 meson-next = "1.2.3"
+
+[dependencies]
+color-eyre = "0.6.3"
