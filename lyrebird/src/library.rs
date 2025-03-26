@@ -1,7 +1,7 @@
 use std::{collections::{BTreeMap, BTreeSet}, ffi::OsStr, fs::{create_dir_all, File}, path::{Path, PathBuf}, sync::Arc};
 
 use color_eyre::eyre::{self, OptionExt, Result};
-use ratatui::{text::{Line, Span}, widgets::ListItem};
+use ratatui::{text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use tokio::spawn;
 use tokio::sync::RwLock;
@@ -185,11 +185,8 @@ impl MusicLibrary
 					if directory.is_absolute()
 					{
 						// Display that with the tree node icon and be done
-						let text: Vec<_> = [self.treeNodeIcon.clone(), directory.to_string_lossy().to_string()]
-							.into_iter()
-							.map(|value| Span::from(value))
-							.collect();
-						ListItem::new(Line::from(text))
+						let text = [self.treeNodeIcon.clone(), directory.to_string_lossy().to_string()];
+						ListItem::new(Line::from_iter(text))
 					}
 					else
 					{
@@ -198,18 +195,14 @@ impl MusicLibrary
 						// Build the prefix of pipes from that
 						let mut prefix = "│ ".repeat(indentLevel - 1);
 						prefix.insert(0, ' ');
-						// Turn the whole lot into a set of Span's
-						let text: Vec<_> =
+						// Turn the resulting prefix, icon and directory name into a nice ListItem
+						let text =
 						[
 							prefix,
 							self.treeLeafIcon.clone(),
 							directory.file_name().unwrap_or_else(|| OsStr::new("")).to_string_lossy().to_string(),
-						]
-							.into_iter()
-							.map(|value| Span::from(value))
-							.collect();
-						// And finally turn that unholy mess into a nice line and a list item
-						ListItem::new(Line::from(text))
+						];
+						ListItem::new(Line::from_iter(text))
 					}
 				}
 			)
