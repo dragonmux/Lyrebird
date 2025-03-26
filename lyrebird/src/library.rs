@@ -225,16 +225,15 @@ impl MusicLibrary
 			(
 				|dir|
 				{
-					let path =
-						if dir.is_relative()
-						{
-							self.basePath.join(dir)
-						}
-						else
-						{
-							dir.clone()
-						};
-					self.files.get(&path)
+					if dir.is_relative()
+					{
+						let path = self.basePath.join(dir);
+						self.files.get(&path)
+					}
+					else
+					{
+						self.files.get(dir)
+					}
 				}
 			)
 			.and_then
