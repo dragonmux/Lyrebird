@@ -217,17 +217,35 @@ impl MusicLibrary
 
 	pub fn filesFor(&self, dirIndex: Option<usize>) -> Option<impl Iterator<Item = ListItem>>
 	{
+		// Find the entry from the directories that describes the requested index
 		dirIndex
 			.and_then(|index| [&self.basePath].into_iter().chain(self.dirs.iter()).nth(index))
-			.and_then(|dir| self.files.get(dir))
+			// Extract what files are in that directory
+			.and_then
+			(
+				|dir|
+				{
+					let path =
+						if dir.is_relative()
+						{
+							self.basePath.join(dir)
+						}
+						else
+						{
+							dir.clone()
+						};
+					self.files.get(&path)
+				}
+			)
 			.and_then
 			(
 				|files|
 				{
+					let files = BTreeSet::from_iter(files.iter());
 					Some
 					(
 						files
-							.iter()
+							.into_iter()
 							.map
 							(
 								|file|
