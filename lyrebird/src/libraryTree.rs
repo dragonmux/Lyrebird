@@ -17,6 +17,7 @@ pub struct LibraryTree
 	activeEntry: Style,
 	activeSide: Side,
 	dirListState: ListState,
+	filesListState: ListState,
 
 	library: Arc<RwLock<MusicLibrary>>,
 }
@@ -37,6 +38,7 @@ impl LibraryTree
 			activeEntry: activeEntry,
 			activeSide: Side::DirectoryTree,
 			dirListState: ListState::default().with_selected(Some(0)),
+			filesListState: ListState::default(),
 
 			library: MusicLibrary::new(&cacheFile, libraryPath)?,
 		})
@@ -76,7 +78,11 @@ impl LibraryTree
 	{
 		match self.activeSide
 		{
-			Side::DirectoryTree => { self.dirListState.select_previous(); }
+			Side::DirectoryTree =>
+			{
+				self.dirListState.select_previous();
+				self.filesListState = ListState::default();
+			}
 			Side::Files => {}
 		}
 	}
@@ -85,7 +91,11 @@ impl LibraryTree
 	{
 		match self.activeSide
 		{
-			Side::DirectoryTree => { self.dirListState.select_next(); }
+			Side::DirectoryTree =>
+			{
+				self.dirListState.select_next();
+				self.filesListState = ListState::default();
+			}
 			Side::Files => {}
 		}
 	}
@@ -96,18 +106,27 @@ impl Widget for &mut LibraryTree
 	fn render(self, area: Rect, buf: &mut Buffer)
 		where Self: Sized
 	{
+		// Split the display area up to display the user's library tree on the left, and the files in a given
+		// directory on the right
 		let layout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(2)])
 			.split(area);
 
+		// Get a lock on the library so we get a consistent view of it for rendering
+		let libraryLock = self.library.blocking_read();
+
+		// Render the directory list using the internal state object
 		StatefulWidget::render
 		(
-			List::new(self.library.blocking_read().directories())
+			// Build a list of directories currently in the library
+			List::new(libraryLock.directories())
+				// Put it in a bordered block for presentation
 				.block
 				(
 					Block::bordered()
 						.title(" Directory Tree ")
 						.title_alignment(Alignment::Left)
 						.border_type(BorderType::Rounded)
+						// Make sure the contents are padded one space on the sides for presentation
 						.padding(Padding::horizontal(1))
 				)
 				.highlight_style(self.activeEntry)
@@ -117,10 +136,23 @@ impl Widget for &mut LibraryTree
 			&mut self.dirListState
 		);
 
-		Block::bordered()
-			.title(" Files ")
-			.title_alignment(Alignment::Left)
-			.border_type(BorderType::Rounded)
-			.render(layout[1], buf);
+		// Build a list of files in the current directory being displayed
+		let filesList = libraryLock.filesFor(self.dirListState.selected())
+			.and_then(|files| Some(List::new(files)))
+			.unwrap_or_default()
+			// Put it in a bordered block for presentation
+			.block
+			(
+				Block::bordered()
+					.title(" Files ")
+					.title_alignment(Alignment::Left)
+					.border_type(BorderType::Rounded)
+					// Make sure the contents are padded one space on the sides for presentation
+					.padding(Padding::horizontal(1))
+			)
+			.highlight_style(self.activeEntry)
+			.direction(ListDirection::TopToBottom);
+
+		StatefulWidget::render(filesList, layout[1], buf, &mut self.filesListState);
 	}
 }
