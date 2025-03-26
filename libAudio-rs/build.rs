@@ -18,14 +18,17 @@ fn main()
 	let mut options = HashMap::new();
 	options.insert("bindings", "false");
 	options.insert("default_library", "static");
-	options.insert("force_fallback_for", "substrate");
+	options.insert("force_fallback_for", "substrate,mp4v2");
 
 	// Build a Meson configuration for this
 	let config = meson::Config::new().options(options);
 
 	// Tell Cargo how/where to find the build results
-	println!("cargo:rustc-link-lib=Audio");
-	println!("cargo:rustc-link-search=native={}", buildPath.join("libAudio").to_str().unwrap());
+	println!("cargo::rustc-link-lib=Audio");
+	println!("cargo::rustc-link-search=native={}", buildPath.join("libAudio").to_str().unwrap());
+	// Tell Cargo what constitutes a need to re-run
+	println!("cargo::rerun-if-changed=build.rs");
+	println!("cargo::rerun-if-changed=clib");
 
 	// Ask Meson to run the build
 	meson::build("clib", buildDir, config);

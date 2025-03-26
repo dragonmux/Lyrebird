@@ -5,6 +5,7 @@ description = "Rust bindings for libAudio"
 license = "BSD-3-Clause"
 authors = ["Rachel Mant <git@dragonmux.network>"]
 edition = "2021"
+links = "Audio"
 
 [lib]
 name = "libAudio"
