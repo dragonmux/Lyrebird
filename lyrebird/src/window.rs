@@ -100,9 +100,10 @@ impl MainWindow
 				if key.kind == KeyEventKind::Press
 				{
 					// Check to see if the event is for quitting
-					if let KeyCode::Char('q' | 'Q') = key.code 
-					{ 
-						return self.quit(); 
+					match key.code {
+						KeyCode::Char('q' | 'Q') => 
+							{ return self.quit(); },
+						_ => {}
 					}
 				}
 				// It's some other kind of event, so figure out which is the active
