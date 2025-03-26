@@ -363,6 +363,9 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 [[package]]
 name = "libAudio-rs"
 version = "0.1.0"
+dependencies = [
+ "meson-next",
+]
 
 [[package]]
 name = "libc"
@@ -433,6 +436,12 @@ name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
+
+[[package]]
+name = "meson-next"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee1d41dd30a4fb9d967567e48a2d24ae193c6d3183baaf29d19b8f85d1c4a4e2"
 
 [[package]]
 name = "miniz_oxide"

@@ -10,4 +10,5 @@ edition = "2021"
 name = "libAudio"
 path = "src/lib.rs"
 
-[dependencies]
+[build-dependencies]
+meson-next = "1.2.3"
