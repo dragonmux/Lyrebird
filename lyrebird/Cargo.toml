@@ -10,6 +10,7 @@ edition = "2021"
 color-eyre = "0.6.3"
 crossterm = "0.28.1"
 directories = "6.0.0"
+libAudio-rs = { version = "0.1.0", path = "../libAudio-rs" }
 ratatui = "0.29"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["preserve_order", "float_roundtrip", "raw_value"] }

@@ -1,6 +1,7 @@
 use std::{collections::{BTreeMap, BTreeSet}, ffi::OsStr, fs::{create_dir_all, File}, path::{Path, PathBuf}, sync::Arc};
 
 use color_eyre::eyre::{self, OptionExt, Result};
+use libAudio::audioFile::AudioFile;
 use ratatui::{text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use tokio::spawn;
@@ -146,6 +147,10 @@ impl MusicLibrary
 			else
 			{
 				// Check if this file is an audio file, and if it is..
+				if !AudioFile::isAudio(path.as_path())
+				{
+					continue;
+				}
 
 				// See if this file's directory is already in the map
 				let filePath = path.parent()

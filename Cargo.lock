@@ -422,6 +422,7 @@ dependencies = [
  "color-eyre",
  "crossterm",
  "directories",
+ "libAudio-rs",
  "ratatui",
  "serde",
  "serde_json",
