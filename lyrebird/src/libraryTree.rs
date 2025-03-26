@@ -131,6 +131,14 @@ impl Widget for &mut LibraryTree
 					Block::bordered()
 						.title(" Directory Tree ")
 						.title_alignment(Alignment::Left)
+						.title_style
+						(
+							match self.activeSide
+							{
+								Side::DirectoryTree => self.activeEntry,
+								_ => Style::default(),
+							}
+						)
 						.border_type(BorderType::Rounded)
 						// Make sure the contents are padded one space on the sides for presentation
 						.padding(Padding::horizontal(1))
@@ -153,6 +161,14 @@ impl Widget for &mut LibraryTree
 					.title(" Files ")
 					.title_alignment(Alignment::Left)
 					.border_type(BorderType::Rounded)
+					.title_style
+					(
+						match self.activeSide
+						{
+							Side::Files => self.activeEntry,
+							_ => Style::default(),
+						}
+					)
 					// Make sure the contents are padded one space on the sides for presentation
 					.padding(Padding::horizontal(1))
 			)
