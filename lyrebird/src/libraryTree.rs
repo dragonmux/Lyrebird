@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::Arc;
 
 use color_eyre::eyre::Result;
@@ -31,7 +31,7 @@ enum Side
 
 impl LibraryTree
 {
-	pub fn new(activeEntry: Style, cacheFile: PathBuf, libraryPath: &PathBuf) -> Result<Self>
+	pub fn new(activeEntry: Style, cacheFile: &Path, libraryPath: &Path) -> Result<Self>
 	{
 		Ok(LibraryTree
 		{
@@ -40,7 +40,7 @@ impl LibraryTree
 			dirListState: ListState::default().with_selected(Some(0)),
 			filesListState: ListState::default(),
 
-			library: MusicLibrary::new(&cacheFile, libraryPath)?,
+			library: MusicLibrary::new(cacheFile, libraryPath)?,
 		})
 	}
 
@@ -66,12 +66,12 @@ impl LibraryTree
 
 	fn moveLeft(&mut self)
 	{
-		self.activeSide = Side::DirectoryTree
+		self.activeSide = Side::DirectoryTree;
 	}
 
 	fn moveRight(&mut self)
 	{
-		self.activeSide = Side::Files
+		self.activeSide = Side::Files;
 	}
 
 	fn moveUp(&mut self)
@@ -136,7 +136,7 @@ impl Widget for &mut LibraryTree
 							match self.activeSide
 							{
 								Side::DirectoryTree => self.activeEntry,
-								_ => Style::default(),
+								Side::Files => Style::default(),
 							}
 						)
 						.border_type(BorderType::Rounded)
@@ -165,7 +165,7 @@ impl Widget for &mut LibraryTree
 						match self.activeSide
 						{
 							Side::Files => self.activeEntry,
-							_ => Style::default(),
+							Side::DirectoryTree => Style::default(),
 						}
 					)
 					// Make sure the contents are padded one space on the sides for presentation

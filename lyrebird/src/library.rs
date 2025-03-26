@@ -238,7 +238,7 @@ impl MusicLibrary
 			(
 				|files|
 				{
-					let files = BTreeSet::from_iter(files.iter());
+					let files = files.iter().collect::<BTreeSet<_>>();
 					files
 							.into_iter()
 							.map

@@ -41,9 +41,9 @@ enum Tab
 
 impl Tab
 {
-	fn value(&self) -> usize
+	fn value(self) -> usize
 	{
-		*self as usize
+		self as usize
 	}
 }
 
@@ -67,7 +67,7 @@ impl MainWindow
 
 			libraryTree: LibraryTree::new
 			(
-				activeEntry, paths.cache_dir().join("library.json"), &config.libraryPath
+				activeEntry, &paths.cache_dir().join("library.json"), &config.libraryPath
 			)?,
 
 			currentlyPlaying: None,
@@ -100,11 +100,9 @@ impl MainWindow
 				if key.kind == KeyEventKind::Press
 				{
 					// Check to see if the event is for quitting
-					match key.code
-					{
-						KeyCode::Char('q') | KeyCode::Char('Q') =>
-							{ return self.quit(); },
-						_ => {}
+					if let KeyCode::Char('q' | 'Q') = key.code 
+					{ 
+						return self.quit(); 
 					}
 				}
 				// It's some other kind of event, so figure out which is the active
@@ -154,7 +152,7 @@ impl Widget for &mut MainWindow
 
 		// Make the header tab titles
 		let headerTabs: Vec<_> = ["Tree", "Artists", "Albums", "Options", "Playlist"]
-			.map(|title| title.to_string())
+			.map(ToString::to_string)
 			.into_iter()
 			.enumerate()
 			.map(|(num, tabTitle)|
@@ -199,7 +197,7 @@ impl Widget for &mut MainWindow
 		// Figure out what strings are to be displayed in the footer
 		let currentlyPlaying = self.currentlyPlaying.as_ref().map_or_else
 		(
-			|| String::from("Nothing playing"), |playing| playing.clone()
+			|| String::from("Nothing playing"), Clone::clone
 		);
 		let songDuration = self.songDuration.map_or_else
 		(
@@ -211,7 +209,7 @@ impl Widget for &mut MainWindow
 		);
 		let errorState = self.errorState.as_ref().map_or_else
 		(
-			|| String::from("No errors"), |error| error.clone()
+			|| String::from("No errors"), Clone::clone
 		);
 
 		// Display the program footer - which song is currently playing, song runtime, and whether errors have occured
