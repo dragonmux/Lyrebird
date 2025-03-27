@@ -17,13 +17,14 @@ pub struct Song
 	state: Arc<ThreadState>
 }
 
-#[derive(PartialEq, Eq)]
-enum PlaybackState
+#[derive(Clone, PartialEq, Eq)]
+pub enum PlaybackState
 {
 	NotStarted,
 	Playing,
 	Paused,
 	Stopped,
+	Unknown(String),
 }
 
 struct ThreadState
@@ -101,6 +102,14 @@ impl Song
 		let result = self.state.stop(self.playbackThread.take());
 		self.playbackThread = None;
 		result
+	}
+
+	// Query the state playback is currently in for this song
+	pub fn state(&self) -> PlaybackState
+	{
+		self.state.state.lock()
+			.map(|lock| lock.clone())
+			.unwrap_or_else(|error| PlaybackState::Unknown(error.to_string()))
 	}
 }
 

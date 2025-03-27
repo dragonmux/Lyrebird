@@ -11,7 +11,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Widget;
 use ratatui::{DefaultTerminal, Frame};
 
-use crate::playback::Song;
+use crate::playback::{PlaybackState, Song};
 use crate::widgets::tabBar::TabBar;
 use crate::{config::Config, libraryTree::LibraryTree};
 
@@ -101,6 +101,7 @@ impl MainWindow
 					match key.code
 					{
 						KeyCode::Char('q' | 'Q') => { return self.quit(); },
+						KeyCode::Char(' ') => { self.togglePlayback(); },
 						_ => {}
 					}
 				}
@@ -145,6 +146,30 @@ impl MainWindow
 		songState.play();
 		self.currentlyPlaying = Some(songState);
 		Ok(())
+	}
+
+	fn togglePlayback(&mut self)
+	{
+		if let Some(song) = &mut self.currentlyPlaying
+		{
+			match song.state()
+			{
+				PlaybackState::Playing =>
+				{
+					let result = song.pause();
+					if let Err(error) = result
+					{
+						self.errorState = Some(error.to_string());
+					}
+				},
+				PlaybackState::Paused |
+				PlaybackState::Stopped |
+				PlaybackState::NotStarted =>
+					{ song.play(); }
+				PlaybackState::Unknown(error) =>
+					{ self.errorState = Some(error); }
+			}
+		}
 	}
 }
 
