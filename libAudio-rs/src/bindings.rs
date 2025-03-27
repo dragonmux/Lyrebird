@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: BSD-3-Clause
-
 use std::ffi::{c_char, c_float, c_int, c_void};
 
 #[repr(C)]
