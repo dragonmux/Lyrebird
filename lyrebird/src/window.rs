@@ -260,7 +260,7 @@ impl Widget for &mut MainWindow
 		Line::from_iter([String::from(" "), currentlyPlaying])
 			.style(self.footer)
 			.render(footerLayout[0], buf);
-		Line::styled(format!("{songDuration}/{playedDuration}"), self.footer)
+		Line::styled(format!("{playedDuration}/{songDuration}"), self.footer)
 			.centered()
 			.render(footerLayout[1], buf);
 		Line::styled(errorState, self.footer).render(footerLayout[2], buf);
