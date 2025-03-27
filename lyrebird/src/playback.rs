@@ -181,3 +181,11 @@ impl ThreadState
 		false
 	}
 }
+
+impl Drop for ThreadState
+{
+	fn drop(&mut self)
+	{
+		self.audioFile.stop();
+	}
+}
