@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::{ffi::CString, os::{raw::c_void, unix::ffi::OsStrExt}, path::Path, ptr::NonNull};
 
-use crate::{bindings::{audioCloseFile, audioGetFileInfo, audioOpenR, audioPause, audioPlay, audioStop, isAudio}, fileInfo::FileInfo};
+use crate::{fileInfo::FileInfo, AudioType};
+use crate::bindings::
+{
+	audioCloseFile, audioGetFileInfo, audioOpenR, audioOpenW, audioPause, audioPlay, audioStop, isAudio
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AudioFile
@@ -19,6 +23,17 @@ impl AudioFile
 		let fileName = CString::new(fileName).ok()?;
 
 		let file = unsafe { audioOpenR(fileName.as_ptr()) };
+		Some(AudioFile { inner: NonNull::new(file)? })
+	}
+
+	/// Try to open the given file as an audio file
+	pub fn forPathWrite(path: &Path, format: AudioType) -> Option<AudioFile>
+	{
+		let fileName = path.to_path_buf();
+		let fileName = fileName.as_os_str().as_bytes();
+		let fileName = CString::new(fileName).ok()?;
+
+		let file = unsafe { audioOpenW(fileName.as_ptr(), format) };
 		Some(AudioFile { inner: NonNull::new(file)? })
 	}
 
