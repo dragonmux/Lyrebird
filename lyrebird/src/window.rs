@@ -8,9 +8,10 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Flex, Layout, Rect};
 use ratatui::style::{Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Tabs, Widget};
+use ratatui::widgets::Widget;
 use ratatui::{DefaultTerminal, Frame};
 
+use crate::widgets::tabBar::TabBar;
 use crate::{config::Config, libraryTree::LibraryTree};
 
 /// Represents the main window of Lyrebird
@@ -102,8 +103,7 @@ impl MainWindow
 					// Check to see if the event is for quitting
 					match key.code
 					{
-						KeyCode::Char('q' | 'Q') => 
-							{ return self.quit(); },
+						KeyCode::Char('q' | 'Q') => { return self.quit(); },
 						_ => {}
 					}
 				}
@@ -153,7 +153,7 @@ impl Widget for &mut MainWindow
 		).split(area);
 
 		// Make the header tab titles
-		let headerTabs: Vec<_> = ["Tree", "Artists", "Albums", "Options", "Playlist"]
+		let headerTabs = ["Tree", "Artists", "Albums", "Options", "Playlist"]
 			.map(ToString::to_string)
 			.into_iter()
 			.enumerate()
@@ -164,8 +164,7 @@ impl Widget for &mut MainWindow
 					Span::styled(tabTitle, self.headerEntry),
 				]
 			)
-			.map(|spans| Line::from(spans.to_vec()).left_aligned())
-			.collect();
+			.map(|spans| Line::from(spans.to_vec()).left_aligned());
 
 		// Build a layout for the header line
 		let headerLayout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(5)])
@@ -174,11 +173,11 @@ impl Widget for &mut MainWindow
 
 		// Display the program header - starting with the program name, followed by the tabs
 		Line::styled(" Lyrebird", self.header).render(headerLayout[0], buf);
-		Tabs::new(headerTabs)
+		TabBar::new(headerTabs)
 			.style(self.headerEntry)
-			.highlight_style(self.activeEntry)
+			.highlightedStyle(self.activeEntry)
 			.select(self.activeTab.value())
-			.divider("│")
+			.firstTabDivider(true)
 			.render(headerLayout[1], buf);
 
 		// Figure out which tab is currently active and draw that
