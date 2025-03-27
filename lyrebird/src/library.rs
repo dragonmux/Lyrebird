@@ -140,8 +140,19 @@ impl MusicLibrary
 			if path.is_dir()
 			{
 				let relativePath = path.strip_prefix(&library.read().await.basePath)?.to_path_buf();
-				library.write().await.dirs.insert(relativePath);
+				library.write().await.dirs.insert(relativePath.clone());
 				Box::pin(Self::discover(library, &path)).await?;
+				// Well, only add it to the directories set if there were any audio files for us or one
+				// of the subdirectories within (which would mean that subdirectory is in the dirs set)
+				if !library.read().await.files.contains_key(&path) &&
+					!library.read().await.dirs.iter().any
+					(
+						|dir| dir.starts_with(&relativePath) && dir != &relativePath
+					)
+				{
+					// In the case that we actually don't have anything for this directory, remove it again
+					library.write().await.dirs.remove(&relativePath);
+				}
 			}
 			// Else if it's a file, see if it's audio
 			else
