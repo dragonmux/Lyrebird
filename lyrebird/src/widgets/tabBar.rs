@@ -110,6 +110,17 @@ impl Default for TabBar<'_>
 	}
 }
 
+// Trait so we can construct a TabBar from an iterator of Line-able items
+impl<'a, Item> FromIterator<Item> for TabBar<'a>
+where
+	Item: Into<Line<'a>>
+{
+	fn from_iter<T: IntoIterator<Item = Item>>(iter: T) -> Self
+	{
+		Self::new(iter)
+	}
+}
+
 // Trait so that ratatui styling works
 impl Styled for TabBar<'_>
 {
