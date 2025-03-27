@@ -97,7 +97,7 @@ impl MusicLibrary
 			)
 		);
 
-		Self::asyncDiscover(library.clone(), basePath.to_path_buf());
+		Self::backgroundDiscover(library.clone(), basePath.to_path_buf());
 
 		Ok(library)
 	}
@@ -118,7 +118,7 @@ impl MusicLibrary
 		Ok(serde_json::to_writer(cache, self)?)
 	}
 
-	fn asyncDiscover(library: Arc<RwLock<Self>>, currentDirectory: PathBuf)
+	fn backgroundDiscover(library: Arc<RwLock<Self>>, currentDirectory: PathBuf)
 	{
 		let task = async move
 		{
