@@ -69,7 +69,7 @@ fn main()
 		buildPath.parent().unwrap().join("libOptimFROG.so.0"),
 	).unwrap();
 
-	// Symlink libmpc's common library so we can make proper use of it
+	// Copy libmpc's common library so we can make proper use of it (OpenAL has one too and that shadows this)
 	let _ = fs::copy
 	(
 		buildPath.join("deps/libmpc/common/libcommon.a"),
