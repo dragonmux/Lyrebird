@@ -35,6 +35,7 @@ impl AudioFile
 		}
 	}
 
+	/// Get the metadata for this audio file
 	pub fn fileInfo<'a>(&self) -> FileInfo<'a>
 	{
 		FileInfo::new
@@ -43,16 +44,19 @@ impl AudioFile
 		)
 	}
 
+	/// Play the file back (resumes playback if previously played and returned from)
 	pub fn play(&self)
 	{
 		unsafe { audioPlay(self.inner.as_ptr()) };
 	}
 
+	/// Pause the file playback (causes play to return)
 	pub fn pause(&self)
 	{
 		unsafe { audioPause(self.inner.as_ptr()) };
 	}
 
+	/// Stop the file playback (causes play to return)
 	pub fn stop(&self)
 	{
 		unsafe { audioStop(self.inner.as_ptr()) };
