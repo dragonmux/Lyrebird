@@ -14,6 +14,7 @@ use tokio::{self, task::spawn_blocking};
 mod config;
 mod library;
 mod libraryTree;
+mod playback;
 mod widgets;
 mod window;
 
