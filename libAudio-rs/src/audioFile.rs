@@ -88,3 +88,6 @@ impl Drop for AudioFile
 		}
 	}
 }
+
+unsafe impl Sync for AudioFile {}
+unsafe impl Send for AudioFile {}
