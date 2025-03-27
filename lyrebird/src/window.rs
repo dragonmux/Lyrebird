@@ -1,6 +1,6 @@
+// SPDX-License-Identifier: BSD-3-Clause
 use std::time::Duration;
 
-// SPDX-License-Identifier: BSD-3-Clause
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use directories::ProjectDirs;
@@ -11,6 +11,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Widget;
 use ratatui::{DefaultTerminal, Frame};
 
+use crate::playback::SongState;
 use crate::widgets::tabBar::TabBar;
 use crate::{config::Config, libraryTree::LibraryTree};
 
@@ -28,9 +29,7 @@ pub struct MainWindow
 
 	libraryTree: LibraryTree,
 
-	currentlyPlaying: Option<String>,
-	songDuration: Option<Duration>,
-	playedDuration: Option<Duration>,
+	currentlyPlaying: Option<SongState>,
 	errorState: Option<String>
 }
 
@@ -72,8 +71,6 @@ impl MainWindow
 			)?,
 
 			currentlyPlaying: None,
-			songDuration: None,
-			playedDuration: None,
 			errorState: None,
 		})
 	}
@@ -196,18 +193,20 @@ impl Widget for &mut MainWindow
 			.split_with_spacers(areas[2]);
 
 		// Figure out what strings are to be displayed in the footer
-		let currentlyPlaying = self.currentlyPlaying.as_ref().map_or_else
-		(
-			|| String::from("Nothing playing"), Clone::clone
-		);
-		let songDuration = self.songDuration.map_or_else
-		(
-			|| String::from("--:--"), durationAsString
-		);
-		let playedDuration = self.playedDuration.map_or_else
-		(
-			|| String::from("--:--"), durationAsString
-		);
+		let currentlyPlaying = self.currentlyPlaying.as_ref()
+			.map_or_else(|| String::from("Nothing playing"), |songState| songState.title());
+		let songDuration = self.currentlyPlaying.as_ref()
+			.and_then(|songState| songState.songDuration())
+			.map_or_else
+			(
+				|| String::from("--:--"), durationAsString
+			);
+		let playedDuration = self.currentlyPlaying.as_ref()
+			.map_or_else
+			(
+				|| String::from("--:--"),
+				|songState| durationAsString(songState.playedDuration())
+			);
 		let errorState = self.errorState.as_ref().map_or_else
 		(
 			|| String::from("No errors"), Clone::clone
