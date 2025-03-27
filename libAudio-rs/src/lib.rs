@@ -13,3 +13,5 @@ pub fn setVolumeLevel(level: f32)
 {
 	unsafe { audioDefaultLevel(level) };
 }
+
+pub type AudioType = bindings::AudioType;
