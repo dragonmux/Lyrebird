@@ -14,6 +14,7 @@ use tokio::{self, task::spawn_blocking};
 mod config;
 mod library;
 mod libraryTree;
+mod widgets;
 mod window;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
