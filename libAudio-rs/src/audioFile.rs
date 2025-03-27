@@ -7,7 +7,6 @@ use crate::bindings::
 	audioCloseFile, audioGetFileInfo, audioOpenR, audioOpenW, audioPause, audioPlay, audioStop, isAudio
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AudioFile
 {
 	inner: NonNull<c_void>,

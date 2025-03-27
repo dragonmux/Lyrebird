@@ -44,11 +44,11 @@ extern "C"
 	pub fn audioFillBuffer(audioFile: *mut c_void, buffer: *mut c_void, length: u32) -> i64;
 
 	// Playback API functions
-	pub fn audioPlay(audioFile: *mut c_void) -> c_void;
-	pub fn audioPause(audioFile: *mut c_void) -> c_void;
-	pub fn audioStop(audioFile: *mut c_void) -> c_void;
+	pub fn audioPlay(audioFile: *mut c_void);
+	pub fn audioPause(audioFile: *mut c_void);
+	pub fn audioStop(audioFile: *mut c_void);
 
-	pub fn audioDefaultLevel(level: c_float) -> c_void;
+	pub fn audioDefaultLevel(level: c_float);
 
 	// Write (encode) API functions
 	pub fn audioOpenW(fileName: *const c_char, audioType: AudioType) -> *mut c_void;
