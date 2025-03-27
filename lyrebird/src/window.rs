@@ -106,9 +106,14 @@ impl MainWindow
 				}
 				// It's some other kind of event, so figure out which is the active
 				// tab and ask it what it thinks of this
-				match self.activeTab
+				let state = match self.activeTab
 				{
 					Tab::LibraryTree => self.libraryTree.handleKeyEvent(key),
+				};
+				// If that key event resulted in a new file to play, process that
+				if let Some(result) = state
+				{
+					self.playSong(result?)?;
 				}
 			},
 			_ => {}
@@ -126,6 +131,20 @@ impl MainWindow
 	fn draw(&mut self, frame: &mut Frame)
 	{
 		frame.render_widget(self, frame.area());
+	}
+
+	fn playSong(&mut self, mut songState: SongState) -> Result<()>
+	{
+		let currentlyPlaying = self.currentlyPlaying.take();
+		// If we already have a song playing, stop it
+		if let Some(mut currentSong) = currentlyPlaying
+		{
+			currentSong.stop()?;
+		}
+		// Now replace the current playing state with the new one having asked this new one to start
+		songState.play();
+		self.currentlyPlaying = Some(songState);
+		Ok(())
 	}
 }
 

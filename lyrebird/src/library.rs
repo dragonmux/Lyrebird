@@ -250,6 +250,19 @@ impl MusicLibrary
 			)
 	}
 
+	pub fn directoryAt(&self, index: usize) -> Option<&PathBuf>
+	{
+		iter::once(&self.basePath)
+			.chain(self.dirs.iter())
+			.nth(index)
+	}
+
+	pub fn fileIn(&self, dir: &PathBuf, index: usize) -> Option<&PathBuf>
+	{
+		let files = self.filesIn(dir)?;
+		files.iter().nth(index)
+	}
+
 	fn filesIn(&self, dir: &PathBuf) -> Option<&BTreeSet<PathBuf>>
 	{
 		if dir.is_relative()

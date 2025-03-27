@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-3-Clause
 use std::path::Path;
 use std::sync::Arc;
 
@@ -10,8 +11,8 @@ use ratatui::widgets::{Block, BorderType, List, ListDirection, ListState, Paddin
 use tokio::sync::RwLock;
 
 use crate::library::MusicLibrary;
+use crate::playback::SongState;
 
-// SPDX-License-Identifier: BSD-3-Clause
 pub struct LibraryTree
 {
 	activeEntry: Style,
@@ -49,7 +50,7 @@ impl LibraryTree
 		self.library.blocking_read().writeCache()
 	}
 
-	pub fn handleKeyEvent(&mut self, key: KeyEvent)
+	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Option<Result<SongState>>
 	{
 		if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
 		{
@@ -59,9 +60,11 @@ impl LibraryTree
 				KeyCode::Right => self.moveRight(),
 				KeyCode::Up => self.moveUp(),
 				KeyCode::Down => self.moveDown(),
+				KeyCode::Enter => { return self.makeSelection(); },
 				_ => {},
 			}
 		}
+		None
 	}
 
 	const fn moveLeft(&mut self)
@@ -104,6 +107,28 @@ impl LibraryTree
 				self.filesListState.select_next();
 			}
 		}
+	}
+
+	/// If the currently sellected side is the directory listing, switch to that directory's file listing
+	/// otherwise, if it's the file listing, figure out which one and make a SongState for it
+	fn makeSelection(&mut self) -> Option<Result<SongState>>
+	{
+		match self.activeSide
+		{
+			Side::DirectoryTree => { self.activeSide = Side::Files },
+			Side::Files =>
+			{
+				// Lock open access to the library
+				let library = self.library.blocking_read();
+				// Extract the current directory selection
+				let dir = library.directoryAt(self.dirListState.selected()?)?;
+				// Extract the current file selection
+				let file = library.fileIn(dir, self.filesListState.selected()?)?;
+				// Now make a new SongState object for that file if possible
+				return Some(SongState::from(dir.join(file).as_path()));
+			}
+		}
+		None
 	}
 }
 
