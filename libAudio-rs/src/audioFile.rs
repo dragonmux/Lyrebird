@@ -16,7 +16,7 @@ pub struct AudioFile
 impl AudioFile
 {
 	/// Try to open the given file as an audio file
-	pub fn forPathRead(path: &Path) -> Option<AudioFile>
+	pub fn readFile(path: &Path) -> Option<AudioFile>
 	{
 		let fileName = path.to_path_buf();
 		let fileName = fileName.as_os_str().as_bytes();
@@ -27,7 +27,7 @@ impl AudioFile
 	}
 
 	/// Try to open the given file as an audio file
-	pub fn forPathWrite(path: &Path, format: AudioType) -> Option<AudioFile>
+	pub fn writeFile(path: &Path, format: AudioType) -> Option<AudioFile>
 	{
 		let fileName = path.to_path_buf();
 		let fileName = fileName.as_os_str().as_bytes();
