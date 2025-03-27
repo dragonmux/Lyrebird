@@ -11,7 +11,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Widget;
 use ratatui::{DefaultTerminal, Frame};
 
-use crate::playback::SongState;
+use crate::playback::Song;
 use crate::widgets::tabBar::TabBar;
 use crate::{config::Config, libraryTree::LibraryTree};
 
@@ -29,7 +29,7 @@ pub struct MainWindow
 
 	libraryTree: LibraryTree,
 
-	currentlyPlaying: Option<SongState>,
+	currentlyPlaying: Option<Song>,
 	errorState: Option<String>
 }
 
@@ -133,7 +133,7 @@ impl MainWindow
 		frame.render_widget(self, frame.area());
 	}
 
-	fn playSong(&mut self, mut songState: SongState) -> Result<()>
+	fn playSong(&mut self, mut songState: Song) -> Result<()>
 	{
 		let currentlyPlaying = self.currentlyPlaying.take();
 		// If we already have a song playing, stop it

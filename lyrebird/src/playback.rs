@@ -8,7 +8,7 @@ use std::time::Duration;
 use color_eyre::eyre::{self, OptionExt, Result};
 use libAudio::audioFile::AudioFile;
 
-pub struct SongState
+pub struct Song
 {
 	title: String,
 	duration: Option<Duration>,
@@ -32,8 +32,9 @@ struct ThreadState
 	state: Mutex<PlaybackState>,
 }
 
-impl SongState
+impl Song
 {
+	/// Try to make a new Song from the path to a given file
 	pub fn from(fileName: &Path) -> Result<Self>
 	{
 		let audioFile = AudioFile::readFile(fileName)
@@ -54,21 +55,25 @@ impl SongState
 		)
 	}
 
+	// Extract the song's title
 	pub fn title(&self) -> String
 	{
 		self.title.clone()
 	}
 
+	// Extract how long the song runs for
 	pub fn songDuration(&self) -> Option<Duration>
 	{
 		self.duration
 	}
 
+	// Extract how much we've played of this song
 	pub fn playedDuration(&self) -> Duration
 	{
 		self.played
 	}
 
+	// Launch playback of the song on a seperate thread
 	pub fn play(&mut self)
 	{
 		// If there is not already playback running
@@ -80,6 +85,7 @@ impl SongState
 		}
 	}
 
+	// Pause playback of the song
 	pub fn pause(&mut self) -> Result<()>
 	{
 		// If we're in a playing state, pause playback
@@ -88,6 +94,7 @@ impl SongState
 		result
 	}
 
+	// Stop playback of the song
 	pub fn stop(&mut self) -> Result<()>
 	{
 		// If we're in a playing state, stop playback

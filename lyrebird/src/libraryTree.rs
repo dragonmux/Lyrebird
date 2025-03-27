@@ -11,7 +11,7 @@ use ratatui::widgets::{Block, BorderType, List, ListDirection, ListState, Paddin
 use tokio::sync::RwLock;
 
 use crate::library::MusicLibrary;
-use crate::playback::SongState;
+use crate::playback::Song;
 
 pub struct LibraryTree
 {
@@ -50,7 +50,7 @@ impl LibraryTree
 		self.library.blocking_read().writeCache()
 	}
 
-	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Option<Result<SongState>>
+	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Option<Result<Song>>
 	{
 		if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
 		{
@@ -111,7 +111,7 @@ impl LibraryTree
 
 	/// If the currently sellected side is the directory listing, switch to that directory's file listing
 	/// otherwise, if it's the file listing, figure out which one and make a SongState for it
-	fn makeSelection(&mut self) -> Option<Result<SongState>>
+	fn makeSelection(&mut self) -> Option<Result<Song>>
 	{
 		match self.activeSide
 		{
@@ -125,7 +125,7 @@ impl LibraryTree
 				// Extract the current file selection
 				let file = library.fileIn(dir, self.filesListState.selected()?)?;
 				// Now make a new SongState object for that file if possible
-				return Some(SongState::from(dir.join(file).as_path()));
+				return Some(Song::from(dir.join(file).as_path()));
 			}
 		}
 		None
