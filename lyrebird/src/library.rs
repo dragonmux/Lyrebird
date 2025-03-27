@@ -229,21 +229,7 @@ impl MusicLibrary
 		dirIndex
 			.and_then(|index| iter::once(&self.basePath).chain(self.dirs.iter()).nth(index))
 			// Extract what files are in that directory
-			.and_then
-			(
-				|dir|
-				{
-					if dir.is_relative()
-					{
-						let path = self.basePath.join(dir);
-						self.files.get(&path)
-					}
-					else
-					{
-						self.files.get(dir)
-					}
-				}
-			)
+			.and_then(|dir| self.filesIn(dir))
 			.map
 			(
 				|files|
@@ -262,5 +248,18 @@ impl MusicLibrary
 						)
 				}
 			)
+	}
+
+	fn filesIn(&self, dir: &PathBuf) -> Option<&BTreeSet<PathBuf>>
+	{
+		if dir.is_relative()
+		{
+			let path = self.basePath.join(dir);
+			self.files.get(&path)
+		}
+		else
+		{
+			self.files.get(dir)
+		}
 	}
 }
