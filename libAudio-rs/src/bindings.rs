@@ -40,6 +40,7 @@ extern "C"
 	// Read (decode) API functions
 	pub fn audioOpenR(fileName: *const c_char) -> *mut c_void;
 	pub fn audioGetFileInfo(audioFile: *mut c_void) -> *const FileInfo;
+	#[allow(dead_code)]
 	pub fn audioFillBuffer(audioFile: *mut c_void, buffer: *mut c_void, length: u32) -> i64;
 
 	// Playback API functions
@@ -51,7 +52,9 @@ extern "C"
 
 	// Write (encode) API functions
 	pub fn audioOpenW(fileName: *const c_char, audioType: AudioType) -> *mut c_void;
+	#[allow(dead_code)]
 	pub fn audioSetFileInfo(audioFile: *mut c_void, fileInfo: *const FileInfo) -> bool;
+	#[allow(dead_code)]
 	pub fn audioWriteBuffer(audioFile: *mut c_void, buffer: *const c_void, length: i64) -> i64;
 
 	// File information API functions
