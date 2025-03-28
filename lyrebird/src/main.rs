@@ -15,6 +15,8 @@ mod config;
 mod library;
 mod libraryTree;
 mod playback;
+mod playlist;
+mod playlists;
 mod widgets;
 mod window;
 

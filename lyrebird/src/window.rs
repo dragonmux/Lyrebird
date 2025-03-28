@@ -12,6 +12,7 @@ use ratatui::widgets::Widget;
 use ratatui::{DefaultTerminal, Frame};
 
 use crate::playback::{PlaybackState, Song};
+use crate::playlists::Playlists;
 use crate::widgets::tabBar::TabBar;
 use crate::{config::Config, libraryTree::LibraryTree};
 
@@ -28,6 +29,7 @@ pub struct MainWindow
 	activeTab: Tab,
 
 	libraryTree: LibraryTree,
+	playlists: Playlists,
 
 	currentlyPlaying: Option<Song>,
 	errorState: Option<String>
@@ -69,6 +71,7 @@ impl MainWindow
 			(
 				activeEntry, &paths.cache_dir().join("library.json"), &config.libraryPath
 			)?,
+			playlists: Playlists::new(),
 
 			currentlyPlaying: None,
 			errorState: None,
