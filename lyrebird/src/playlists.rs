@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Padding, StatefulWidget, Widget};
 use serde::{Deserialize, Serialize};
 
-use crate::{playback::Song, playlist::Playlist};
+use crate::window::Operation;
+use crate::playlist::Playlist;
 
 #[derive(Serialize, Deserialize)]
 pub struct Playlists
@@ -32,7 +32,7 @@ impl Playlists
 		}
 	}
 
-	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Option<Result<Song>>
+	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Operation
 	{
 		if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
 		{
@@ -46,7 +46,7 @@ impl Playlists
 				_ => {},
 			}
 		}
-		None
+		Operation::None
 	}
 
 	pub fn nowPlaying<'a>(&'a mut self) -> &'a mut Playlist
@@ -61,7 +61,7 @@ impl Widget for &mut Playlists
 		where Self: Sized
 	{
 		// Split the area up so we can display a listing of all the user's playlists, and what's currently queued
-		let layout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(1)])
+		let layout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(2)])
 			.split(area);
 
 		// Render the playlist listing using the internal state object

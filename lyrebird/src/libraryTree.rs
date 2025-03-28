@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use color_eyre::eyre::Result;
@@ -12,6 +12,7 @@ use tokio::sync::RwLock;
 
 use crate::library::MusicLibrary;
 use crate::playback::Song;
+use crate::window::Operation;
 
 pub struct LibraryTree
 {
@@ -50,7 +51,7 @@ impl LibraryTree
 		self.library.blocking_read().writeCache()
 	}
 
-	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Option<Result<Song>>
+	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Operation
 	{
 		if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
 		{
@@ -60,11 +61,19 @@ impl LibraryTree
 				KeyCode::Right => self.moveRight(),
 				KeyCode::Up => self.moveUp(),
 				KeyCode::Down => self.moveDown(),
-				KeyCode::Enter => { return self.makeSelection(); },
+				KeyCode::Enter =>
+				{
+					let selection = self.makeSelection();
+					return match selection
+					{
+						Some(selection) => Operation::Play(Song::from(selection.as_path())),
+						None => Operation::None,
+					};
+				},
 				_ => {},
 			}
 		}
-		None
+		Operation::None
 	}
 
 	const fn moveLeft(&mut self)
@@ -111,7 +120,7 @@ impl LibraryTree
 
 	/// If the currently sellected side is the directory listing, switch to that directory's file listing
 	/// otherwise, if it's the file listing, figure out which one and make a SongState for it
-	fn makeSelection(&mut self) -> Option<Result<Song>>
+	fn makeSelection(&mut self) -> Option<PathBuf>
 	{
 		match self.activeSide
 		{
@@ -125,7 +134,7 @@ impl LibraryTree
 				// Extract the current file selection
 				let file = library.fileIn(dir, self.filesListState.selected()?)?;
 				// Now make a new SongState object for that file if possible
-				return Some(Song::from(dir.join(file).as_path()));
+				return Some(dir.join(file));
 			}
 		}
 		None

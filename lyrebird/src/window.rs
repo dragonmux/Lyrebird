@@ -50,6 +50,12 @@ impl Tab
 	}
 }
 
+pub enum Operation
+{
+	None,
+	Play(Result<Song>),
+}
+
 impl MainWindow
 {
 	/// Set up a new main window, building the style pallet needed
@@ -113,15 +119,17 @@ impl MainWindow
 				}
 				// It's some other kind of event, so figure out which is the active
 				// tab and ask it what it thinks of this
-				let state = match self.activeTab
+				let operation = match self.activeTab
 				{
 					Tab::LibraryTree => self.libraryTree.handleKeyEvent(key),
 					Tab::Playlists => self.playlists.handleKeyEvent(key),
 				};
 				// If that key event resulted in a new file to play, process that
-				if let Some(result) = state
+				match operation
 				{
-					self.playSong(result?)?;
+					// XXX: This should replace the now playing playlist
+					Operation::Play(song) => self.playSong(song?)?,
+					Operation::None => {},
 				}
 			},
 			_ => {}
@@ -141,7 +149,7 @@ impl MainWindow
 		frame.render_widget(self, frame.area());
 	}
 
-	fn playSong(&mut self, mut songState: Song) -> Result<()>
+	fn playSong(&mut self, mut song: Song) -> Result<()>
 	{
 		let currentlyPlaying = self.currentlyPlaying.take();
 		// If we already have a song playing, stop it
@@ -150,8 +158,8 @@ impl MainWindow
 			currentSong.stop()?;
 		}
 		// Now replace the current playing state with the new one having asked this new one to start
-		songState.play();
-		self.currentlyPlaying = Some(songState);
+		song.play();
+		self.currentlyPlaying = Some(song);
 		Ok(())
 	}
 
