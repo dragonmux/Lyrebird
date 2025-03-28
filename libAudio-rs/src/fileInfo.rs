@@ -43,44 +43,44 @@ impl<'a> FileInfo<'a>
 		unsafe { audioFileChannels(self.inner) }
 	}
 
-	pub fn title(&self) -> Result<String>
+	pub fn title(&self) -> Result<Option<String>>
 	{
 		let title = unsafe { audioFileTitle(self.inner) };
 		match title.is_null()
 		{
-			true => Ok(String::default()),
+			true => Ok(None),
 			false =>
 			{
 				let title = unsafe { CStr::from_ptr(title) };
-				Ok(String::from_utf8(title.to_bytes().to_vec())?)
+				Ok(Some(String::from_utf8(title.to_bytes().to_vec())?))
 			}
 		}
 	}
 
-	pub fn artist(&self) -> Result<String>
+	pub fn artist(&self) -> Result<Option<String>>
 	{
 		let artist = unsafe { audioFileArtist(self.inner) };
 		match artist.is_null()
 		{
-			true => Ok(String::default()),
+			true => Ok(None),
 			false =>
 			{
 				let artist = unsafe { CStr::from_ptr(artist) };
-				Ok(String::from_utf8(artist.to_bytes().to_vec())?)
+				Ok(Some(String::from_utf8(artist.to_bytes().to_vec())?))
 			}
 		}
 	}
 
-	pub fn album(&self) -> Result<String>
+	pub fn album(&self) -> Result<Option<String>>
 	{
 		let album = unsafe { audioFileAlbum(self.inner) };
 		match album.is_null()
 		{
-			true => Ok(String::default()),
+			true => Ok(None),
 			false =>
 			{
 				let album = unsafe { CStr::from_ptr(album) };
-				Ok(String::from_utf8(album.to_bytes().to_vec())?)
+				Ok(Some(String::from_utf8(album.to_bytes().to_vec())?))
 			}
 		}
 	}

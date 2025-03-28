@@ -238,7 +238,7 @@ impl Widget for &mut MainWindow
 
 		// Figure out what strings are to be displayed in the footer
 		let currentlyPlaying = self.currentlyPlaying.as_ref()
-			.map_or_else(|| String::from("Nothing playing"), |song| song.title());
+			.map_or_else(|| String::from("Nothing playing"), |song| song.description());
 		let songDuration = self.currentlyPlaying.as_ref()
 			.and_then(|songState| songState.songDuration())
 			.map_or_else

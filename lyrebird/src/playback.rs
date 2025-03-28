@@ -10,7 +10,7 @@ use libAudio::audioFile::AudioFile;
 
 pub struct Song
 {
-	title: String,
+	description: String,
 	duration: Option<Duration>,
 	played: Duration,
 	playbackThread: Option<JoinHandle<()>>,
@@ -38,16 +38,22 @@ impl Song
 	/// Try to make a new Song from the path to a given file
 	pub fn from(fileName: &Path) -> Result<Self>
 	{
+		// Ask libAudio to open the file for read and playback, and grab how long the file's playback lasts
 		let audioFile = AudioFile::readFile(fileName)
 			.ok_or_eyre(format!("Failed to open file {}", fileName.to_string_lossy()))?;
-		let title = audioFile.fileInfo().title()?;
 		let totalTime = audioFile.fileInfo().totalTime();
+
+		// Build a description of the song being played to display
+		let fileInfo = audioFile.fileInfo();
+		let title = fileInfo.title()?;
+		let album = fileInfo.album()?;
+		let artist = fileInfo.artist()?;
 
 		Ok
 		(
 			Self
 			{
-				title,
+				description: Self::buildDescriptionFrom(fileName, title, album, artist),
 				duration: if totalTime != 0 { Some(Duration::from_secs(totalTime)) } else { None },
 				played: Duration::default(),
 				playbackThread: None,
@@ -56,10 +62,41 @@ impl Song
 		)
 	}
 
-	// Extract the song's title
-	pub fn title(&self) -> String
+	// Try to build a description of this track from parts
+	fn buildDescriptionFrom(fileName: &Path, title: Option<String>, album: Option<String>, artist: Option<String>)
+		-> String
 	{
-		self.title.clone()
+		// If the title, album and artist are all missing, then use the full path to the file as a description
+		if title.is_none() && album.is_none() && artist.is_none()
+		{
+			return fileName.to_string_lossy().to_string();
+		}
+
+		// Otherwise, at least one of these is not None, so try to build up
+		// the description chunks, starting with the title
+		let mut description = match title
+		{
+			Some(title) => title.clone(),
+			None => fileName.file_name().unwrap_or(fileName.as_os_str()).to_string_lossy().to_string(),
+		};
+		// Now add the album, if we have one
+		if let Some(album) = album
+		{
+			description += format!(" - {album}").as_str();
+		}
+		// And finally the artist, if we have that
+		if let Some(artist) = artist
+		{
+			description += format!(" - {artist}").as_str();
+		}
+
+		description
+	}
+
+	// Return a copy of the description of what this song is
+	pub fn description(&self) -> String
+	{
+		self.description.clone()
 	}
 
 	// Extract how long the song runs for
