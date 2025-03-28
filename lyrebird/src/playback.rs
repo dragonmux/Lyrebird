@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::ops::Deref;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::thread::{spawn, JoinHandle};
 use std::time::Duration;
@@ -10,6 +10,7 @@ use libAudio::audioFile::AudioFile;
 
 pub struct Song
 {
+	fileName: PathBuf,
 	description: String,
 	duration: Option<Duration>,
 	played: Duration,
@@ -53,6 +54,7 @@ impl Song
 		(
 			Self
 			{
+				fileName: fileName.to_path_buf(),
 				description: Self::buildDescriptionFrom(fileName, title, album, artist),
 				duration: if totalTime != 0 { Some(Duration::from_secs(totalTime)) } else { None },
 				played: Duration::default(),
@@ -91,6 +93,12 @@ impl Song
 		}
 
 		description
+	}
+
+	// Return the path to the file this represents
+	pub fn fileName(&self) -> &Path
+	{
+		self.fileName.as_path()
 	}
 
 	// Return a copy of the description of what this song is
