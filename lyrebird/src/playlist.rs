@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use ratatui::widgets::ListItem;
 use serde::{Deserialize, Serialize};
@@ -25,6 +25,17 @@ impl Playlist
 	pub fn name(&self) -> &str
 	{
 		return self.name.as_str()
+	}
+
+	pub fn add(&mut self, fileName: &Path)
+	{
+		self.entries.push(fileName.to_path_buf());
+	}
+
+	pub fn replaceWith(&mut self, fileName: &Path)
+	{
+		self.entries.clear();
+		self.add(fileName);
 	}
 
 	pub fn contents(&self) -> impl Iterator<Item = ListItem>
