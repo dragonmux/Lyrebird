@@ -70,6 +70,7 @@ impl LibraryTree
 						None => Operation::None,
 					};
 				},
+				KeyCode::Char('+') => { return Operation::playlist(self.makeSelection()); },
 				_ => {},
 			}
 		}
