@@ -39,6 +39,7 @@ pub struct MainWindow
 enum Tab
 {
 	LibraryTree,
+	Playlists,
 }
 
 impl Tab
@@ -105,6 +106,8 @@ impl MainWindow
 					{
 						KeyCode::Char('q' | 'Q') => { return self.quit(); },
 						KeyCode::Char(' ') => { self.togglePlayback(); },
+						KeyCode::Char('1') => { self.activeTab = Tab::LibraryTree; }
+						KeyCode::Char('5') => { self.activeTab = Tab::Playlists; }
 						_ => {}
 					}
 				}
@@ -113,6 +116,7 @@ impl MainWindow
 				let state = match self.activeTab
 				{
 					Tab::LibraryTree => self.libraryTree.handleKeyEvent(key),
+					Tab::Playlists => self.playlists.handleKeyEvent(key),
 				};
 				// If that key event resulted in a new file to play, process that
 				if let Some(result) = state
@@ -235,6 +239,7 @@ impl Widget for &mut MainWindow
 		match self.activeTab
 		{
 			Tab::LibraryTree => self.libraryTree.render(areas[1], buf),
+			Tab::Playlists => self.playlists.render(areas[1], buf),
 		}
 
 		// Build a layout for the footer line
