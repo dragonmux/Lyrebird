@@ -54,7 +54,7 @@ impl Tab
 pub enum Operation
 {
 	None,
-	Play(Result<Song>),
+	Play(PathBuf),
 	Playlist(PathBuf),
 }
 
@@ -141,10 +141,11 @@ impl MainWindow
 				// If that key event resulted in a new file to play, process that
 				match operation
 				{
-					Operation::Play(song) =>
+					Operation::Play(fileName) =>
 					{
-						let song = song?;
-						self.playlists.nowPlaying().replaceWith(song.fileName());
+						let fileName = fileName.as_path();
+						let song = Song::from(fileName)?;
+						self.playlists.nowPlaying().replaceWith(fileName);
 						self.playSong(song)?
 					},
 					Operation::Playlist(song) => self.playlistSong(song)?,

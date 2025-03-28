@@ -11,7 +11,6 @@ use ratatui::widgets::{Block, BorderType, List, ListDirection, ListState, Paddin
 use tokio::sync::RwLock;
 
 use crate::library::MusicLibrary;
-use crate::playback::Song;
 use crate::window::Operation;
 
 pub struct LibraryTree
@@ -66,7 +65,7 @@ impl LibraryTree
 					let selection = self.makeSelection();
 					return match selection
 					{
-						Some(selection) => Operation::Play(Song::from(selection.as_path())),
+						Some(selection) => Operation::Play(selection),
 						None => Operation::None,
 					};
 				},
