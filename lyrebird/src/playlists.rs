@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use crate::playlist::Playlist;
+use serde::{Deserialize, Serialize};
 
+use crate::{playback::Song, playlist::Playlist};
+
+#[derive(Serialize, Deserialize)]
 pub struct Playlists
 {
-	playlists: Vec<Playlist>
+	nowPlaying: Playlist,
+	playlists: Vec<Playlist>,
 }
 
 impl Playlists
@@ -12,6 +16,7 @@ impl Playlists
 	{
 		Self
 		{
+			nowPlaying: Playlist::new("Now Playing".into()),
 			playlists: Vec::new(),
 		}
 	}
