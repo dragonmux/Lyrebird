@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use color_eyre::eyre::Result;
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Padding, StatefulWidget, Widget};
@@ -29,6 +30,23 @@ impl Playlists
 			nowPlayingState: ListState::default(),
 			playlistsState: ListState::default(),
 		}
+	}
+
+	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Option<Result<Song>>
+	{
+		if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
+		{
+			match key.code
+			{
+				KeyCode::Left => {},
+				KeyCode::Right => {},
+				KeyCode::Up => {},
+				KeyCode::Down => {},
+				KeyCode::Enter => {},
+				_ => {},
+			}
+		}
+		None
 	}
 }
 
