@@ -175,10 +175,17 @@ impl MainWindow
 
 fn durationAsString(duration: Duration) -> String
 {
-	let seconds = duration.as_secs();
-	let minutes = seconds / 60;
-	let seconds = seconds % 60;
-	format!("{minutes:2}:{seconds:02}")
+	if duration.is_zero()
+	{
+		"--:--".to_string()
+	}
+	else
+	{
+		let seconds = duration.as_secs();
+		let minutes = seconds / 60;
+		let seconds = seconds % 60;
+		format!("{minutes:2}:{seconds:02}")
+	}
 }
 
 // Turn the window into a widget for rendering to make the rendering phase simpler
