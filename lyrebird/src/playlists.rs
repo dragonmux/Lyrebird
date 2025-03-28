@@ -48,6 +48,11 @@ impl Playlists
 		}
 		None
 	}
+
+	pub fn nowPlaying<'a>(&'a mut self) -> &'a mut Playlist
+	{
+		&mut self.nowPlaying
+	}
 }
 
 impl Widget for &mut Playlists
