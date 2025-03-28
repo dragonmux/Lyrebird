@@ -129,7 +129,7 @@ impl ThreadState
 {
 	fn play(&self)
 	{
-		if !self.switchTo(PlaybackState::Playing)
+		if self.switchTo(PlaybackState::Playing)
 		{
 			self.audioFile.play();
 		}
@@ -138,7 +138,7 @@ impl ThreadState
 	fn pause(&self, threadHandle: Option<JoinHandle<()>>) -> Result<()>
 	{
 		// See if we have any work to do
-		if !self.switchTo(PlaybackState::Paused)
+		if self.switchTo(PlaybackState::Paused)
 		{
 			// Now actually pause playback
 			self.audioFile.pause();
@@ -162,7 +162,7 @@ impl ThreadState
 	fn stop(&self, threadHandle: Option<JoinHandle<()>>) -> Result<()>
 	{
 		// See if we have any work to do
-		if !self.switchTo(PlaybackState::Stopped)
+		if self.switchTo(PlaybackState::Stopped)
 		{
 			// Now actually stop playback
 			self.audioFile.stop();
