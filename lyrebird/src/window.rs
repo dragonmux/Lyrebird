@@ -141,8 +141,12 @@ impl MainWindow
 				// If that key event resulted in a new file to play, process that
 				match operation
 				{
-					// XXX: This should replace the now playing playlist
-					Operation::Play(song) => self.playSong(song?)?,
+					Operation::Play(song) =>
+					{
+						let song = song?;
+						self.playlists.nowPlaying().replaceWith(song.fileName());
+						self.playSong(song)?
+					},
 					Operation::Playlist(song) => self.playlistSong(song)?,
 					Operation::None => {},
 				}
