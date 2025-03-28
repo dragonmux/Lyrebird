@@ -45,20 +45,44 @@ impl<'a> FileInfo<'a>
 
 	pub fn title(&self) -> Result<String>
 	{
-		let title = unsafe { CStr::from_ptr(audioFileTitle(self.inner)) };
-		Ok(String::from_utf8(title.to_bytes().to_vec())?)
+		let title = unsafe { audioFileTitle(self.inner) };
+		match title.is_null()
+		{
+			true => Ok(String::default()),
+			false =>
+			{
+				let title = unsafe { CStr::from_ptr(title) };
+				Ok(String::from_utf8(title.to_bytes().to_vec())?)
+			}
+		}
 	}
 
 	pub fn artist(&self) -> Result<String>
 	{
-		let artist = unsafe { CStr::from_ptr(audioFileArtist(self.inner)) };
-		Ok(String::from_utf8(artist.to_bytes().to_vec())?)
+		let artist = unsafe { audioFileArtist(self.inner) };
+		match artist.is_null()
+		{
+			true => Ok(String::default()),
+			false =>
+			{
+				let artist = unsafe { CStr::from_ptr(artist) };
+				Ok(String::from_utf8(artist.to_bytes().to_vec())?)
+			}
+		}
 	}
 
 	pub fn album(&self) -> Result<String>
 	{
-		let album = unsafe { CStr::from_ptr(audioFileAlbum(self.inner)) };
-		Ok(String::from_utf8(album.to_bytes().to_vec())?)
+		let album = unsafe { audioFileAlbum(self.inner) };
+		match album.is_null()
+		{
+			true => Ok(String::default()),
+			false =>
+			{
+				let album = unsafe { CStr::from_ptr(album) };
+				Ok(String::from_utf8(album.to_bytes().to_vec())?)
+			}
+		}
 	}
 
 	pub fn otherComments(&self) -> Result<Vec<String>>
