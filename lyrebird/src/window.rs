@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+use std::path::PathBuf;
 use std::time::Duration;
 
 use color_eyre::Result;
@@ -54,6 +55,19 @@ pub enum Operation
 {
 	None,
 	Play(Result<Song>),
+	Playlist(PathBuf),
+}
+
+impl Operation
+{
+	pub fn playlist(song: Option<PathBuf>) -> Self
+	{
+		match song
+		{
+			Some(song) => Operation::Playlist(song),
+			None => Operation::None,
+		}
+	}
 }
 
 impl MainWindow
@@ -129,6 +143,7 @@ impl MainWindow
 				{
 					// XXX: This should replace the now playing playlist
 					Operation::Play(song) => self.playSong(song?)?,
+					Operation::Playlist(song) => self.playlistSong(song)?,
 					Operation::None => {},
 				}
 			},
@@ -161,6 +176,17 @@ impl MainWindow
 		song.play();
 		self.currentlyPlaying = Some(song);
 		Ok(())
+	}
+
+	fn playlistSong(&mut self, song: PathBuf) -> Result<()>
+	{
+		let nowPlaying = self.playlists.nowPlaying();
+		nowPlaying.add(song.as_path());
+		match &self.currentlyPlaying
+		{
+			Some(_) => Ok(()),
+			None => self.playSong(Song::from(song.as_path())?),
+		}
 	}
 
 	fn togglePlayback(&mut self)
