@@ -112,7 +112,13 @@ impl MainWindow
 
 	fn handleEvents(&mut self) -> Result<()>
 	{
-		// See if we got any events
+		// Check to see if we got any new events
+		if !event::poll(Duration::from_millis(1))?
+		{
+			return Ok(())
+		}
+
+		// We did! find out what it was and handle it
 		match event::read()?
 		{
 			// Key change event?
