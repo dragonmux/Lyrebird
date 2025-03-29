@@ -220,6 +220,7 @@ impl MainWindow
 				PlaybackState::Stopped |
 				PlaybackState::NotStarted =>
 					{ song.play(); }
+				PlaybackState::Complete => {}
 				PlaybackState::Unknown(error) =>
 					{ self.errorState = Some(error); }
 			}

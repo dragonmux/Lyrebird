@@ -25,6 +25,7 @@ pub enum PlaybackState
 	Playing,
 	Paused,
 	Stopped,
+	Complete,
 	Unknown(String),
 }
 
@@ -166,9 +167,19 @@ impl ThreadState
 
 	fn play(&self)
 	{
+		// Switch into playing state if we're not already
 		if self.switchTo(PlaybackState::Playing)
 		{
+			// We weren't already, so have libAudio actually do playback (this is blocking!)
 			self.audioFile.play();
+			// Now, check what playback state we're in.. if we're in Playing still, the file ended
+			// and we should notify the main window of this fact via a channel
+			let mut state = self.state.lock()
+				.expect("playback state mutex in invalid state");
+			if *state == PlaybackState::Playing
+			{
+				*state = PlaybackState::Complete;
+			}
 		}
 	}
 
