@@ -9,6 +9,9 @@ pub struct Playlist
 {
 	name: String,
 	entries: Vec<PathBuf>,
+
+	#[serde(skip)]
+	currentEntry: usize,
 }
 
 impl Playlist
@@ -19,6 +22,7 @@ impl Playlist
 		{
 			name,
 			entries: Vec::new(),
+			currentEntry: 0,
 		}
 	}
 
@@ -35,6 +39,7 @@ impl Playlist
 	pub fn replaceWith(&mut self, fileName: &Path)
 	{
 		self.entries.clear();
+		self.currentEntry = 0;
 		self.add(fileName);
 	}
 
@@ -46,5 +51,33 @@ impl Playlist
 			(
 				|fileName| ListItem::new(fileName.to_string_lossy())
 			)
+	}
+
+	pub fn currentEntry(&self) -> usize
+	{
+		self.currentEntry
+	}
+
+	pub fn next(&mut self) -> Option<&Path>
+	{
+		// If there are no entries in this playlist, we're done.. nothing comes next
+		if self.entries.is_empty()
+		{
+			return None;
+		}
+		// If there are entries, figure out how many vs currentEntry
+		let count = self.entries.len();
+		if self.currentEntry < count
+		{
+			// Increment the current entry counter if there's room to
+			self.currentEntry += 1
+		}
+		// Now check if we're done
+		if self.currentEntry >= count
+		{
+			return None;
+		}
+		// Finally, we get to the happy path - give them what they want, a new entry from the playlist!
+		Some(self.entries[self.currentEntry].as_path())
 	}
 }
