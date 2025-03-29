@@ -240,8 +240,18 @@ impl MainWindow
 			{
 				Ok(notification) => match notification
 				{
-					// XXX: Should look at the now playing playlist and see if there's another song to follow.
-					PlaybackState::Complete => self.currentlyPlaying = None,
+					// Playback completed, so.. go find out if there's something more
+					// to play in the now playing playlist, and set it going if there is
+					PlaybackState::Complete =>
+					{
+						let nowPlaying = self.playlists.nowPlaying();
+						let nextEntry = nowPlaying.next();
+						match nextEntry
+						{
+							Some(fileName) => self.playSong(fileName.as_path())?,
+							None => self.currentlyPlaying = None,
+						};
+					},
 					_ => {},
 				},
 				Err(error) => match error

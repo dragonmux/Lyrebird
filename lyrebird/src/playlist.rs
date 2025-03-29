@@ -58,7 +58,7 @@ impl Playlist
 		self.currentEntry
 	}
 
-	pub fn next(&mut self) -> Option<&Path>
+	pub fn next(&mut self) -> Option<PathBuf>
 	{
 		// If there are no entries in this playlist, we're done.. nothing comes next
 		if self.entries.is_empty()
@@ -78,6 +78,6 @@ impl Playlist
 			return None;
 		}
 		// Finally, we get to the happy path - give them what they want, a new entry from the playlist!
-		Some(self.entries[self.currentEntry].as_path())
+		Some(self.entries[self.currentEntry].clone())
 	}
 }
