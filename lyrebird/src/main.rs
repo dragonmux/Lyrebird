@@ -9,7 +9,6 @@ use directories::ProjectDirs;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 use window::MainWindow;
-use tokio::{self, task::spawn_blocking};
 
 mod config;
 mod library;
@@ -20,7 +19,7 @@ mod playlists;
 mod widgets;
 mod window;
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()>
 {
 	tracing_subscriber::registry()
@@ -31,11 +30,6 @@ async fn main() -> Result<()>
 		)
 		.init();
 
-	spawn_blocking(run).await?
-}
-
-fn run() -> Result<()>
-{
 	// Try to get the application paths available
 	let paths = ProjectDirs::from("com", "rachelmant", "Lyrebird").
 		ok_or_else(|| eyre::eyre!("Failed to get program working paths"))?;
@@ -46,7 +40,7 @@ fn run() -> Result<()>
 	let mut terminal = ratatui::init();
 	let mut mainWindow = MainWindow::new(&paths, &mut config)?;
 	// Now run the main window of Lyrebird till the user exits the program
-	let result = mainWindow.run(&mut terminal);
+	let result = mainWindow.run(&mut terminal).await;
 	// Give the terminal back and return the result of running the main window
 	ratatui::restore();
 	// Re-serialise the user's config as our last step

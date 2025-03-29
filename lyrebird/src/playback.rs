@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::path::Path;
-use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread::{spawn, JoinHandle};
 use std::time::Duration;
 
 use color_eyre::eyre::{self, OptionExt, Result};
 use libAudio::audioFile::AudioFile;
+use tokio::sync::mpsc::Sender;
 
 pub struct Song
 {
@@ -180,7 +180,7 @@ impl ThreadState
 				*state = PlaybackState::Complete;
 			}
 			let state = state.clone();
-			self.notification.send(state).unwrap();
+			self.notification.blocking_send(state).unwrap();
 		}
 	}
 

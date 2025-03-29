@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{channel, Receiver, TryRecvError};
 use std::time::Duration;
 
 use color_eyre::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
 use directories::ProjectDirs;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint, Flex, Layout, Rect};
@@ -12,6 +11,8 @@ use ratatui::style::{Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Widget;
 use ratatui::{DefaultTerminal, Frame};
+use tokio::sync::mpsc::{channel, Receiver};
+use tokio_stream::StreamExt;
 
 use crate::playback::{PlaybackState, Song};
 use crate::playlists::Playlists;
@@ -101,29 +102,37 @@ impl MainWindow
 	}
 
 	/// Run the program window until an exit-causing event occurs
-	pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()>
+	pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()>
 	{
+		// Set up an events stream for console events happening
+		let mut events = EventStream::new();
+		// Set up a redraw timer
+		let mut frameTimer = tokio::time::interval(Duration::from_secs(1).div_f32(50.0));
+
 		// Until the user's asked us to exit
 		while !self.exit
 		{
-			// Redraw the terminal, and ask if there are more events to handle
-			terminal.draw(|frame| self.draw(frame))?;
-			self.handleEvents()?;
-			self.handleNotifications()?;
+			// See if there's something to do from one of our event sources
+			tokio::select!
+			{
+				// Redraw the terminal every 50th of a second
+				_ = frameTimer.tick() => { terminal.draw(|frame| self.draw(frame))?; },
+				// Ask if there are more events to handle
+				Some(Ok(event)) = events.next() => { self.handleEvent(event)?; },
+				// If there is a file playing, check to see if it's giving us any notifications
+				Some(notification) = self.playbackNotification(), if self.currentlyPlaying.is_some() =>
+				{
+					self.handlePlaybackNotification(notification)?
+				},
+			}
 		}
 		Ok(())
 	}
 
-	fn handleEvents(&mut self) -> Result<()>
+	fn handleEvent(&mut self, event: Event) -> Result<()>
 	{
-		// Check to see if we got any new events
-		if !event::poll(Duration::from_millis(10))?
-		{
-			return Ok(())
-		}
-
 		// We did! find out what it was and handle it
-		match event::read()?
+		match event
 		{
 			// Key change event?
 			Event::Key(key) =>
@@ -178,10 +187,11 @@ impl MainWindow
 		frame.render_widget(self, frame.area());
 	}
 
-	fn playSong(&mut self, song: &Path) -> Result<()>
+	fn playSong(&mut self, fileName: &Path) -> Result<()>
 	{
-		let (sender, receiver) = channel();
-		let mut song = Song::from(song, sender)?;
+		// Make a new channel for the new playback thread to communicate back to us with
+		let (sender, receiver) = channel(1);
+		let mut song = Song::from(fileName, sender)?;
 		let currentlyPlaying = self.currentlyPlaying.take();
 		// If we already have a song playing, stop it
 		if let Some((mut currentSong, _)) = currentlyPlaying
@@ -194,14 +204,14 @@ impl MainWindow
 		Ok(())
 	}
 
-	fn playlistSong(&mut self, song: PathBuf) -> Result<()>
+	fn playlistSong(&mut self, fileName: PathBuf) -> Result<()>
 	{
 		let nowPlaying = self.playlists.nowPlaying();
-		nowPlaying.add(song.as_path());
+		nowPlaying.add(fileName.as_path());
 		match &self.currentlyPlaying
 		{
 			Some(_) => Ok(()),
-			None => self.playSong(song.as_path()),
+			None => self.playSong(fileName.as_path()),
 		}
 	}
 
@@ -230,36 +240,31 @@ impl MainWindow
 		}
 	}
 
-	fn handleNotifications(&mut self) -> Result<()>
+	// Wait for a playback notification from the currently playing song - note, it is an
+	// error to call this function if self.currentlyPlaying is None!
+	async fn playbackNotification(&mut self) -> Option<PlaybackState>
 	{
-		// Now check to see if there's something playing, and if so, check if there are any notifications
-		// about that playback from the notification channel
-		if let Some((_, channel)) = &self.currentlyPlaying
+		let (_, channel) = self.currentlyPlaying.as_mut().unwrap();
+		channel.recv().await
+	}
+
+	fn handlePlaybackNotification(&mut self, notification: PlaybackState) -> Result<()>
+	{
+		match notification
 		{
-			match channel.try_recv()
+			// Playback completed, so.. go find out if there's something more
+			// to play in the now playing playlist, and set it going if there is
+			PlaybackState::Complete =>
 			{
-				Ok(notification) => match notification
+				let nowPlaying = self.playlists.nowPlaying();
+				let nextEntry = nowPlaying.next();
+				match nextEntry
 				{
-					// Playback completed, so.. go find out if there's something more
-					// to play in the now playing playlist, and set it going if there is
-					PlaybackState::Complete =>
-					{
-						let nowPlaying = self.playlists.nowPlaying();
-						let nextEntry = nowPlaying.next();
-						match nextEntry
-						{
-							Some(fileName) => self.playSong(fileName.as_path())?,
-							None => self.currentlyPlaying = None,
-						};
-					},
-					_ => {},
-				},
-				Err(error) => match error
-				{
-					TryRecvError::Disconnected => { return Err(error.into()); },
-					TryRecvError::Empty => {},
-				},
-			}
+					Some(fileName) => self.playSong(fileName.as_path())?,
+					None => self.currentlyPlaying = None,
+				};
+			},
+			_ => {},
 		}
 		Ok(())
 	}
