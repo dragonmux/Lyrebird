@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{channel, Receiver, TryRecvError};
 use std::time::Duration;
 
 use color_eyre::Result;
@@ -113,12 +113,19 @@ impl MainWindow
 			// about that playback from the notification channel
 			if let Some((_, channel)) = &self.currentlyPlaying
 			{
-				let notification = channel.try_recv()?;
-				match notification
+				match channel.try_recv()
 				{
-					// XXX: Should look at the now playing playlist and see if there's another song to follow.
-					PlaybackState::Complete => self.currentlyPlaying = None,
-					_ => {},
+					Ok(notification) => match notification
+					{
+						// XXX: Should look at the now playing playlist and see if there's another song to follow.
+						PlaybackState::Complete => self.currentlyPlaying = None,
+						_ => {},
+					},
+					Err(error) => match error
+					{
+						TryRecvError::Disconnected => { return Err(error.into()); },
+						TryRecvError::Empty => {},
+					},
 				}
 			}
 		}
