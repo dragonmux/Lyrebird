@@ -225,10 +225,11 @@ impl ThreadState
 	/// is atomically updated and we return true
 	fn switchTo(&self, newState: PlaybackState) -> bool
 	{
-		let mut lock = self.state.lock().expect("playback state mutex in invalid state");
-		if lock.deref() != &newState
+		let mut state = self.state.lock()
+			.expect("playback state mutex in invalid state");
+		if *state != newState
 		{
-			*lock = newState;
+			*state = newState;
 			return true;
 		}
 		false
