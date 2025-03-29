@@ -103,10 +103,24 @@ impl MainWindow
 	/// Run the program window until an exit-causing event occurs
 	pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()>
 	{
+		// Until the user's asked us to exit
 		while !self.exit
 		{
+			// Redraw the terminal, and ask if there are more events to handle
 			terminal.draw(|frame| self.draw(frame))?;
 			self.handleEvents()?;
+			// Now check to see if there's something playing, and if so, check if there are any notifications
+			// about that playback from the notification channel
+			if let Some((_, channel)) = &self.currentlyPlaying
+			{
+				let notification = channel.try_recv()?;
+				match notification
+				{
+					// XXX: Should look at the now playing playlist and see if there's another song to follow.
+					PlaybackState::Complete => self.currentlyPlaying = None,
+					_ => {},
+				}
+			}
 		}
 		Ok(())
 	}

@@ -180,6 +180,8 @@ impl ThreadState
 			{
 				*state = PlaybackState::Complete;
 			}
+			let state = state.clone();
+			self.notification.send(state).unwrap();
 		}
 	}
 
