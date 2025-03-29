@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::{channel, Receiver};
 use std::time::Duration;
 
 use color_eyre::Result;
@@ -32,7 +33,7 @@ pub struct MainWindow
 	libraryTree: LibraryTree,
 	playlists: Playlists,
 
-	currentlyPlaying: Option<Song>,
+	currentlyPlaying: Option<(Song, Receiver<PlaybackState>)>,
 	errorState: Option<String>
 }
 
@@ -176,16 +177,17 @@ impl MainWindow
 
 	fn playSong(&mut self, song: &Path) -> Result<()>
 	{
-		let mut song = Song::from(song)?;
+		let (sender, receiver) = channel();
+		let mut song = Song::from(song, sender)?;
 		let currentlyPlaying = self.currentlyPlaying.take();
 		// If we already have a song playing, stop it
-		if let Some(mut currentSong) = currentlyPlaying
+		if let Some((mut currentSong, _)) = currentlyPlaying
 		{
 			currentSong.stop()?;
 		}
 		// Now replace the current playing state with the new one having asked this new one to start
 		song.play();
-		self.currentlyPlaying = Some(song);
+		self.currentlyPlaying = Some((song, receiver));
 		Ok(())
 	}
 
@@ -202,7 +204,7 @@ impl MainWindow
 
 	fn togglePlayback(&mut self)
 	{
-		if let Some(song) = &mut self.currentlyPlaying
+		if let Some((song, _)) = &mut self.currentlyPlaying
 		{
 			match song.state()
 			{
@@ -298,9 +300,9 @@ impl Widget for &mut MainWindow
 
 		// Figure out what strings are to be displayed in the footer
 		let currentlyPlaying = self.currentlyPlaying.as_ref()
-			.map_or_else(|| String::from("Nothing playing"), |song| song.description());
+			.map_or_else(|| String::from("Nothing playing"), |(song, _)| song.description());
 		let songDuration = self.currentlyPlaying.as_ref()
-			.and_then(|songState| songState.songDuration())
+			.and_then(|(song, _)| song.songDuration())
 			.map_or_else
 			(
 				|| String::from("--:--"), durationAsString
@@ -309,7 +311,7 @@ impl Widget for &mut MainWindow
 			.map_or_else
 			(
 				|| String::from("--:--"),
-				|songState| durationAsString(songState.playedDuration())
+				|(song, _)| durationAsString(song.playedDuration())
 			);
 		let errorState = self.errorState.as_ref().map_or_else
 		(

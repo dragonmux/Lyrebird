@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::ops::Deref;
 use std::path::Path;
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::thread::{spawn, JoinHandle};
 use std::time::Duration;
@@ -30,13 +31,14 @@ pub enum PlaybackState
 struct ThreadState
 {
 	audioFile: AudioFile,
+	notification: Sender<PlaybackState>,
 	state: Mutex<PlaybackState>,
 }
 
 impl Song
 {
 	/// Try to make a new Song from the path to a given file
-	pub fn from(fileName: &Path) -> Result<Self>
+	pub fn from(fileName: &Path, notificationChannel: Sender<PlaybackState>) -> Result<Self>
 	{
 		// Ask libAudio to open the file for read and playback, and grab how long the file's playback lasts
 		let audioFile = AudioFile::readFile(fileName)
@@ -57,7 +59,7 @@ impl Song
 				duration: if totalTime != 0 { Some(Duration::from_secs(totalTime)) } else { None },
 				played: Duration::default(),
 				playbackThread: None,
-				state: Arc::new(ThreadState::from(audioFile)),
+				state: Arc::new(ThreadState::from(audioFile, notificationChannel)),
 			}
 		)
 	}
@@ -150,20 +152,18 @@ impl Song
 	}
 }
 
-impl From<AudioFile> for ThreadState
+impl ThreadState
 {
-	fn from(audioFile: AudioFile) -> Self
+	pub fn from(audioFile: AudioFile, notification: Sender<PlaybackState>) -> Self
 	{
 		Self
 		{
 			audioFile,
+			notification,
 			state: Mutex::new(PlaybackState::NotStarted),
 		}
 	}
-}
 
-impl ThreadState
-{
 	fn play(&self)
 	{
 		if self.switchTo(PlaybackState::Playing)
