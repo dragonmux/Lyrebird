@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::ops::Deref;
 use std::path::Path;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
