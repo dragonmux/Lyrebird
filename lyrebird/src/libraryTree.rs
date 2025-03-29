@@ -55,6 +55,16 @@ impl LibraryTree
 			.writeCache()
 	}
 
+	pub fn isDiscovering(&self) -> bool
+	{
+		self.library.read().unwrap().isDiscovering()
+	}
+
+	pub async fn maybeJoinDiscovery(&self) -> Result<()>
+	{
+		MusicLibrary::maybeJoinDiscoveryThread(&self.library).await
+	}
+
 	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Operation
 	{
 		if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat

@@ -112,18 +112,25 @@ impl MainWindow
 		// Until the user's asked us to exit
 		while !self.exit
 		{
+			// If we're not discovering the library tree any more, check if we don't need to join the background
+			// thread for discovery
+			if !self.libraryTree.isDiscovering()
+			{
+				self.libraryTree.maybeJoinDiscovery().await?;
+				// Redraw the terminal before trying to process an event
+				terminal.draw(|frame| self.draw(frame))?;
+			}
 			// See if there's something to do from one of our event sources
 			tokio::select!
 			{
-				// Redraw the terminal every 50th of a second
-				_ = frameTimer.tick() => { terminal.draw(|frame| self.draw(frame))?; },
+				// Redraw the terminal every 50th of a second while discovery runs
+				_ = frameTimer.tick(), if self.libraryTree.isDiscovering() =>
+					{ terminal.draw(|frame| self.draw(frame))?; },
 				// Ask if there are more events to handle
 				Some(Ok(event)) = events.next() => { self.handleEvent(event)?; },
 				// If there is a file playing, check to see if it's giving us any notifications
 				Some(notification) = self.playbackNotification(), if self.currentlyPlaying.is_some() =>
-				{
-					self.handlePlaybackNotification(notification)?
-				},
+					{ self.handlePlaybackNotification(notification)? },
 			}
 		}
 		Ok(())
