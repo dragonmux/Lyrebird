@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use color_eyre::Result;
@@ -143,9 +143,8 @@ impl MainWindow
 				{
 					Operation::Play(fileName) =>
 					{
-						let fileName = fileName.as_path();
-						let song = Song::from(fileName)?;
-						self.playlists.nowPlaying().replaceWith(fileName);
+						let song = fileName.as_path();
+						self.playlists.nowPlaying().replaceWith(song);
 						self.playSong(song)?
 					},
 					Operation::Playlist(song) => self.playlistSong(song)?,
@@ -169,8 +168,9 @@ impl MainWindow
 		frame.render_widget(self, frame.area());
 	}
 
-	fn playSong(&mut self, mut song: Song) -> Result<()>
+	fn playSong(&mut self, song: &Path) -> Result<()>
 	{
+		let mut song = Song::from(song)?;
 		let currentlyPlaying = self.currentlyPlaying.take();
 		// If we already have a song playing, stop it
 		if let Some(mut currentSong) = currentlyPlaying
@@ -190,7 +190,7 @@ impl MainWindow
 		match &self.currentlyPlaying
 		{
 			Some(_) => Ok(()),
-			None => self.playSong(Song::from(song.as_path())?),
+			None => self.playSong(song.as_path()),
 		}
 	}
 
