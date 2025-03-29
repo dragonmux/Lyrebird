@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use ratatui::widgets::ListItem;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Playlist
 {
 	name: String,
