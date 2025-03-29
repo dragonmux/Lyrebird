@@ -109,25 +109,7 @@ impl MainWindow
 			// Redraw the terminal, and ask if there are more events to handle
 			terminal.draw(|frame| self.draw(frame))?;
 			self.handleEvents()?;
-			// Now check to see if there's something playing, and if so, check if there are any notifications
-			// about that playback from the notification channel
-			if let Some((_, channel)) = &self.currentlyPlaying
-			{
-				match channel.try_recv()
-				{
-					Ok(notification) => match notification
-					{
-						// XXX: Should look at the now playing playlist and see if there's another song to follow.
-						PlaybackState::Complete => self.currentlyPlaying = None,
-						_ => {},
-					},
-					Err(error) => match error
-					{
-						TryRecvError::Disconnected => { return Err(error.into()); },
-						TryRecvError::Empty => {},
-					},
-				}
-			}
+			self.handleNotifications()?;
 		}
 		Ok(())
 	}
@@ -135,7 +117,7 @@ impl MainWindow
 	fn handleEvents(&mut self) -> Result<()>
 	{
 		// Check to see if we got any new events
-		if !event::poll(Duration::from_millis(1))?
+		if !event::poll(Duration::from_millis(10))?
 		{
 			return Ok(())
 		}
@@ -246,6 +228,30 @@ impl MainWindow
 					{ self.errorState = Some(error); }
 			}
 		}
+	}
+
+	fn handleNotifications(&mut self) -> Result<()>
+	{
+		// Now check to see if there's something playing, and if so, check if there are any notifications
+		// about that playback from the notification channel
+		if let Some((_, channel)) = &self.currentlyPlaying
+		{
+			match channel.try_recv()
+			{
+				Ok(notification) => match notification
+				{
+					// XXX: Should look at the now playing playlist and see if there's another song to follow.
+					PlaybackState::Complete => self.currentlyPlaying = None,
+					_ => {},
+				},
+				Err(error) => match error
+				{
+					TryRecvError::Disconnected => { return Err(error.into()); },
+					TryRecvError::Empty => {},
+				},
+			}
+		}
+		Ok(())
 	}
 }
 
