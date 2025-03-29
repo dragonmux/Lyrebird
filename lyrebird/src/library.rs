@@ -1,11 +1,15 @@
-use std::{collections::{BTreeMap, BTreeSet}, ffi::OsStr, fs::{create_dir_all, File}, iter, path::{Path, PathBuf}, sync::Arc};
+// SPDX-License-Identifier: BSD-3-Clause
+use std::collections::{BTreeMap, BTreeSet};
+use std::fs::{create_dir_all, File};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::{ffi::OsStr, iter};
 
 use color_eyre::eyre::{self, OptionExt, Result};
 use libAudio::audioFile::AudioFile;
 use ratatui::{text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use tokio::spawn;
-use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use tracing::error;
 
@@ -122,12 +126,30 @@ impl MusicLibrary
 	{
 		let task = async move
 		{
-			Self::discover(library.as_ref(), currentDirectory.as_path()).await
+			Self::discover(library.as_ref(), currentDirectory.as_path())
 		};
 		spawn(task);
 	}
 
-	async fn discover(library: &RwLock<Self>, currentDirectory: &Path) -> Result<()>
+	fn writeLock(library: &RwLock<Self>) -> Result<RwLockWriteGuard<'_, Self>>
+	{
+		library.write()
+			.map_err
+			(
+				|error| eyre::eyre!("While discovering library: {}", error)
+			)
+	}
+
+	fn readLock(library: &RwLock<Self>) -> Result<RwLockReadGuard<'_, Self>>
+	{
+		library.read()
+			.map_err
+			(
+				|error| eyre::eyre!("While discovering library: {}", error)
+			)
+	}
+
+	fn discover(library: &RwLock<Self>, currentDirectory: &Path) -> Result<()>
 	{
 		// Explore the current directory's contents
 		let contents = currentDirectory.read_dir()?;
@@ -139,19 +161,19 @@ impl MusicLibrary
 			// If it's a directory, add it to the set discovered and recurse
 			if path.is_dir()
 			{
-				let relativePath = path.strip_prefix(&library.read().await.basePath)?.to_path_buf();
-				library.write().await.dirs.insert(relativePath.clone());
-				Box::pin(Self::discover(library, &path)).await?;
+				let relativePath = path.strip_prefix(&Self::readLock(library)?.basePath)?.to_path_buf();
+				Self::writeLock(library)?.dirs.insert(relativePath.clone());
+				Self::discover(library, &path)?;
 				// Well, only add it to the directories set if there were any audio files for us or one
 				// of the subdirectories within (which would mean that subdirectory is in the dirs set)
-				if !library.read().await.files.contains_key(&path) &&
-					!library.read().await.dirs.iter().any
+				if !Self::readLock(library)?.files.contains_key(&path) &&
+					!Self::readLock(library)?.dirs.iter().any
 					(
 						|dir| dir.starts_with(&relativePath) && dir != &relativePath
 					)
 				{
 					// In the case that we actually don't have anything for this directory, remove it again
-					library.write().await.dirs.remove(&relativePath);
+					Self::writeLock(library)?.dirs.remove(&relativePath);
 				}
 			}
 			// Else if it's a file, see if it's audio
@@ -166,17 +188,17 @@ impl MusicLibrary
 				// See if this file's directory is already in the map
 				let filePath = path.parent()
 					.ok_or_eyre("File does not have a valid path parent")?;
-				if !library.read().await.files.contains_key(filePath)
+				if !Self::readLock(library)?.files.contains_key(filePath)
 				{
-					library.write().await.files.insert(filePath.to_path_buf(), BTreeSet::new());
+					Self::writeLock(library)?.files.insert(filePath.to_path_buf(), BTreeSet::new());
 				}
 				// Now we definitely have a vec to use, look the path up and add the file
-				library.write().await.files.get_mut(filePath)
+				Self::writeLock(library)?.files.get_mut(filePath)
 					.ok_or_eyre("Failed to look file's path up in file map")?
 					.insert(path);
 			}
 			// If we're being asked to stop, stop
-			if library.read().await.discoveryCancellation.is_cancelled()
+			if Self::readLock(library)?.discoveryCancellation.is_cancelled()
 			{
 				break
 			}

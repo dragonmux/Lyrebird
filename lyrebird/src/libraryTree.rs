@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{self, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::Style;
 use ratatui::widgets::{Block, BorderType, List, ListDirection, ListState, Padding, StatefulWidget, Widget};
-use tokio::sync::RwLock;
 
 use crate::library::MusicLibrary;
 use crate::window::Operation;
@@ -47,7 +46,13 @@ impl LibraryTree
 
 	pub fn writeCache(&self) -> Result<()>
 	{
-		self.library.blocking_read().writeCache()
+		self.library.read()
+			.map_err
+			(
+				|error|
+					eyre::eyre!("While writing library cache: {}", error.to_string())
+			)?
+			.writeCache()
 	}
 
 	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Operation
@@ -128,7 +133,7 @@ impl LibraryTree
 			Side::Files =>
 			{
 				// Lock open access to the library
-				let library = self.library.blocking_read();
+				let library = self.library.read().ok()?;
 				// Extract the current directory selection
 				let dir = library.directoryAt(self.dirListState.selected()?)?;
 				// Extract the current file selection
@@ -152,7 +157,7 @@ impl Widget for &mut LibraryTree
 			.split(area);
 
 		// Get a lock on the library so we get a consistent view of it for rendering
-		let libraryLock = self.library.blocking_read();
+		let libraryLock = self.library.read().unwrap();
 
 		// Render the directory list using the internal state object
 		StatefulWidget::render
