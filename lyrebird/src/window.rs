@@ -40,8 +40,8 @@ pub struct MainWindow
 #[derive(Clone, Copy)]
 enum Tab
 {
-	LibraryTree,
-	Playlists,
+	LibraryTree = 0,
+	Playlists = 4,
 }
 
 impl Tab
