@@ -10,6 +10,7 @@ use libAudio::audioFile::AudioFile;
 use ratatui::{text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use tokio::spawn;
+use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::error;
 
@@ -25,6 +26,9 @@ pub struct MusicLibrary
 	dirs: BTreeSet<PathBuf>,
 	/// Map of directories to a list of files in that directory which are music
 	files: BTreeMap<PathBuf, BTreeSet<PathBuf>>,
+
+	#[serde(skip)]
+	discoveryThread: Option<JoinHandle<Result<()>>>,
 	#[serde(skip)]
 	discoveryCancellation: CancellationToken,
 
@@ -93,6 +97,8 @@ impl MusicLibrary
 					cacheFile: cacheFile.to_path_buf(),
 					dirs: BTreeSet::new(),
 					files: BTreeMap::new(),
+
+					discoveryThread: None,
 					discoveryCancellation: CancellationToken::new(),
 
 					treeNodeIcon: defaultTreeIcon(),
@@ -101,7 +107,7 @@ impl MusicLibrary
 			)
 		);
 
-		Self::backgroundDiscover(library.clone(), basePath.to_path_buf());
+		Self::backgroundDiscover(&library, library.clone(), basePath.to_path_buf())?;
 
 		Ok(library)
 	}
@@ -122,13 +128,37 @@ impl MusicLibrary
 		Ok(serde_json::to_writer(cache, self)?)
 	}
 
-	fn backgroundDiscover(library: Arc<RwLock<Self>>, currentDirectory: PathBuf)
+	pub fn isDiscovering(&self) -> bool
+	{
+		match &self.discoveryThread
+		{
+			Some(thread) => !thread.is_finished(),
+			None => false,
+		}
+	}
+
+	pub async fn maybeJoinDiscoveryThread(library: &Arc<RwLock<Self>>) -> Result<()>
+	{
+		if Self::readLock(library)?.discoveryThread.is_some()
+		{
+			let mut library = Self::writeLock(library)?;
+			let thread = library.discoveryThread.take()
+				.ok_or( eyre::eyre!("Inconsistency in discovery thread state"))?;
+			return thread.await?;
+		}
+		Ok(())
+	}
+
+	fn backgroundDiscover(localLibrary: &Arc<RwLock<Self>>, library: Arc<RwLock<Self>>, currentDirectory: PathBuf) -> Result<()>
 	{
 		let task = async move
 		{
 			Self::discover(library.as_ref(), currentDirectory.as_path())
 		};
-		spawn(task);
+
+		let mut library = Self::writeLock(localLibrary)?;
+		library.discoveryThread = Some(spawn(task));
+		Ok(())
 	}
 
 	fn writeLock(library: &RwLock<Self>) -> Result<RwLockWriteGuard<'_, Self>>
