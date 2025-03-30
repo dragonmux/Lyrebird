@@ -75,15 +75,7 @@ impl LibraryTree
 				KeyCode::Right => self.moveRight(),
 				KeyCode::Up => self.moveUp(),
 				KeyCode::Down => self.moveDown(),
-				KeyCode::Enter =>
-				{
-					let selection = self.makeSelection();
-					return match selection
-					{
-						Some(selection) => Operation::Play(selection),
-						None => Operation::None,
-					};
-				},
+				KeyCode::Enter => { return self.playSelection(); },
 				KeyCode::Char('+') => { return Operation::playlist(self.makeSelection()); },
 				_ => {},
 			}
@@ -153,6 +145,16 @@ impl LibraryTree
 			}
 		}
 		None
+	}
+
+	fn playSelection(&mut self) -> Operation
+	{
+		let selection = self.makeSelection();
+		match selection
+		{
+			Some(selection) => Operation::Play(selection),
+			None => Operation::None,
+		}
 	}
 }
 
