@@ -60,8 +60,8 @@ impl Playlists
 			{
 				KeyCode::Left => self.moveLeft(),
 				KeyCode::Right => self.moveRight(),
-				KeyCode::Up => {},
-				KeyCode::Down => {},
+				KeyCode::Up => self.moveUp(),
+				KeyCode::Down => self.moveDown(),
 				KeyCode::Enter => {},
 				_ => {},
 			}
@@ -77,6 +77,36 @@ impl Playlists
 
 	const fn moveRight(&mut self)
 		{ self.activeSide = Side::PlaylistContents; }
+
+	fn moveUp(&mut self)
+	{
+		match self.activeSide
+		{
+			Side::Playlists =>
+			{
+				self.playlistsState.select_previous();
+			}
+			Side::PlaylistContents =>
+			{
+				self.nowPlayingState.select_previous();
+			}
+		}
+	}
+
+	fn moveDown(&mut self)
+	{
+		match self.activeSide
+		{
+			Side::Playlists =>
+			{
+				self.playlistsState.select_next();
+			}
+			Side::PlaylistContents =>
+			{
+				self.nowPlayingState.select_next();
+			}
+		}
+	}
 }
 
 impl Widget for &mut Playlists
