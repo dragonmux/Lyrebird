@@ -2,6 +2,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::style::Style;
 use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Padding, StatefulWidget, Widget};
 use serde::{Deserialize, Serialize};
 
@@ -14,19 +15,38 @@ pub struct Playlists
 	nowPlaying: Playlist,
 	playlists: Vec<Playlist>,
 	#[serde(skip)]
+	activeEntry: Style,
+	#[serde(skip)]
+	activeSide: Side,
+	#[serde(skip)]
 	nowPlayingState: ListState,
 	#[serde(skip)]
 	playlistsState: ListState,
 }
 
+#[derive(Clone, Copy)]
+enum Side
+{
+	Playlists,
+	PlaylistContents,
+}
+
+impl Default for Side
+{
+	fn default() -> Self
+		{ Side::Playlists }
+}
+
 impl Playlists
 {
-	pub fn new() -> Self
+	pub fn new(activeEntry: Style) -> Self
 	{
 		Self
 		{
 			nowPlaying: Playlist::new("Now Playing".into()),
 			playlists: Vec::new(),
+			activeEntry,
+			activeSide: Side::Playlists,
 			nowPlayingState: ListState::default(),
 			playlistsState: ListState::default(),
 		}
@@ -38,8 +58,8 @@ impl Playlists
 		{
 			match key.code
 			{
-				KeyCode::Left => {},
-				KeyCode::Right => {},
+				KeyCode::Left => self.moveLeft(),
+				KeyCode::Right => self.moveRight(),
 				KeyCode::Up => {},
 				KeyCode::Down => {},
 				KeyCode::Enter => {},
@@ -50,9 +70,13 @@ impl Playlists
 	}
 
 	pub fn nowPlaying<'a>(&'a mut self) -> &'a mut Playlist
-	{
-		&mut self.nowPlaying
-	}
+		{ &mut self.nowPlaying }
+
+	const fn moveLeft(&mut self)
+		{ self.activeSide = Side::Playlists; }
+
+	const fn moveRight(&mut self)
+		{ self.activeSide = Side::PlaylistContents; }
 }
 
 impl Widget for &mut Playlists
@@ -80,6 +104,14 @@ impl Widget for &mut Playlists
 					Block::bordered()
 						.title(" Playlists ")
 						.title_alignment(Alignment::Left)
+						.title_style
+						(
+							match self.activeSide
+							{
+								Side::Playlists => self.activeEntry,
+								Side::PlaylistContents => Style::default(),
+							}
+						)
 						.border_type(BorderType::Rounded)
 						.padding(Padding::horizontal(1))
 				),
@@ -99,6 +131,14 @@ impl Widget for &mut Playlists
 					Block::bordered()
 						.title(" Now Playing ")
 						.title_alignment(Alignment::Left)
+						.title_style
+						(
+							match self.activeSide
+							{
+								Side::PlaylistContents => self.activeEntry,
+								Side::Playlists => Style::default(),
+							}
+						)
 						.border_type(BorderType::Rounded)
 						.padding(Padding::horizontal(1))
 				),

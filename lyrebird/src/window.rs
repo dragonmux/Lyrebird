@@ -94,7 +94,7 @@ impl MainWindow
 			(
 				activeEntry, &paths.cache_dir().join("library.json"), &config.libraryPath
 			)?,
-			playlists: Playlists::new(),
+			playlists: Playlists::new(activeEntry),
 
 			currentlyPlaying: None,
 			errorState: None,
