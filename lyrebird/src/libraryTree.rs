@@ -84,14 +84,10 @@ impl LibraryTree
 	}
 
 	const fn moveLeft(&mut self)
-	{
-		self.activeSide = Side::DirectoryTree;
-	}
+		{ self.activeSide = Side::DirectoryTree; }
 
 	const fn moveRight(&mut self)
-	{
-		self.activeSide = Side::Files;
-	}
+		{ self.activeSide = Side::Files; }
 
 	fn moveUp(&mut self)
 	{
