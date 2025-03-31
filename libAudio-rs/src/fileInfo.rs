@@ -99,9 +99,9 @@ impl<'a> FileInfo<'a>
 	}
 }
 
-impl<'a> From<AudioFile> for FileInfo<'a>
+impl<'a> From<&'a AudioFile> for FileInfo<'a>
 {
-	fn from(audioFile: AudioFile) -> Self
+	fn from(audioFile: &'a AudioFile) -> Self
 	{
 		audioFile.fileInfo()
 	}

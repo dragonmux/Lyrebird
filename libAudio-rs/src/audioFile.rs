@@ -50,7 +50,7 @@ impl AudioFile
 	}
 
 	/// Get the metadata for this audio file
-	pub fn fileInfo<'a>(&self) -> FileInfo<'a>
+	pub fn fileInfo<'a>(&'a self) -> FileInfo<'a>
 	{
 		FileInfo::new
 		(
