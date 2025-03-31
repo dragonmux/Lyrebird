@@ -62,7 +62,7 @@ impl Playlists
 				KeyCode::Right => self.moveRight(),
 				KeyCode::Up => self.moveUp(),
 				KeyCode::Down => self.moveDown(),
-				KeyCode::Enter => {},
+				KeyCode::Enter => { return self.makeSelection(); },
 				_ => {},
 			}
 		}
@@ -106,6 +106,32 @@ impl Playlists
 			Side::PlaylistContents =>
 			{
 				self.currentPlaylistState.select_next();
+			}
+		}
+	}
+
+	fn makeSelection(&mut self) -> Operation
+	{
+		match self.activeSide
+		{
+			Side::Playlists => Operation::None,
+			Side::PlaylistContents =>
+			{
+				// Figure out which file this is from the list, starting by looking up
+				// which entry is currently selected (if any)
+				let file = self.currentPlaylistState.selected()
+					// Now look that up in the now playing list
+					.map(|index| self.nowPlaying.entry(index));
+				// Finally if we have a valid selection, convert that into a request to play it
+				match file
+				{
+					// XXX: This replaces the now playing playlist - we don't want to do that
+					// if we're in the now playing playlist.. rather we want it to be a switch-to
+					// operation in that case.
+					Some(fileName) => Operation::Play(fileName.to_path_buf()),
+					None => Operation::None,
+
+				}
 			}
 		}
 	}

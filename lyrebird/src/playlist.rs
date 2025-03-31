@@ -53,6 +53,11 @@ impl Playlist
 			)
 	}
 
+	pub fn entry(&self, index: usize) -> &Path
+	{
+		self.entries[index].as_path()
+	}
+
 	pub fn currentEntry(&self) -> usize
 	{
 		self.currentEntry
