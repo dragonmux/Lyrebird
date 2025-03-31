@@ -19,7 +19,7 @@ pub struct Playlists
 	#[serde(skip)]
 	activeSide: Side,
 	#[serde(skip)]
-	nowPlayingState: ListState,
+	currentPlaylistState: ListState,
 	#[serde(skip)]
 	playlistsState: ListState,
 }
@@ -47,7 +47,7 @@ impl Playlists
 			playlists: Vec::new(),
 			activeEntry,
 			activeSide: Side::Playlists,
-			nowPlayingState: ListState::default(),
+			currentPlaylistState: ListState::default(),
 			playlistsState: ListState::default(),
 		}
 	}
@@ -85,10 +85,11 @@ impl Playlists
 			Side::Playlists =>
 			{
 				self.playlistsState.select_previous();
+				self.currentPlaylistState = ListState::default();
 			}
 			Side::PlaylistContents =>
 			{
-				self.nowPlayingState.select_previous();
+				self.currentPlaylistState.select_previous();
 			}
 		}
 	}
@@ -100,10 +101,11 @@ impl Playlists
 			Side::Playlists =>
 			{
 				self.playlistsState.select_next();
+				self.currentPlaylistState = ListState::default();
 			}
 			Side::PlaylistContents =>
 			{
-				self.nowPlayingState.select_next();
+				self.currentPlaylistState.select_next();
 			}
 		}
 	}
@@ -174,7 +176,7 @@ impl Widget for &mut Playlists
 				),
 			layout[1],
 			buf,
-			&mut self.nowPlayingState
+			&mut self.currentPlaylistState
 		);
 	}
 }
