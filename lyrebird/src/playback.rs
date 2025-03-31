@@ -14,7 +14,7 @@ pub struct Song
 	duration: Option<Duration>,
 	played: Duration,
 	playbackThread: Option<JoinHandle<()>>,
-	state: Arc<ThreadState>
+	state: Arc<ThreadState>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -41,8 +41,8 @@ impl Song
 	pub fn from(fileName: &Path, notificationChannel: Sender<PlaybackState>) -> Result<Self>
 	{
 		// Ask libAudio to open the file for read and playback, and grab how long the file's playback lasts
-		let audioFile = AudioFile::readFile(fileName)
-			.ok_or_eyre(format!("Failed to open file {}", fileName.to_string_lossy()))?;
+		let audioFile =
+			AudioFile::readFile(fileName).ok_or_eyre(format!("Failed to open file {}", fileName.to_string_lossy()))?;
 		let totalTime = audioFile.fileInfo().totalTime();
 
 		// Build a description of the song being played to display
@@ -51,22 +51,26 @@ impl Song
 		let album = fileInfo.album()?;
 		let artist = fileInfo.artist()?;
 
-		Ok
-		(
-			Self
+		Ok(Self {
+			description: Self::buildDescriptionFrom(fileName, title, album, artist),
+			duration: if totalTime != 0
 			{
-				description: Self::buildDescriptionFrom(fileName, title, album, artist),
-				duration: if totalTime != 0 { Some(Duration::from_secs(totalTime)) } else { None },
-				played: Duration::default(),
-				playbackThread: None,
-				state: Arc::new(ThreadState::from(audioFile, notificationChannel)),
+				Some(Duration::from_secs(totalTime))
 			}
-		)
+			else
+			{
+				None
+			},
+			played: Duration::default(),
+			playbackThread: None,
+			state: Arc::new(ThreadState::from(audioFile, notificationChannel)),
+		})
 	}
 
 	// Try to build a description of this track from parts
-	fn buildDescriptionFrom(fileName: &Path, title: Option<String>, album: Option<String>, artist: Option<String>)
-		-> String
+	fn buildDescriptionFrom(
+		fileName: &Path, title: Option<String>, album: Option<String>, artist: Option<String>,
+	) -> String
 	{
 		// If the title, album and artist are all missing, then use the full path to the file as a description
 		if title.is_none() && album.is_none() && artist.is_none()
@@ -79,7 +83,12 @@ impl Song
 		let mut description = match title
 		{
 			Some(title) => title.clone(),
-			None => fileName.file_name().unwrap_or(fileName.as_os_str()).to_string_lossy().to_string(),
+			None =>
+				fileName
+					.file_name()
+					.unwrap_or(fileName.as_os_str())
+					.to_string_lossy()
+					.to_string(),
 		};
 		// Now add the album, if we have one
 		if let Some(album) = album
@@ -120,7 +129,9 @@ impl Song
 		if let None = self.playbackThread
 		{
 			let state = self.state.clone();
-			let task = move || { state.play(); };
+			let task = move || {
+				state.play();
+			};
 			self.playbackThread = Some(spawn(task));
 		}
 	}
@@ -146,7 +157,9 @@ impl Song
 	// Query the state playback is currently in for this song
 	pub fn state(&self) -> PlaybackState
 	{
-		self.state.state.lock()
+		self.state
+			.state
+			.lock()
 			.map(|lock| lock.clone())
 			.unwrap_or_else(|error| PlaybackState::Unknown(error.to_string()))
 	}
@@ -156,8 +169,7 @@ impl ThreadState
 {
 	pub fn from(audioFile: AudioFile, notification: Sender<PlaybackState>) -> Self
 	{
-		Self
-		{
+		Self {
 			audioFile,
 			notification,
 			state: Mutex::new(PlaybackState::NotStarted),
@@ -173,7 +185,9 @@ impl ThreadState
 			self.audioFile.play();
 			// Now, check what playback state we're in.. if we're in Playing still, the file ended
 			// and we should notify the main window of this fact via a channel
-			let mut state = self.state.lock()
+			let mut state = self
+				.state
+				.lock()
 				.expect("playback state mutex in invalid state");
 			if *state == PlaybackState::Playing
 			{
@@ -192,18 +206,16 @@ impl ThreadState
 			// Now actually pause playback
 			self.audioFile.pause();
 			// Extract the join handle
-			return threadHandle.map
-			(
-				|thread|
-				{
+			return threadHandle
+				.map(|thread| {
 					// Ask the thread to join, and map any error it produces to our error types
-			 		let result = thread.join()
+					let result = thread
+						.join()
 						.map_err(|error| eyre::eyre!("Error from playback thread: {:?}", error));
 					return result;
-				}
-			)
-			// Extract the resulting Result from that, making this an Ok if there was no thread to join
-			.unwrap_or_else(|| Ok(()));
+				})
+				// Extract the resulting Result from that, making this an Ok if there was no thread to join
+				.unwrap_or_else(|| Ok(()));
 		}
 		Ok(())
 	}
@@ -216,18 +228,16 @@ impl ThreadState
 			// Now actually stop playback
 			self.audioFile.stop();
 			// Extract the join handle
-			return threadHandle.map
-			(
-				|thread|
-				{
+			return threadHandle
+				.map(|thread| {
 					// Ask the thread to join, and map any error it produces to our error types
-			 		let result = thread.join()
+					let result = thread
+						.join()
 						.map_err(|error| eyre::eyre!("Error from playback thread: {:?}", error));
 					return result;
-				}
-			)
-			// Extract the resulting Result from that, making this an Ok if there was no thread to join
-			.unwrap_or_else(|| Ok(()));
+				})
+				// Extract the resulting Result from that, making this an Ok if there was no thread to join
+				.unwrap_or_else(|| Ok(()));
 		}
 		Ok(())
 	}
@@ -237,7 +247,9 @@ impl ThreadState
 	/// is atomically updated and we return true
 	fn switchTo(&self, newState: PlaybackState) -> bool
 	{
-		let mut state = self.state.lock()
+		let mut state = self
+			.state
+			.lock()
 			.expect("playback state mutex in invalid state");
 		if *state != newState
 		{

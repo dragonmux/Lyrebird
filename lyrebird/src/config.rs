@@ -1,4 +1,7 @@
-use std::{fs::{create_dir_all, File}, path::PathBuf};
+use std::{
+	fs::{create_dir_all, File},
+	path::PathBuf,
+};
 
 use color_eyre::eyre::Result;
 use directories::{ProjectDirs, UserDirs};
@@ -32,7 +35,7 @@ impl Config
 
 			return Ok(config);
 		}
-		
+
 		Ok(Self::default())
 	}
 
@@ -53,11 +56,12 @@ impl Default for Config
 		// Try to get the user directories
 		let userDirs = UserDirs::new().expect("Failed to get user directories");
 		// See if we can get the user's music directory; if we can't, default to their homedir.
-		let musicDir = userDirs.audio_dir().map_or_else(|| userDirs.home_dir(), |dir| dir);
+		let musicDir = userDirs
+			.audio_dir()
+			.map_or_else(|| userDirs.home_dir(), |dir| dir);
 
 		// Generate a configuration with this data
-		Self
-		{
+		Self {
 			version: ConfigVersion::Version1,
 			libraryPath: musicDir.to_path_buf(),
 		}

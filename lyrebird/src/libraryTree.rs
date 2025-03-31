@@ -33,8 +33,7 @@ impl LibraryTree
 {
 	pub fn new(activeEntry: Style, cacheFile: &Path, libraryPath: &Path) -> Result<Self>
 	{
-		Ok(Self
-		{
+		Ok(Self {
 			activeEntry,
 			activeSide: Side::DirectoryTree,
 			dirListState: ListState::default().with_selected(Some(0)),
@@ -46,12 +45,9 @@ impl LibraryTree
 
 	pub fn writeCache(&self) -> Result<()>
 	{
-		self.library.read()
-			.map_err
-			(
-				|error|
-					eyre::eyre!("While writing library cache: {}", error.to_string())
-			)?
+		self.library
+			.read()
+			.map_err(|error| eyre::eyre!("While writing library cache: {}", error.to_string()))?
 			.writeCache()
 	}
 
@@ -75,19 +71,30 @@ impl LibraryTree
 				KeyCode::Right => self.moveRight(),
 				KeyCode::Up => self.moveUp(),
 				KeyCode::Down => self.moveDown(),
-				KeyCode::Enter => { return self.playSelection(); },
-				KeyCode::Char('+') => { return Operation::playlist(self.makeSelection()); },
-				_ => {},
+				KeyCode::Enter =>
+				{
+					return self.playSelection();
+				}
+				KeyCode::Char('+') =>
+				{
+					return Operation::playlist(self.makeSelection());
+				}
+				_ =>
+				{}
 			}
 		}
 		Operation::None
 	}
 
 	const fn moveLeft(&mut self)
-		{ self.activeSide = Side::DirectoryTree; }
+	{
+		self.activeSide = Side::DirectoryTree;
+	}
 
 	const fn moveRight(&mut self)
-		{ self.activeSide = Side::Files; }
+	{
+		self.activeSide = Side::Files;
+	}
 
 	fn moveUp(&mut self)
 	{
@@ -127,7 +134,7 @@ impl LibraryTree
 	{
 		match self.activeSide
 		{
-			Side::DirectoryTree => { self.activeSide = Side::Files },
+			Side::DirectoryTree => self.activeSide = Side::Files,
 			Side::Files =>
 			{
 				// Lock open access to the library
@@ -157,67 +164,59 @@ impl LibraryTree
 impl Widget for &mut LibraryTree
 {
 	fn render(self, area: Rect, buf: &mut Buffer)
-		where Self: Sized
+	where
+		Self: Sized,
 	{
 		// Split the display area up to display the user's library tree on the left, and the files in a given
 		// directory on the right
-		let layout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(2)])
-			.split(area);
+		let layout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(2)]).split(area);
 
 		// Get a lock on the library so we get a consistent view of it for rendering
 		let libraryLock = self.library.read().unwrap();
 
 		// Render the directory list using the internal state object
-		StatefulWidget::render
-		(
+		StatefulWidget::render(
 			// Build a list of directories currently in the library
 			List::new(libraryLock.directories())
 				// Put it in a bordered block for presentation
-				.block
-				(
+				.block(
 					Block::bordered()
 						.title(" Directory Tree ")
 						.title_alignment(Alignment::Left)
-						.title_style
-						(
-							match self.activeSide
-							{
-								Side::DirectoryTree => self.activeEntry,
-								Side::Files => Style::default(),
-							}
-						)
+						.title_style(match self.activeSide
+						{
+							Side::DirectoryTree => self.activeEntry,
+							Side::Files => Style::default(),
+						})
 						.border_type(BorderType::Rounded)
 						// Make sure the contents are padded one space on the sides for presentation
-						.padding(Padding::horizontal(1))
+						.padding(Padding::horizontal(1)),
 				)
 				.highlight_style(self.activeEntry)
 				.direction(ListDirection::TopToBottom),
 			layout[0],
 			buf,
-			&mut self.dirListState
+			&mut self.dirListState,
 		);
 
 		// Build a list of files in the current directory being displayed
-		let filesList = libraryLock.filesFor(self.dirListState.selected())
+		let filesList = libraryLock
+			.filesFor(self.dirListState.selected())
 			.map(List::new)
 			.unwrap_or_default()
 			// Put it in a bordered block for presentation
-			.block
-			(
+			.block(
 				Block::bordered()
 					.title(" Files ")
 					.title_alignment(Alignment::Left)
 					.border_type(BorderType::Rounded)
-					.title_style
-					(
-						match self.activeSide
-						{
-							Side::Files => self.activeEntry,
-							Side::DirectoryTree => Style::default(),
-						}
-					)
+					.title_style(match self.activeSide
+					{
+						Side::Files => self.activeEntry,
+						Side::DirectoryTree => Style::default(),
+					})
 					// Make sure the contents are padded one space on the sides for presentation
-					.padding(Padding::horizontal(1))
+					.padding(Padding::horizontal(1)),
 			)
 			.highlight_style(self.activeEntry)
 			.direction(ListDirection::TopToBottom);

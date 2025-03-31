@@ -1,0 +1,43 @@
+# tabs for indentation, spaces for layout
+hard_tabs = true
+
+# 120 character line max
+max_width = 120
+
+# braces on next line
+control_brace_style = "AlwaysNextLine"
+brace_style = "AlwaysNextLine"
+
+# operators on end of line
+binop_separator = "Back"
+
+# separate control expression
+combine_control_expr = false
+
+condense_wildcard_suffixes = true
+
+fn_params_layout = "Compressed"
+
+force_multiline_blocks = true
+
+format_strings = true
+
+hex_literal_case = "Lower"
+
+match_arm_blocks = false
+
+# be less aggressive with expression chains
+struct_lit_width = 25
+chain_width = 50
+
+newline_style = "Unix"
+
+normalize_comments = true
+
+reorder_impl_items = true
+
+group_imports = "StdExternalCrate"
+
+struct_lit_single_line = false
+
+use_field_init_shorthand = true
