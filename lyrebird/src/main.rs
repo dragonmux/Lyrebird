@@ -23,16 +23,12 @@ mod window;
 async fn main() -> Result<()>
 {
 	tracing_subscriber::registry()
-		.with
-		(
-			tracing_subscriber::fmt::layer()
-				.with_filter(LevelFilter::INFO)
-		)
+		.with(tracing_subscriber::fmt::layer().with_filter(LevelFilter::INFO))
 		.init();
 
 	// Try to get the application paths available
-	let paths = ProjectDirs::from("com", "rachelmant", "Lyrebird").
-		ok_or_else(|| eyre::eyre!("Failed to get program working paths"))?;
+	let paths = ProjectDirs::from("com", "rachelmant", "Lyrebird")
+		.ok_or_else(|| eyre::eyre!("Failed to get program working paths"))?;
 	// Now try to get a configuration object so we know where to find things and such
 	let mut config = Config::read(&paths)?;
 

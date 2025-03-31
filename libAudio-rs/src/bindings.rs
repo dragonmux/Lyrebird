@@ -31,8 +31,7 @@ pub enum AudioType
 	SNDH = 19,
 }
 
-extern "C"
-{
+extern "C" {
 	// General API functions
 	pub fn audioCloseFile(audioFile: *mut c_void) -> c_int;
 	pub fn isAudio(fileName: *const c_char) -> bool;

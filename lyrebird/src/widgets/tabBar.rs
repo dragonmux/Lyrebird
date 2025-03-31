@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use itertools::Itertools;
-use ratatui::{buffer::Buffer, layout::Rect, style::{Style, Styled}, symbols, text::{Line, Span}, widgets::Widget};
+use ratatui::{
+	buffer::Buffer,
+	layout::Rect,
+	style::{Style, Styled},
+	symbols,
+	text::{Line, Span},
+	widgets::Widget,
+};
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
@@ -38,8 +45,7 @@ impl<'a> TabBar<'a>
 		let selected = if tabs.is_empty() { None } else { Some(0) };
 
 		// Construct a tab bar state with defaults for everything else
-		Self
-		{
+		Self {
 			tabs,
 			selected,
 			style: Style::default(),
@@ -51,7 +57,7 @@ impl<'a> TabBar<'a>
 	}
 
 	/// Set which tab is selected
-    #[must_use = "method moves the value of self and returns the modified value"]
+	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn select<T: Into<Option<usize>>>(mut self, selected: T) -> Self
 	{
 		self.selected = selected.into();
@@ -59,7 +65,7 @@ impl<'a> TabBar<'a>
 	}
 
 	/// Sets the normal style for the tabs
-    #[must_use = "method moves the value of self and returns the modified value"]
+	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn style<S: Into<Style>>(mut self, style: S) -> Self
 	{
 		self.style = style.into();
@@ -67,7 +73,7 @@ impl<'a> TabBar<'a>
 	}
 
 	/// Sets the highlighted tab style for the tabs
-    #[must_use = "method moves the value of self and returns the modified value"]
+	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn highlightedStyle<S: Into<Style>>(mut self, style: S) -> Self
 	{
 		self.highlightedStyle = style.into();
@@ -75,17 +81,17 @@ impl<'a> TabBar<'a>
 	}
 
 	/// Sets the string to use as the divider between tabs (defaults to a line drawing vertical line)
-    #[must_use = "method moves the value of self and returns the modified value"]
+	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn divider<T>(mut self, divider: T) -> Self
 	where
-		T: Into<Span<'a>>
+		T: Into<Span<'a>>,
 	{
 		self.divider = divider.into();
 		self
 	}
 
 	/// Sets whether to show a divider before the first tab
-    #[must_use = "method moves the value of self and returns the modified value"]
+	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn firstTabDivider(mut self, show: bool) -> Self
 	{
 		self.firstTabDivider = show;
@@ -93,7 +99,7 @@ impl<'a> TabBar<'a>
 	}
 
 	/// Sets the string to use as the divider between tabs (defaults to a line drawing vertical line)
-    #[must_use = "method moves the value of self and returns the modified value"]
+	#[must_use = "method moves the value of self and returns the modified value"]
 	pub fn lastTabDivider(mut self, show: bool) -> Self
 	{
 		self.lastTabDivider = show;
@@ -113,7 +119,7 @@ impl Default for TabBar<'_>
 // Trait so we can construct a TabBar from an iterator of Line-able items
 impl<'a, Item> FromIterator<Item> for TabBar<'a>
 where
-	Item: Into<Line<'a>>
+	Item: Into<Line<'a>>,
 {
 	fn from_iter<T: IntoIterator<Item = Item>>(iter: T) -> Self
 	{
@@ -225,16 +231,14 @@ impl TabBar<'_>
 			// Check if this is the selected tab, and if it is.. use the highlighted style
 			if self.selected == Some(idx)
 			{
-				buf.set_style
-				(
-					Rect
-					{
+				buf.set_style(
+					Rect {
 						x: left,
 						y: area.top(),
 						width: tabArea,
 						height: 1,
 					},
-					self.highlightedStyle
+					self.highlightedStyle,
 				);
 			}
 			left += tabArea;

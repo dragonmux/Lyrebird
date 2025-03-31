@@ -3,8 +3,14 @@ use std::{ffi::CStr, marker::PhantomData, ops::Range};
 
 use color_eyre::eyre::Result;
 
-use crate::{audioFile::{self, AudioFile}, bindings::{self, audioFileAlbum, audioFileArtist, audioFileBitRate, audioFileBitsPerSample, audioFileChannels, audioFileOtherComment, audioFileOtherCommentsCount, audioFileTitle}};
 use crate::bindings::audioFileTotalTime;
+use crate::{
+	audioFile::{self, AudioFile},
+	bindings::{
+		self, audioFileAlbum, audioFileArtist, audioFileBitRate, audioFileBitsPerSample, audioFileChannels,
+		audioFileOtherComment, audioFileOtherCommentsCount, audioFileTitle,
+	},
+};
 
 pub struct FileInfo<'a>
 {
@@ -16,8 +22,7 @@ impl<'a> FileInfo<'a>
 {
 	pub fn new(fileInfo: *const bindings::FileInfo) -> Self
 	{
-		FileInfo
-		{
+		FileInfo {
 			inner: fileInfo,
 			phantom: PhantomData,
 		}
@@ -89,7 +94,10 @@ impl<'a> FileInfo<'a>
 	{
 		let count = unsafe { audioFileOtherCommentsCount(self.inner) };
 		let mut comments = Vec::with_capacity(count);
-		let indexes = Range{ start: 0, end: count };
+		let indexes = Range {
+			start: 0,
+			end: count,
+		};
 		for idx in indexes
 		{
 			let comment = unsafe { CStr::from_ptr(audioFileOtherComment(self.inner, idx)) };

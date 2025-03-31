@@ -18,8 +18,7 @@ impl Playlist
 {
 	pub fn new(name: String) -> Self
 	{
-		Self
-		{
+		Self {
 			name,
 			entries: Vec::new(),
 			currentEntry: 0,
@@ -28,7 +27,7 @@ impl Playlist
 
 	pub fn name(&self) -> &str
 	{
-		return self.name.as_str()
+		return self.name.as_str();
 	}
 
 	pub fn add(&mut self, fileName: &Path)
@@ -47,10 +46,7 @@ impl Playlist
 	{
 		self.entries
 			.iter()
-			.map
-			(
-				|fileName| ListItem::new(fileName.to_string_lossy())
-			)
+			.map(|fileName| ListItem::new(fileName.to_string_lossy()))
 	}
 
 	pub fn entry(&self, index: usize) -> &Path

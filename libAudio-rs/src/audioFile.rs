@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::{ffi::CString, os::{raw::c_void, unix::ffi::OsStrExt}, path::Path, ptr::NonNull};
-
-use crate::{fileInfo::FileInfo, AudioType};
-use crate::bindings::
-{
-	audioCloseFile, audioGetFileInfo, audioOpenR, audioOpenW, audioPause, audioPlay, audioStop, isAudio
+use std::{
+	ffi::CString,
+	os::{raw::c_void, unix::ffi::OsStrExt},
+	path::Path,
+	ptr::NonNull,
 };
+
+use crate::bindings::{
+	audioCloseFile, audioGetFileInfo, audioOpenR, audioOpenW, audioPause, audioPlay, audioStop, isAudio,
+};
+use crate::{fileInfo::FileInfo, AudioType};
 
 pub struct AudioFile
 {
@@ -22,7 +26,9 @@ impl AudioFile
 		let fileName = CString::new(fileName).ok()?;
 
 		let file = unsafe { audioOpenR(fileName.as_ptr()) };
-		Some(AudioFile { inner: NonNull::new(file)? })
+		Some(AudioFile {
+			inner: NonNull::new(file)?,
+		})
 	}
 
 	/// Try to open the given file as an audio file
@@ -33,7 +39,9 @@ impl AudioFile
 		let fileName = CString::new(fileName).ok()?;
 
 		let file = unsafe { audioOpenW(fileName.as_ptr(), format) };
-		Some(AudioFile { inner: NonNull::new(file)? })
+		Some(AudioFile {
+			inner: NonNull::new(file)?,
+		})
 	}
 
 	/// Check if the target file is a valid audio file
@@ -44,18 +52,16 @@ impl AudioFile
 		let fileName = CString::new(fileName);
 		match fileName
 		{
-			Ok(fileName) => unsafe { isAudio(fileName.as_ptr()) }
-			Err(_) => false
+			Ok(fileName) =>
+			unsafe { isAudio(fileName.as_ptr()) },
+			Err(_) => false,
 		}
 	}
 
 	/// Get the metadata for this audio file
 	pub fn fileInfo<'a>(&self) -> FileInfo<'a>
 	{
-		FileInfo::new
-		(
-			unsafe { audioGetFileInfo(self.inner.as_ptr()) }
-		)
+		FileInfo::new(unsafe { audioGetFileInfo(self.inner.as_ptr()) })
 	}
 
 	/// Play the file back (resumes playback if previously played and returned from)
@@ -82,8 +88,7 @@ impl Drop for AudioFile
 	/// Clean up properly by disposing of the audio file object correctly
 	fn drop(&mut self)
 	{
-		unsafe
-		{
+		unsafe {
 			audioCloseFile(self.inner.as_ptr());
 		}
 	}

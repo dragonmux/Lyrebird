@@ -6,8 +6,8 @@ use ratatui::style::Style;
 use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Padding, StatefulWidget, Widget};
 use serde::{Deserialize, Serialize};
 
-use crate::window::Operation;
 use crate::playlist::Playlist;
+use crate::window::Operation;
 
 #[derive(Serialize, Deserialize)]
 pub struct Playlists
@@ -34,15 +34,16 @@ enum Side
 impl Default for Side
 {
 	fn default() -> Self
-		{ Side::Playlists }
+	{
+		Side::Playlists
+	}
 }
 
 impl Playlists
 {
 	pub fn new(activeEntry: Style) -> Self
 	{
-		Self
-		{
+		Self {
 			nowPlaying: Playlist::new("Now Playing".into()),
 			playlists: Vec::new(),
 			activeEntry,
@@ -62,21 +63,31 @@ impl Playlists
 				KeyCode::Right => self.moveRight(),
 				KeyCode::Up => self.moveUp(),
 				KeyCode::Down => self.moveDown(),
-				KeyCode::Enter => { return self.makeSelection(); },
-				_ => {},
+				KeyCode::Enter =>
+				{
+					return self.makeSelection();
+				}
+				_ =>
+				{}
 			}
 		}
 		Operation::None
 	}
 
 	pub fn nowPlaying<'a>(&'a mut self) -> &'a mut Playlist
-		{ &mut self.nowPlaying }
+	{
+		&mut self.nowPlaying
+	}
 
 	const fn moveLeft(&mut self)
-		{ self.activeSide = Side::Playlists; }
+	{
+		self.activeSide = Side::Playlists;
+	}
 
 	const fn moveRight(&mut self)
-		{ self.activeSide = Side::PlaylistContents; }
+	{
+		self.activeSide = Side::PlaylistContents;
+	}
 
 	fn moveUp(&mut self)
 	{
@@ -119,7 +130,9 @@ impl Playlists
 			{
 				// Figure out which file this is from the list, starting by looking up
 				// which entry is currently selected (if any)
-				let file = self.currentPlaylistState.selected()
+				let file = self
+					.currentPlaylistState
+					.selected()
 					// Now look that up in the now playing list
 					.map(|index| self.nowPlaying.entry(index));
 				// Finally if we have a valid selection, convert that into a request to play it
@@ -130,7 +143,6 @@ impl Playlists
 					// operation in that case.
 					Some(fileName) => Operation::Play(fileName.to_path_buf()),
 					None => Operation::None,
-
 				}
 			}
 		}
@@ -140,69 +152,58 @@ impl Playlists
 impl Widget for &mut Playlists
 {
 	fn render(self, area: Rect, buf: &mut Buffer)
-		where Self: Sized
+	where
+		Self: Sized,
 	{
 		// Split the area up so we can display a listing of all the user's playlists, and what's currently queued
-		let layout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(2)])
-			.split(area);
+		let layout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(2)]).split(area);
 
 		// Render the playlist listing using the internal state object
-		StatefulWidget::render
-		(
+		StatefulWidget::render(
 			// Build a list of playlists currently available to the user
-			List::new
-			(
+			List::new(
 				self.playlists
 					.iter()
-					.map(|playlist| ListItem::new(playlist.name()))
+					.map(|playlist| ListItem::new(playlist.name())),
 			)
-				// Put it in a bordered block for presentation
-				.block
-				(
-					Block::bordered()
-						.title(" Playlists ")
-						.title_alignment(Alignment::Left)
-						.title_style
-						(
-							match self.activeSide
-							{
-								Side::Playlists => self.activeEntry,
-								Side::PlaylistContents => Style::default(),
-							}
-						)
-						.border_type(BorderType::Rounded)
-						.padding(Padding::horizontal(1))
-				),
+			// Put it in a bordered block for presentation
+			.block(
+				Block::bordered()
+					.title(" Playlists ")
+					.title_alignment(Alignment::Left)
+					.title_style(match self.activeSide
+					{
+						Side::Playlists => self.activeEntry,
+						Side::PlaylistContents => Style::default(),
+					})
+					.border_type(BorderType::Rounded)
+					.padding(Padding::horizontal(1)),
+			),
 			layout[0],
 			buf,
-			&mut self.playlistsState
+			&mut self.playlistsState,
 		);
 
 		// Render the now playing playlist using the internal state object
-		StatefulWidget::render
-		(
+		StatefulWidget::render(
 			// Build a list of all the files in the Now Playing playlist
 			List::new(self.nowPlaying.contents())
 				// Put it in a bordered block for presentation
-				.block
-				(
+				.block(
 					Block::bordered()
 						.title(" Now Playing ")
 						.title_alignment(Alignment::Left)
-						.title_style
-						(
-							match self.activeSide
-							{
-								Side::PlaylistContents => self.activeEntry,
-								Side::Playlists => Style::default(),
-							}
-						)
+						.title_style(match self.activeSide
+						{
+							Side::PlaylistContents => self.activeEntry,
+							Side::Playlists => Style::default(),
+						})
 						.border_type(BorderType::Rounded)
-						.padding(Padding::horizontal(1))
+						.padding(Padding::horizontal(1)),
 				),
 			layout[1],
 			buf,
-			&mut self.currentPlaylistState
+			&mut self.currentPlaylistState,
 		);
 	}
 }

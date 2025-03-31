@@ -35,7 +35,7 @@ pub struct MainWindow
 	playlists: Playlists,
 
 	currentlyPlaying: Option<(Song, Receiver<PlaybackState>)>,
-	errorState: Option<String>
+	errorState: Option<String>,
 }
 
 #[derive(Clone, Copy)]
@@ -79,8 +79,7 @@ impl MainWindow
 	{
 		let activeEntry = Style::new().light_blue();
 
-		Ok(Self
-		{
+		Ok(Self {
 			header: Style::new().blue().on_black(),
 			headerEntry: Style::new().blue().on_black(),
 			headerNumber: Style::new().light_blue().on_black(),
@@ -90,9 +89,10 @@ impl MainWindow
 			exit: false,
 			activeTab: Tab::LibraryTree,
 
-			libraryTree: LibraryTree::new
-			(
-				activeEntry, &paths.cache_dir().join("library.json"), &config.libraryPath
+			libraryTree: LibraryTree::new(
+				activeEntry,
+				&paths.cache_dir().join("library.json"),
+				&config.libraryPath,
 			)?,
 			playlists: Playlists::new(activeEntry),
 
@@ -121,8 +121,7 @@ impl MainWindow
 				terminal.draw(|frame| self.draw(frame))?;
 			}
 			// See if there's something to do from one of our event sources
-			tokio::select!
-			{
+			tokio::select! {
 				// Redraw the terminal every 50th of a second while discovery runs
 				_ = frameTimer.tick(), if self.libraryTree.isDiscovering() =>
 					{ terminal.draw(|frame| self.draw(frame))?; },
@@ -150,11 +149,24 @@ impl MainWindow
 					// Check to see if the event is for quitting
 					match key.code
 					{
-						KeyCode::Char('q' | 'Q') => { return self.quit(); },
-						KeyCode::Char(' ') => { self.togglePlayback(); },
-						KeyCode::Char('1') => { self.activeTab = Tab::LibraryTree; }
-						KeyCode::Char('5') => { self.activeTab = Tab::Playlists; }
-						_ => {}
+						KeyCode::Char('q' | 'Q') =>
+						{
+							return self.quit();
+						}
+						KeyCode::Char(' ') =>
+						{
+							self.togglePlayback();
+						}
+						KeyCode::Char('1') =>
+						{
+							self.activeTab = Tab::LibraryTree;
+						}
+						KeyCode::Char('5') =>
+						{
+							self.activeTab = Tab::Playlists;
+						}
+						_ =>
+						{}
 					}
 				}
 				// It's some other kind of event, so figure out which is the active
@@ -172,12 +184,14 @@ impl MainWindow
 						let song = fileName.as_path();
 						self.playlists.nowPlaying().replaceWith(song);
 						self.playSong(song)?
-					},
+					}
 					Operation::Playlist(song) => self.playlistSong(song)?,
-					Operation::None => {},
+					Operation::None =>
+					{}
 				}
-			},
-			_ => {}
+			}
+			_ =>
+			{}
 		}
 		Ok(())
 	}
@@ -235,14 +249,17 @@ impl MainWindow
 					{
 						self.errorState = Some(error.to_string());
 					}
-				},
-				PlaybackState::Paused |
-				PlaybackState::Stopped |
-				PlaybackState::NotStarted =>
-					{ song.play(); }
-				PlaybackState::Complete => {}
+				}
+				PlaybackState::Paused | PlaybackState::Stopped | PlaybackState::NotStarted =>
+				{
+					song.play();
+				}
+				PlaybackState::Complete =>
+				{}
 				PlaybackState::Unknown(error) =>
-					{ self.errorState = Some(error); }
+				{
+					self.errorState = Some(error);
+				}
 			}
 		}
 	}
@@ -270,8 +287,9 @@ impl MainWindow
 					Some(fileName) => self.playSong(fileName.as_path())?,
 					None => self.currentlyPlaying = None,
 				};
-			},
-			_ => {},
+			}
+			_ =>
+			{}
 		}
 		Ok(())
 	}
@@ -296,26 +314,24 @@ fn durationAsString(duration: Duration) -> String
 impl Widget for &mut MainWindow
 {
 	fn render(self, area: Rect, buf: &mut Buffer)
-		where Self: Sized
+	where
+		Self: Sized,
 	{
 		// Split the screen up into 3 major chunks - the header line, content, and footer line
-		let areas = Layout::vertical
-		(
-			[Constraint::Length(1), Constraint::Fill(1), Constraint::Length(1)]
-		).split(area);
+		let areas = Layout::vertical([Constraint::Length(1), Constraint::Fill(1), Constraint::Length(1)]).split(area);
 
 		// Make the header tab titles
 		let headerTabs = ["Tree", "Artists", "Albums", "Options", "Playlist"]
 			.map(ToString::to_string)
 			.into_iter()
 			.enumerate()
-			.map(|(num, tabTitle)|
+			.map(|(num, tabTitle)| {
 				[
 					Span::styled((num + 1).to_string(), self.headerNumber),
 					Span::from(" "),
 					Span::styled(tabTitle, self.headerEntry),
 				]
-			)
+			})
 			.map(|spans| Line::from(spans.to_vec()).left_aligned());
 
 		// Build a layout for the header line
@@ -340,33 +356,30 @@ impl Widget for &mut MainWindow
 		}
 
 		// Build a layout for the footer line
-		let (footerLayout, footerSpacers ) = Layout::horizontal
-		(
-			[Constraint::Percentage(50), Constraint::Fill(1), Constraint::Fill(3)]
-		)
-			.flex(Flex::SpaceBetween)
-			.spacing(1)
-			.split_with_spacers(areas[2]);
+		let (footerLayout, footerSpacers) =
+			Layout::horizontal([Constraint::Percentage(50), Constraint::Fill(1), Constraint::Fill(3)])
+				.flex(Flex::SpaceBetween)
+				.spacing(1)
+				.split_with_spacers(areas[2]);
 
 		// Figure out what strings are to be displayed in the footer
-		let currentlyPlaying = self.currentlyPlaying.as_ref()
+		let currentlyPlaying = self
+			.currentlyPlaying
+			.as_ref()
 			.map_or_else(|| String::from("Nothing playing"), |(song, _)| song.description());
-		let songDuration = self.currentlyPlaying.as_ref()
+		let songDuration = self
+			.currentlyPlaying
+			.as_ref()
 			.and_then(|(song, _)| song.songDuration())
-			.map_or_else
-			(
-				|| String::from("--:--"), durationAsString
-			);
-		let playedDuration = self.currentlyPlaying.as_ref()
-			.map_or_else
-			(
-				|| String::from("--:--"),
-				|(song, _)| durationAsString(song.playedDuration())
-			);
-		let errorState = self.errorState.as_ref().map_or_else
-		(
-			|| String::from("No errors"), Clone::clone
+			.map_or_else(|| String::from("--:--"), durationAsString);
+		let playedDuration = self.currentlyPlaying.as_ref().map_or_else(
+			|| String::from("--:--"),
+			|(song, _)| durationAsString(song.playedDuration()),
 		);
+		let errorState = self
+			.errorState
+			.as_ref()
+			.map_or_else(|| String::from("No errors"), Clone::clone);
 
 		// Display the program footer - which song is currently playing, song runtime, and whether errors have occured
 		Line::from_iter([String::from(" "), currentlyPlaying])

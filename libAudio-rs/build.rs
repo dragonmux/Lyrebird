@@ -6,14 +6,13 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use meson_next as meson;
 use cc::Build;
+use meson_next as meson;
 
 fn main()
 {
 	// Figure out where the build is to go into
-	let buildPath = PathBuf::from(env::var("OUT_DIR").unwrap())
-		.join("build");
+	let buildPath = PathBuf::from(env::var("OUT_DIR").unwrap()).join("build");
 	let buildDir = buildPath.to_str().unwrap();
 
 	// Set up the build options to not build the Python bindings and to statically link libAudio
@@ -42,20 +41,20 @@ fn main()
 	meson::build("clib", buildDir, config);
 
 	// Figure out which version of OptimFROG to use and put it onto the search path
-	let targetOS =
-		match env::var("CARGO_CFG_TARGET_OS").unwrap().as_str()
-		{
-			"linux" => "Linux",
-			"macos" => "OSX",
-			"windows" => "Win",
-			_ => panic!("Unable to build and link with OptimFROG on this OS"),
-		};
-	let targetArch =
-		match env::var("CARGO_CFG_TARGET_ARCH").unwrap().as_str()
-		{
-			"x86_64" => "x64",
-			_ => panic!("Unable to build and link with OptimFROG on this CPU architecture"),
-		};
+	let targetOS = match env::var("CARGO_CFG_TARGET_OS").unwrap().as_str()
+	{
+		"linux" => "Linux",
+		"macos" => "OSX",
+		"windows" => "Win",
+		_ => panic!("Unable to build and link with OptimFROG on this OS"),
+	};
+	let targetArch = match env::var("CARGO_CFG_TARGET_ARCH")
+		.unwrap()
+		.as_str()
+	{
+		"x86_64" => "x64",
+		_ => panic!("Unable to build and link with OptimFROG on this CPU architecture"),
+	};
 
 	let manifestPath = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
 	let depsPath = manifestPath.join("clib/deps");
@@ -63,18 +62,21 @@ fn main()
 	emitSearchPath(optimFROGPath.clone());
 
 	// Now copy the library object to the build directory
-	let _ = fs::copy
-	(
+	let _ = fs::copy(
 		optimFROGPath.join("libOptimFROG.so.0"),
-		buildPath.parent().unwrap().join("libOptimFROG.so.0"),
-	).unwrap();
+		buildPath
+			.parent()
+			.unwrap()
+			.join("libOptimFROG.so.0"),
+	)
+	.unwrap();
 
 	// Copy libmpc's common library so we can make proper use of it (OpenAL has one too and that shadows this)
-	let _ = fs::copy
-	(
+	let _ = fs::copy(
 		buildPath.join("deps/libmpc/common/libcommon.a"),
 		buildPath.join("deps/libmpc/common/libmpccommon.a"),
-	).unwrap();
+	)
+	.unwrap();
 }
 
 fn emitLinkOptions(buildDir: &Path)
