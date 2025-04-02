@@ -13,6 +13,7 @@ use window::MainWindow;
 mod config;
 mod library;
 mod libraryTree;
+mod options;
 mod playback;
 mod playlist;
 mod playlists;
