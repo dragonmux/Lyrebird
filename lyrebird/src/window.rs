@@ -55,8 +55,13 @@ impl Tab
 
 pub enum Operation
 {
+	/// Processing event determined there's nothing needs to be done
 	None,
+	/// Play a file, replacing the Now Playing playlist
 	Play(PathBuf),
+	/// Play a file already in the Now Playing playlist as if the current reached PlaybackState::Complete
+	PlayNext(PathBuf),
+	/// Add a file to the Now Playing playlist
 	Playlist(PathBuf),
 }
 
@@ -173,6 +178,7 @@ impl MainWindow
 						self.playlists.nowPlaying().replaceWith(song);
 						self.playSong(song)?
 					},
+					Operation::PlayNext(fileName) => self.playSong(fileName.as_path())?,
 					Operation::Playlist(song) => self.playlistSong(song)?,
 					Operation::None => {},
 				}
