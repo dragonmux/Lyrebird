@@ -119,18 +119,18 @@ impl Playlists
 			{
 				// Figure out which file this is from the list, starting by looking up
 				// which entry is currently selected (if any)
-				let file = self.currentPlaylistState.selected()
-					// Now look that up in the now playing list
-					.map(|index| self.nowPlaying.entry(index));
-				// Finally if we have a valid selection, convert that into a request to play it
-				match file
+				match self.currentPlaylistState.selected()
 				{
-					// XXX: This replaces the now playing playlist - we don't want to do that
-					// if we're in the now playing playlist.. rather we want it to be a switch-to
-					// operation in that case.
-					Some(fileName) => Operation::Play(fileName.to_path_buf()),
+					// If we have a valid selection
+					Some(index) =>
+					{
+						// Look that up in the now playing list
+						let fileName = self.nowPlaying.entry(index).to_path_buf();
+						// Set it as the next thing to play, and ask the file to be switched to
+						self.nowPlaying.nextEntry(index);
+						Operation::PlayNext(fileName)
+					},
 					None => Operation::None,
-
 				}
 			}
 		}

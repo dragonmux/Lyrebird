@@ -58,6 +58,11 @@ impl Playlist
 		self.entries[index].as_path()
 	}
 
+	pub fn nextEntry(&mut self, index: usize)
+	{
+		self.currentEntry = index
+	}
+
 	pub fn currentEntry(&self) -> usize
 	{
 		self.currentEntry
