@@ -3,7 +3,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::Style;
-use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Padding, StatefulWidget, Widget};
+use ratatui::widgets::{Block, BorderType, List, ListDirection, ListItem, ListState, Padding, StatefulWidget, Widget};
 use serde::{Deserialize, Serialize};
 
 use crate::window::Operation;
@@ -172,7 +172,9 @@ impl Widget for &mut Playlists
 						)
 						.border_type(BorderType::Rounded)
 						.padding(Padding::horizontal(1))
-				),
+				)
+				.highlight_style(self.activeEntry)
+				.direction(ListDirection::TopToBottom),
 			layout[0],
 			buf,
 			&mut self.playlistsState
@@ -199,7 +201,9 @@ impl Widget for &mut Playlists
 						)
 						.border_type(BorderType::Rounded)
 						.padding(Padding::horizontal(1))
-				),
+				)
+				.highlight_style(self.activeEntry)
+				.direction(ListDirection::TopToBottom),
 			layout[1],
 			buf,
 			&mut self.currentPlaylistState
