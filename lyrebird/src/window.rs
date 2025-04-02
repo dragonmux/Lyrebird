@@ -14,6 +14,7 @@ use ratatui::{DefaultTerminal, Frame};
 use tokio::sync::mpsc::{channel, Receiver};
 use tokio_stream::StreamExt;
 
+use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, Song};
 use crate::playlists::Playlists;
 use crate::widgets::tabBar::TabBar;
@@ -32,6 +33,7 @@ pub struct MainWindow
 	activeTab: Tab,
 
 	libraryTree: LibraryTree,
+	optionsPanel: OptionsPanel,
 	playlists: Playlists,
 
 	currentlyPlaying: Option<(Song, Receiver<PlaybackState>)>,
@@ -42,6 +44,7 @@ pub struct MainWindow
 enum Tab
 {
 	LibraryTree = 0,
+	Options = 3,
 	Playlists = 4,
 }
 
@@ -99,6 +102,7 @@ impl MainWindow
 			(
 				activeEntry, &paths.cache_dir().join("library.json"), &config.libraryPath
 			)?,
+			optionsPanel: OptionsPanel::new(),
 			playlists: Playlists::new(activeEntry),
 
 			currentlyPlaying: None,
@@ -158,6 +162,7 @@ impl MainWindow
 						KeyCode::Char('q' | 'Q') => { return self.quit(); },
 						KeyCode::Char(' ') => { self.togglePlayback(); },
 						KeyCode::Char('1') => { self.activeTab = Tab::LibraryTree; }
+						KeyCode::Char('4') => { self.activeTab = Tab::Options; }
 						KeyCode::Char('5') => { self.activeTab = Tab::Playlists; }
 						_ => {}
 					}
@@ -167,6 +172,7 @@ impl MainWindow
 				let operation = match self.activeTab
 				{
 					Tab::LibraryTree => self.libraryTree.handleKeyEvent(key),
+					Tab::Options => self.optionsPanel.handleKeyEvent(key),
 					Tab::Playlists => self.playlists.handleKeyEvent(key),
 				};
 				// If that key event resulted in a new file to play, process that
@@ -342,6 +348,7 @@ impl Widget for &mut MainWindow
 		match self.activeTab
 		{
 			Tab::LibraryTree => self.libraryTree.render(areas[1], buf),
+			Tab::Options => self.optionsPanel.render(areas[1], buf),
 			Tab::Playlists => self.playlists.render(areas[1], buf),
 		}
 

@@ -140,7 +140,8 @@ impl Playlists
 impl Widget for &mut Playlists
 {
 	fn render(self, area: Rect, buf: &mut Buffer)
-		where Self: Sized
+	where
+		Self: Sized
 	{
 		// Split the area up so we can display a listing of all the user's playlists, and what's currently queued
 		let layout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(2)])
