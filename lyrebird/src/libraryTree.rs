@@ -127,7 +127,7 @@ impl LibraryTree
 	{
 		match self.activeSide
 		{
-			Side::DirectoryTree => { self.activeSide = Side::Files },
+			Side::DirectoryTree => self.activeSide = Side::Files,
 			Side::Files =>
 			{
 				// Lock open access to the library
