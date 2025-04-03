@@ -6,7 +6,7 @@ use color_eyre::Result;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
 use directories::ProjectDirs;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint, Flex, Layout, Rect};
+use ratatui::layout::{Constraint, Flex, Layout, Rect, Size};
 use ratatui::style::{Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Widget;
@@ -83,7 +83,7 @@ impl Operation
 impl MainWindow
 {
 	/// Set up a new main window, building the style pallet needed
-	pub fn new(paths: &ProjectDirs, config: &mut Config) -> Result<Self>
+	pub fn new(paths: &ProjectDirs, config: &mut Config, initialSize: Size) -> Result<Self>
 	{
 		let activeEntry = Style::new().light_blue();
 
@@ -100,7 +100,10 @@ impl MainWindow
 
 			libraryTree: LibraryTree::new
 			(
-				activeEntry, &paths.cache_dir().join("library.json"), &config.libraryPath
+				activeEntry,
+				&paths.cache_dir().join("library.json"),
+				&config.libraryPath,
+				Size::new(initialSize.width, initialSize.height.saturating_sub(2)),
 			)?,
 			optionsPanel: OptionsPanel::new(),
 			playlists: Playlists::new(activeEntry),
@@ -188,6 +191,10 @@ impl MainWindow
 					Operation::Playlist(song) => self.playlistSong(song)?,
 					Operation::None => {},
 				}
+			},
+			Event::Resize(width, height) =>
+			{
+				self.libraryTree.handleResize(Size::new(width, height));
 			},
 			_ => {}
 		}

@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock};
 use color_eyre::eyre::{self, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Constraint, Layout, Margin, Rect};
+use ratatui::layout::{Alignment, Constraint, Layout, Margin, Rect, Size};
 use ratatui::style::Style;
 use ratatui::symbols::scrollbar;
 use ratatui::widgets::{Block, BorderType, List, ListDirection, ListState, Padding, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget};
@@ -21,6 +21,7 @@ pub struct LibraryTree
 	dirListScrollbar: ScrollbarState,
 	filesListState: ListState,
 	filesListScrollbar: ScrollbarState,
+	viewportSize: Size,
 
 	library: Arc<RwLock<MusicLibrary>>,
 }
@@ -34,7 +35,7 @@ enum Side
 
 impl LibraryTree
 {
-	pub fn new(activeEntry: Style, cacheFile: &Path, libraryPath: &Path) -> Result<Self>
+	pub fn new(activeEntry: Style, cacheFile: &Path, libraryPath: &Path, viewportSize: Size) -> Result<Self>
 	{
 		Ok(Self
 		{
@@ -44,6 +45,7 @@ impl LibraryTree
 			dirListScrollbar: ScrollbarState::default(),
 			filesListState: ListState::default(),
 			filesListScrollbar: ScrollbarState::default(),
+			viewportSize,
 
 			library: MusicLibrary::new(cacheFile, libraryPath)?,
 		})
@@ -87,6 +89,9 @@ impl LibraryTree
 		}
 		Operation::None
 	}
+
+	pub fn handleResize(&mut self, newSize: Size)
+		{ self.viewportSize = newSize; }
 
 	const fn moveLeft(&mut self)
 		{ self.activeSide = Side::DirectoryTree; }
@@ -205,8 +210,8 @@ impl Widget for &mut LibraryTree
 		// Rebuild the directory scroll bar to take into account any library changes that
 		// occured since last redraw, and figure out where the user is currently scrolled to
 		self.dirListScrollbar = self.dirListScrollbar
-			.content_length(libraryLock.directoryCount())
-			.position(self.dirListState.selected().unwrap_or_default());
+			.content_length(libraryLock.directoryCount().saturating_sub(self.viewportSize.height.into()))
+			.position(self.dirListState.selected().unwrap_or_default().saturating_sub(self.viewportSize.height.into()));
 		// Render the scroll location of the directory list
 		StatefulWidget::render
 		(
@@ -249,8 +254,19 @@ impl Widget for &mut LibraryTree
 		// Rebuild the files scroll bar to take into account any library changes that
 		// occured since last redraw, and figure out where the user is currently scrolled to
 		self.filesListScrollbar = self.filesListScrollbar
-			.content_length(libraryLock.filesCount(self.dirListState.selected()))
-			.position(self.filesListState.selected().unwrap_or_default());
+			.content_length
+			(
+				libraryLock
+					.filesCount(self.dirListState.selected())
+					.saturating_sub(self.viewportSize.height.into())
+			)
+			.position
+			(
+				self.filesListState
+					.selected()
+					.unwrap_or_default()
+					.saturating_sub(self.viewportSize.height.into())
+			);
 		// Render the scroll location of the files list
 		StatefulWidget::render
 		(
