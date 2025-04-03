@@ -275,6 +275,9 @@ impl MusicLibrary
 			)
 	}
 
+	pub fn directoryCount(&self) -> usize
+		{ self.dirs.len() + 1 }
+
 	pub fn filesFor(&self, dirIndex: Option<usize>) -> Option<impl Iterator<Item = ListItem>>
 	{
 		// Find the entry from the directories that describes the requested index
@@ -300,6 +303,15 @@ impl MusicLibrary
 						)
 				}
 			)
+	}
+
+	pub fn filesCount(&self, dirIndex: Option<usize>) -> usize
+	{
+		dirIndex
+			.and_then(|index| iter::once(&self.basePath).chain(self.dirs.iter()).nth(index))
+			.and_then(|dir| self.filesIn(dir))
+			.map(|files| files.len())
+			.unwrap_or_default()
 	}
 
 	pub fn directoryAt(&self, index: usize) -> Option<&PathBuf>

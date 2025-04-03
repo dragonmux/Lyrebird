@@ -5,9 +5,10 @@ use std::sync::{Arc, RwLock};
 use color_eyre::eyre::{self, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::layout::{Alignment, Constraint, Layout, Margin, Rect};
 use ratatui::style::Style;
-use ratatui::widgets::{Block, BorderType, List, ListDirection, ListState, Padding, StatefulWidget, Widget};
+use ratatui::symbols::scrollbar;
+use ratatui::widgets::{Block, BorderType, List, ListDirection, ListState, Padding, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget};
 
 use crate::library::MusicLibrary;
 use crate::window::Operation;
@@ -17,7 +18,9 @@ pub struct LibraryTree
 	activeEntry: Style,
 	activeSide: Side,
 	dirListState: ListState,
+	dirListScrollbar: ScrollbarState,
 	filesListState: ListState,
+	filesListScrollbar: ScrollbarState,
 
 	library: Arc<RwLock<MusicLibrary>>,
 }
@@ -38,7 +41,9 @@ impl LibraryTree
 			activeEntry,
 			activeSide: Side::DirectoryTree,
 			dirListState: ListState::default().with_selected(Some(0)),
+			dirListScrollbar: ScrollbarState::default(),
 			filesListState: ListState::default(),
+			filesListScrollbar: ScrollbarState::default(),
 
 			library: MusicLibrary::new(cacheFile, libraryPath)?,
 		})
@@ -197,6 +202,23 @@ impl Widget for &mut LibraryTree
 			&mut self.dirListState
 		);
 
+		// Rebuild the directory scroll bar to take into account any library changes that
+		// occured since last redraw, and figure out where the user is currently scrolled to
+		self.dirListScrollbar = self.dirListScrollbar
+			.content_length(libraryLock.directoryCount())
+			.position(self.dirListState.selected().unwrap_or_default());
+		// Render the scroll location of the directory list
+		StatefulWidget::render
+		(
+			Scrollbar::new(ScrollbarOrientation::VerticalRight)
+				.symbols(scrollbar::VERTICAL)
+				.begin_symbol(None)
+				.end_symbol(None),
+			layout[0].inner(Margin::new(0, 1)),
+			buf,
+			&mut self.dirListScrollbar,
+		);
+
 		// Build a list of files in the current directory being displayed
 		let filesList = libraryLock.filesFor(self.dirListState.selected())
 			.map(List::new)
@@ -223,5 +245,22 @@ impl Widget for &mut LibraryTree
 			.direction(ListDirection::TopToBottom);
 
 		StatefulWidget::render(filesList, layout[1], buf, &mut self.filesListState);
+
+		// Rebuild the files scroll bar to take into account any library changes that
+		// occured since last redraw, and figure out where the user is currently scrolled to
+		self.filesListScrollbar = self.filesListScrollbar
+			.content_length(libraryLock.filesCount(self.dirListState.selected()))
+			.position(self.filesListState.selected().unwrap_or_default());
+		// Render the scroll location of the files list
+		StatefulWidget::render
+		(
+			Scrollbar::new(ScrollbarOrientation::VerticalRight)
+				.symbols(scrollbar::VERTICAL)
+				.begin_symbol(None)
+				.end_symbol(None),
+			layout[1].inner(Margin::new(0, 1)),
+			buf,
+			&mut self.filesListScrollbar,
+		);
 	}
 }
