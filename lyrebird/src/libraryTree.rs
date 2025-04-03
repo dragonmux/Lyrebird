@@ -82,6 +82,8 @@ impl LibraryTree
 				KeyCode::Right => self.moveRight(),
 				KeyCode::Up => self.moveUp(),
 				KeyCode::Down => self.moveDown(),
+				KeyCode::PageUp => self.movePageUp(),
+				KeyCode::PageDown => self.movePageDown(),
 				KeyCode::Enter => { return self.playSelection(); },
 				KeyCode::Char('+') => { return Operation::playlist(self.makeSelection()); },
 				_ => {},
@@ -127,6 +129,38 @@ impl LibraryTree
 			Side::Files =>
 			{
 				self.filesListState.select_next();
+			}
+		}
+	}
+
+	fn movePageUp(&mut self)
+	{
+		match self.activeSide
+		{
+			Side::DirectoryTree =>
+			{
+				self.dirListState.scroll_up_by(self.viewportSize.height);
+				self.filesListState = ListState::default();
+			}
+			Side::Files =>
+			{
+				self.filesListState.scroll_up_by(self.viewportSize.height);
+			}
+		}
+	}
+
+	fn movePageDown(&mut self)
+	{
+		match self.activeSide
+		{
+			Side::DirectoryTree =>
+			{
+				self.dirListState.scroll_down_by(self.viewportSize.height);
+				self.filesListState = ListState::default();
+			}
+			Side::Files =>
+			{
+				self.filesListState.scroll_down_by(self.viewportSize.height);
 			}
 		}
 	}
