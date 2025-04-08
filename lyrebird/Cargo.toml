@@ -16,7 +16,7 @@ ratatui = "0.29"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["preserve_order", "float_roundtrip", "raw_value"] }
 serde_repr = "0.1.20"
-tokio = { version = "1.44.1", features = ["macros", "rt", "rt-multi-thread", "sync", "time", "tracing"] }
+tokio = { version = "1.44.2", features = ["macros", "rt", "rt-multi-thread", "sync", "time", "tracing"] }
 tokio-stream = "0.1.17"
 tokio-util = { version = "0.7.14", features = ["tracing"] }
 tracing = "0.1.41"
