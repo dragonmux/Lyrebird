@@ -48,7 +48,7 @@ impl Playlists
 		}
 	}
 
-	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Operation
+	pub fn handleKeyEvent(&mut self, key: &KeyEvent) -> Operation
 	{
 		if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
 		{

@@ -21,7 +21,7 @@ impl OptionsPanel
 	}
 
 	#[expect(clippy::unused_self, reason = "dummy function for now")]
-	pub fn handleKeyEvent(&mut self, _key: KeyEvent) -> Operation
+	pub fn handleKeyEvent(&mut self, _key: &KeyEvent) -> Operation
 	{
 		Operation::None
 	}

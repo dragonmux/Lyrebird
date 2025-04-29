@@ -72,7 +72,7 @@ impl LibraryTree
 		MusicLibrary::maybeJoinDiscoveryThread(&self.library).await
 	}
 
-	pub fn handleKeyEvent(&mut self, key: KeyEvent) -> Operation
+	pub fn handleKeyEvent(&mut self, key: &KeyEvent) -> Operation
 	{
 		if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
 		{

@@ -174,9 +174,9 @@ impl MainWindow
 				// tab and ask it what it thinks of this
 				let operation = match self.activeTab
 				{
-					Tab::LibraryTree => self.libraryTree.handleKeyEvent(*key),
-					Tab::Options => self.optionsPanel.handleKeyEvent(*key),
-					Tab::Playlists => self.playlists.handleKeyEvent(*key),
+					Tab::LibraryTree => self.libraryTree.handleKeyEvent(key),
+					Tab::Options => self.optionsPanel.handleKeyEvent(key),
+					Tab::Playlists => self.playlists.handleKeyEvent(key),
 				};
 				// If that key event resulted in a new file to play, process that
 				match operation
