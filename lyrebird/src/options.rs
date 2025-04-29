@@ -26,8 +26,10 @@ impl OptionsPanel
 	}
 }
 
-impl Default for OptionsPanel {
-    fn default() -> Self {
+impl Default for OptionsPanel
+{
+    fn default() -> Self
+	{
         Self::new()
     }
 }
