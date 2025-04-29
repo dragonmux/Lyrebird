@@ -270,6 +270,7 @@ impl MainWindow
 	// error to call this function if self.currentlyPlaying is None!
 	async fn playbackNotification(&mut self) -> Option<PlaybackState>
 	{
+		#[expect(clippy::unwrap_used, reason = "impossible in context")]
 		let (_, channel) = self.currentlyPlaying.as_mut().unwrap();
 		channel.recv().await
 	}

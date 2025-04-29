@@ -64,7 +64,7 @@ impl LibraryTree
 
 	pub fn isDiscovering(&self) -> bool
 	{
-		self.library.read().unwrap().isDiscovering()
+		self.library.read().expect("Library lock in bad state").isDiscovering()
 	}
 
 	pub async fn maybeJoinDiscovery(&self) -> Result<()>
@@ -209,7 +209,7 @@ impl Widget for &mut LibraryTree
 			.split(area);
 
 		// Get a lock on the library so we get a consistent view of it for rendering
-		let libraryLock = self.library.read().unwrap();
+		let libraryLock = self.library.read().expect("Library lock in bad state");
 
 		// Render the directory list using the internal state object
 		StatefulWidget::render

@@ -117,7 +117,7 @@ impl Song
 	pub fn play(&mut self)
 	{
 		// If there is not already playback running
-		if let None = self.playbackThread
+		if self.playbackThread.is_none()
 		{
 			let state = self.state.clone();
 			let task = move || { state.play(); };
@@ -180,7 +180,7 @@ impl ThreadState
 				*state = PlaybackState::Complete;
 			}
 			let state = state.clone();
-			self.notification.blocking_send(state).unwrap();
+			self.notification.blocking_send(state).expect("Notification sender has bad state");
 		}
 	}
 
@@ -197,9 +197,8 @@ impl ThreadState
 				|thread|
 				{
 					// Ask the thread to join, and map any error it produces to our error types
-			 		let result = thread.join()
-						.map_err(|error| eyre::eyre!("Error from playback thread: {:?}", error));
-					return result;
+			 		thread.join()
+						.map_err(|error| eyre::eyre!("Error from playback thread: {:?}", error))
 				}
 			)
 			// Extract the resulting Result from that, making this an Ok if there was no thread to join
@@ -221,9 +220,8 @@ impl ThreadState
 				|thread|
 				{
 					// Ask the thread to join, and map any error it produces to our error types
-			 		let result = thread.join()
-						.map_err(|error| eyre::eyre!("Error from playback thread: {:?}", error));
-					return result;
+					thread.join()
+						.map_err(|error| eyre::eyre!("Error from playback thread: {:?}", error))
 				}
 			)
 			// Extract the resulting Result from that, making this an Ok if there was no thread to join

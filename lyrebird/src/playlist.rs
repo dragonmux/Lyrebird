@@ -28,7 +28,7 @@ impl Playlist
 
 	pub fn name(&self) -> &str
 	{
-		return self.name.as_str()
+		self.name.as_str()
 	}
 
 	pub fn add(&mut self, fileName: &Path)

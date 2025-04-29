@@ -141,8 +141,7 @@ impl MusicLibrary
 	{
 		if Self::readLock(library)?.discoveryThread.is_some()
 		{
-			let mut library = Self::writeLock(library)?;
-			let thread = library.discoveryThread.take()
+			let thread = Self::writeLock(library)?.discoveryThread.take()
 				.ok_or( eyre::eyre!("Inconsistency in discovery thread state"))?;
 			return thread.await?;
 		}

@@ -26,6 +26,12 @@ impl OptionsPanel
 	}
 }
 
+impl Default for OptionsPanel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Widget for &mut OptionsPanel
 {
 	fn render(self, area: Rect, buf: &mut Buffer)

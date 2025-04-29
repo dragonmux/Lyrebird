@@ -24,17 +24,12 @@ pub struct Playlists
 	playlistsState: ListState,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 enum Side
 {
+	#[default]
 	Playlists,
 	PlaylistContents,
-}
-
-impl Default for Side
-{
-	fn default() -> Self
-		{ Side::Playlists }
 }
 
 impl Playlists
@@ -69,7 +64,7 @@ impl Playlists
 		Operation::None
 	}
 
-	pub fn nowPlaying<'a>(&'a mut self) -> &'a mut Playlist
+	pub fn nowPlaying(&mut self) -> &mut Playlist
 		{ &mut self.nowPlaying }
 
 	const fn moveLeft(&mut self)

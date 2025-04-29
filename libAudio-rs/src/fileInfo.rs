@@ -12,7 +12,7 @@ pub struct FileInfo<'a>
 	phantom: PhantomData<&'a audioFile::AudioFile>,
 }
 
-impl<'a> FileInfo<'a>
+impl FileInfo<'_>
 {
 	pub fn new(fileInfo: *const bindings::FileInfo) -> Self
 	{
