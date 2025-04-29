@@ -13,6 +13,7 @@ use crate::playlist::Playlist;
 pub struct Playlists
 {
 	nowPlaying: Playlist,
+	#[expect(clippy::struct_field_names, reason = "naming is hard, okay")]
 	playlists: Vec<Playlist>,
 	#[serde(skip)]
 	activeEntry: Style,

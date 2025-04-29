@@ -14,6 +14,7 @@ pub struct FileInfo<'a>
 
 impl FileInfo<'_>
 {
+	#[must_use]
 	pub fn new(fileInfo: *const bindings::FileInfo) -> Self
 	{
 		FileInfo
@@ -23,68 +24,71 @@ impl FileInfo<'_>
 		}
 	}
 
+	#[must_use]
 	pub fn totalTime(&self) -> u64
 	{
 		unsafe { audioFileTotalTime(self.inner) }
 	}
 
+	#[must_use]
 	pub fn bitsPerSample(&self) -> u32
 	{
 		unsafe { audioFileBitsPerSample(self.inner) }
 	}
 
+	#[must_use]
 	pub fn bitRate(&self) -> u32
 	{
 		unsafe { audioFileBitRate(self.inner) }
 	}
 
+	#[must_use]
 	pub fn channels(&self) -> u8
 	{
 		unsafe { audioFileChannels(self.inner) }
 	}
 
+	/// # Errors
+	/// Fails if the track title is not valid UTF-8.
 	pub fn title(&self) -> Result<Option<String>>
 	{
 		let title = unsafe { audioFileTitle(self.inner) };
-		match title.is_null()
+		if title.is_null()
 		{
-			true => Ok(None),
-			false =>
-			{
-				let title = unsafe { CStr::from_ptr(title) };
-				Ok(Some(String::from_utf8(title.to_bytes().to_vec())?))
-			}
+			return Ok(None);
 		}
+		let title = unsafe { CStr::from_ptr(title) };
+		Ok(Some(String::from_utf8(title.to_bytes().to_vec())?))
 	}
 
+	/// # Errors
+	/// Fails if the track artist is not valid UTF-8.
 	pub fn artist(&self) -> Result<Option<String>>
 	{
 		let artist = unsafe { audioFileArtist(self.inner) };
-		match artist.is_null()
+		if artist.is_null()
 		{
-			true => Ok(None),
-			false =>
-			{
-				let artist = unsafe { CStr::from_ptr(artist) };
-				Ok(Some(String::from_utf8(artist.to_bytes().to_vec())?))
-			}
+			return Ok(None);
 		}
+		let artist = unsafe { CStr::from_ptr(artist) };
+		Ok(Some(String::from_utf8(artist.to_bytes().to_vec())?))
 	}
 
+	/// # Errors
+	/// Fails if the album title is not valid UTF-8.
 	pub fn album(&self) -> Result<Option<String>>
 	{
 		let album = unsafe { audioFileAlbum(self.inner) };
-		match album.is_null()
+		if album.is_null()
 		{
-			true => Ok(None),
-			false =>
-			{
-				let album = unsafe { CStr::from_ptr(album) };
-				Ok(Some(String::from_utf8(album.to_bytes().to_vec())?))
-			}
+			return Ok(None);
 		}
+		let album = unsafe { CStr::from_ptr(album) };
+		Ok(Some(String::from_utf8(album.to_bytes().to_vec())?))
 	}
 
+	/// # Errors
+	/// Fails if other comments are not valid UTF-8.
 	pub fn otherComments(&self) -> Result<Vec<String>>
 	{
 		let count = unsafe { audioFileOtherCommentsCount(self.inner) };

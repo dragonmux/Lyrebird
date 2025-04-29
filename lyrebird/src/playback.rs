@@ -147,8 +147,11 @@ impl Song
 	pub fn state(&self) -> PlaybackState
 	{
 		self.state.state.lock()
-			.map(|lock| lock.clone())
-			.unwrap_or_else(|error| PlaybackState::Unknown(error.to_string()))
+			.map_or_else
+			(
+				|error| PlaybackState::Unknown(error.to_string()),
+				|lock| lock.clone()
+			)
 	}
 }
 
@@ -192,17 +195,20 @@ impl ThreadState
 			// Now actually pause playback
 			self.audioFile.pause();
 			// Extract the join handle
-			return threadHandle.map
+			return threadHandle.map_or_else
 			(
+				||
+				{
+					// If there's no thread to join, then just return Ok.
+					Ok(())
+				},
 				|thread|
 				{
 					// Ask the thread to join, and map any error it produces to our error types
 			 		thread.join()
 						.map_err(|error| eyre::eyre!("Error from playback thread: {:?}", error))
 				}
-			)
-			// Extract the resulting Result from that, making this an Ok if there was no thread to join
-			.unwrap_or_else(|| Ok(()));
+			);
 		}
 		Ok(())
 	}
@@ -215,8 +221,12 @@ impl ThreadState
 			// Now actually stop playback
 			self.audioFile.stop();
 			// Extract the join handle
-			return threadHandle.map
+			return threadHandle.map_or_else
 			(
+				|| {
+					// If there's no thread to join, then just return Ok.
+					Ok(())
+				},
 				|thread|
 				{
 					// Ask the thread to join, and map any error it produces to our error types
@@ -224,8 +234,6 @@ impl ThreadState
 						.map_err(|error| eyre::eyre!("Error from playback thread: {:?}", error))
 				}
 			)
-			// Extract the resulting Result from that, making this an Ok if there was no thread to join
-			.unwrap_or_else(|| Ok(()));
 		}
 		Ok(())
 	}

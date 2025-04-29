@@ -166,7 +166,7 @@ impl LibraryTree
 	}
 
 	/// If the currently sellected side is the directory listing, switch to that directory's file listing
-	/// otherwise, if it's the file listing, figure out which one and make a SongState for it
+	/// otherwise, if it's the file listing, figure out which one and make a `SongState` for it
 	fn makeSelection(&mut self) -> Option<PathBuf>
 	{
 		match self.activeSide

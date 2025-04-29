@@ -124,6 +124,7 @@ fn emitLinkOptions(buildDir: &Path)
 	emitSearchPath(buildDir.join("deps/zlib-1.2.13"));
 }
 
+#[expect(clippy::needless_pass_by_value, reason = "this should take &Path, but it's easier this way")]
 fn emitSearchPath(path: PathBuf)
 {
 	println!("cargo::rustc-link-search=native={}", path.to_str().unwrap());

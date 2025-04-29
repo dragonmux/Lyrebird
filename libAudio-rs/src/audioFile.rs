@@ -15,6 +15,7 @@ pub struct AudioFile
 impl AudioFile
 {
 	/// Try to open the given file as an audio file
+	#[must_use]
 	pub fn readFile(path: &Path) -> Option<AudioFile>
 	{
 		let fileName = path.to_path_buf();
@@ -26,6 +27,7 @@ impl AudioFile
 	}
 
 	/// Try to open the given file as an audio file
+	#[must_use]
 	pub fn writeFile(path: &Path, format: AudioType) -> Option<AudioFile>
 	{
 		let fileName = path.to_path_buf();
@@ -37,6 +39,7 @@ impl AudioFile
 	}
 
 	/// Check if the target file is a valid audio file
+	#[must_use]
 	pub fn isAudio(path: &Path) -> bool
 	{
 		let fileName = path.to_path_buf();
@@ -50,6 +53,7 @@ impl AudioFile
 	}
 
 	/// Get the metadata for this audio file
+	#[must_use]
 	pub fn fileInfo(&self) -> FileInfo<'_>
 	{
 		FileInfo::new

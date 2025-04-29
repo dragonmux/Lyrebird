@@ -60,7 +60,7 @@ impl Playlist
 
 	pub fn nextEntry(&mut self, index: usize)
 	{
-		self.currentEntry = index
+		self.currentEntry = index;
 	}
 
 	pub fn currentEntry(&self) -> usize
@@ -80,7 +80,7 @@ impl Playlist
 		if self.currentEntry < count
 		{
 			// Increment the current entry counter if there's room to
-			self.currentEntry += 1
+			self.currentEntry += 1;
 		}
 		// Now check if we're done
 		if self.currentEntry >= count

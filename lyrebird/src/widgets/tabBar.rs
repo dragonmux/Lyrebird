@@ -168,13 +168,14 @@ impl TabBar<'_>
 		// Now turn that into graphemes
 		let graphemes = UnicodeSegmentation::graphemes(string, true);
 		// Now we have a bunch of graphemes, figure out if they're visible or not,
-		// and count wide the whole lot is in total
+		// and count how wide the whole lot is in total
 		graphemes
-			.filter(|symbol| !symbol.contains(|char: char| char.is_control()))
-			.map(|symbol| symbol.width() as u16)
-			.filter(|width| *width > 0)
+			.filter(|symbol| !symbol.contains(char::is_control))
+			.map(UnicodeWidthStr::width)
 			.reduce(|a, b| a + b)
 			.unwrap_or(0)
+			.try_into()
+			.expect("divider width longer than 65535 characters")
 	}
 
 	/// Render the tab bar to the given surface area of the console
@@ -212,10 +213,15 @@ impl TabBar<'_>
 			left = pos.0;
 		}
 
+		assert!((1..=65535).contains(&tabCount), "tabCount out of range");
+
+		#[expect(clippy::unwrap_used, reason = "assert above should have fired")]
+		let tabCountU16 = tabCount.try_into().unwrap();
+
 		// Now we have the exact bounds of the area we can use, subtract out the dividers
-		let totalArea = (right - left).saturating_sub((tabCount - 1) as u16 * dividerWidth);
+		let totalArea = (right - left).saturating_sub((tabCountU16 - 1) * dividerWidth);
 		// Now compute how wide each tab can be
-		let tabArea = totalArea.saturating_div(tabCount as u16);
+		let tabArea = totalArea.saturating_div(tabCountU16);
 
 		// Loop through all the tabs
 		for (idx, tab) in self.tabs.iter().enumerate()

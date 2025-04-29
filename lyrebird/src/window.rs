@@ -62,7 +62,7 @@ pub enum Operation
 	None,
 	/// Play a file, replacing the Now Playing playlist
 	Play(PathBuf),
-	/// Play a file already in the Now Playing playlist as if the current reached PlaybackState::Complete
+	/// Play a file already in the Now Playing playlist as if the current reached `PlaybackState::Complete`
 	PlayNext(PathBuf),
 	/// Add a file to the Now Playing playlist
 	Playlist(PathBuf),
@@ -139,16 +139,16 @@ impl MainWindow
 				_ = frameTimer.tick(), if self.libraryTree.isDiscovering() =>
 					{ terminal.draw(|frame| self.draw(frame))?; },
 				// Ask if there are more events to handle
-				Some(Ok(event)) = events.next() => { self.handleEvent(event)?; },
+				Some(Ok(event)) = events.next() => { self.handleEvent(&event)?; },
 				// If there is a file playing, check to see if it's giving us any notifications
 				Some(notification) = self.playbackNotification(), if self.currentlyPlaying.is_some() =>
-					{ self.handlePlaybackNotification(notification)? },
+					{ self.handlePlaybackNotification(&notification)? },
 			}
 		}
 		Ok(())
 	}
 
-	fn handleEvent(&mut self, event: Event) -> Result<()>
+	fn handleEvent(&mut self, event: &Event) -> Result<()>
 	{
 		// We did! find out what it was and handle it
 		match event
@@ -174,9 +174,9 @@ impl MainWindow
 				// tab and ask it what it thinks of this
 				let operation = match self.activeTab
 				{
-					Tab::LibraryTree => self.libraryTree.handleKeyEvent(key),
-					Tab::Options => self.optionsPanel.handleKeyEvent(key),
-					Tab::Playlists => self.playlists.handleKeyEvent(key),
+					Tab::LibraryTree => self.libraryTree.handleKeyEvent(*key),
+					Tab::Options => self.optionsPanel.handleKeyEvent(*key),
+					Tab::Playlists => self.playlists.handleKeyEvent(*key),
 				};
 				// If that key event resulted in a new file to play, process that
 				match operation
@@ -185,16 +185,16 @@ impl MainWindow
 					{
 						let song = fileName.as_path();
 						self.playlists.nowPlaying().replaceWith(song);
-						self.playSong(song)?
+						self.playSong(song)?;
 					},
 					Operation::PlayNext(fileName) => self.playSong(fileName.as_path())?,
-					Operation::Playlist(song) => self.playlistSong(song)?,
+					Operation::Playlist(song) => self.playlistSong(song.as_path())?,
 					Operation::None => {},
 				}
 			},
 			Event::Resize(width, height) =>
 			{
-				self.libraryTree.handleResize(Size::new(width, height));
+				self.libraryTree.handleResize(Size::new(*width, *height));
 			},
 			_ => {}
 		}
@@ -230,14 +230,14 @@ impl MainWindow
 		Ok(())
 	}
 
-	fn playlistSong(&mut self, fileName: PathBuf) -> Result<()>
+	fn playlistSong(&mut self, fileName: &Path) -> Result<()>
 	{
 		let nowPlaying = self.playlists.nowPlaying();
-		nowPlaying.add(fileName.as_path());
+		nowPlaying.add(fileName);
 		match &self.currentlyPlaying
 		{
 			Some(_) => Ok(()),
-			None => self.playSong(fileName.as_path()),
+			None => self.playSong(fileName),
 		}
 	}
 
@@ -275,7 +275,7 @@ impl MainWindow
 		channel.recv().await
 	}
 
-	fn handlePlaybackNotification(&mut self, notification: PlaybackState) -> Result<()>
+	fn handlePlaybackNotification(&mut self, notification: &PlaybackState) -> Result<()>
 	{
 		match notification
 		{
@@ -289,7 +289,7 @@ impl MainWindow
 				{
 					Some(fileName) => self.playSong(fileName.as_path())?,
 					None => self.currentlyPlaying = None,
-				};
+				}
 			},
 			_ => {},
 		}

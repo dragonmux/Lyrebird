@@ -309,7 +309,7 @@ impl MusicLibrary
 		dirIndex
 			.and_then(|index| iter::once(&self.basePath).chain(self.dirs.iter()).nth(index))
 			.and_then(|dir| self.filesIn(dir))
-			.map(|files| files.len())
+			.map(BTreeSet::len)
 			.unwrap_or_default()
 	}
 

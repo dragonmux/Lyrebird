@@ -2,6 +2,7 @@
 #![warn(clippy::unwrap_used)]
 #![allow(clippy::upper_case_acronyms)]
 #![allow(non_snake_case)]
+#![warn(clippy::pedantic)]
 
 use color_eyre::{eyre, Result};
 use config::Config;
