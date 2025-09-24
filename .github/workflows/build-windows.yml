@@ -53,6 +53,7 @@ jobs:
       - name: Setup pkgconf
         run: |
           git submodule init deps/pkgconf
+          git submodule update --depth 1
           cd deps/pkgconf
           meson setup build --prefix=$HOME/.local -Dtests=disabled
           meson compile -C build
