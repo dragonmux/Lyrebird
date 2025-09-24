@@ -59,6 +59,8 @@ jobs:
           cargo --version
           rustc --version
           cargo llvm-cov --version
+          meson --version
+          ninja --version
       - name: Build
         run: cargo b
       - name: Test
@@ -66,7 +68,7 @@ jobs:
       - name: Collect code coverage
         run: cargo llvm-cov --all-features --workspace --codecov --output-path codecov.json
       - name: Codecov
-        if: success() && github.repository == 'blackmagic-debug/bmputil'
+        if: success() && github.repository == 'dragonmux/Lyrebird'
         uses: codecov/codecov-action@v5
         with:
           files: codecov.json
