@@ -1,0 +1,100 @@
+name: Build Windows
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.job }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    name: '${{ matrix.os }} (msvc)'
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: pwsh
+    strategy:
+      matrix:
+        os:
+          - windows-2022
+          - windows-2025
+      fail-fast: false
+    steps:
+      - name: Runtime environment
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        run: |
+          Add-Content $env:GITHUB_PATH "$HOME/.local/bin"
+          Add-Content $env:GITHUB_PATH "$HOME/.cargo/bin"
+          "GITHUB_WORKSPACE=$(pwd)" >> $env:GITHUB_ENV
+          "PKG_CONFIG_PATH=$HOME/deps/lib/pkgconfig,$HOME/deps/share/pkgconfig" >> $env:GITHUB_ENV
+          "PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1" >> $env:GITHUB_ENV
+      - name: Checkout Lyrebird
+        uses: actions/checkout@v5
+        with:
+          lfs: true
+          submodules: true
+      - name: Setup Meson + Ninja
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel
+          python3 -m pip install meson ninja
+        working-directory: ${{ runner.temp }}
+      - name: Setup pkgconf
+        run: |
+          meson setup build --prefix=$HOME/.local -Dtests=disabled
+          meson compile -C build
+          meson install -C build
+          "PKG_CONFIG=$(where.exe pkgconf.exe)" >> $env:GITHUB_ENV
+          Remove-Item $(where.exe pkg-config.bat)
+          Remove-Item $(where.exe pkg-config)
+        working-directory:  ${{ github.workspace }}/libAudio-rs/clib/deps/pkgconf
+      - name: Setup Rust
+        run: |
+          rustup toolchain install stable-x86_64-pc-windows-msvc
+          rustup default stable-x86_64-pc-windows-msvc
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - name: Version tools
+        run: |
+          cl /Bv
+          link
+          cargo --version
+          rustc --version
+          cargo llvm-cov --version
+          meson --version
+          ninja --version
+      - name: Build
+        run: cargo b
+      - name: Test
+        run: cargo t
+      - name: Collect code coverage
+        run: cargo llvm-cov --all-features --workspace --codecov --output-path codecov.json
+      - name: Codecov
+        if: success() && github.repository == 'dragonmux/Lyrebird'
+        uses: codecov/codecov-action@v5
+        with:
+          files: codecov.json
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Release build
+        if: success() && github.event_name == 'push'
+        run: |
+          cargo b -r
+      - name: Upload build
+        if: success() && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyrebird-${{ matrix.os }}-msvc
+          path: |
+		  	build/release/lyrebird.exe
+		  	build/release/libOptimFROG.dll
+          if-no-files-found: error
