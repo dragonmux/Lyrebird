@@ -52,13 +52,15 @@ jobs:
         working-directory: ${{ runner.temp }}
       - name: Setup pkgconf
         run: |
+          git submodule init deps/pkgconf
+          cd deps/pkgconf
           meson setup build --prefix=$HOME/.local -Dtests=disabled
           meson compile -C build
           meson install -C build
           "PKG_CONFIG=$(where.exe pkgconf.exe)" >> $env:GITHUB_ENV
           Remove-Item $(where.exe pkg-config.bat)
           Remove-Item $(where.exe pkg-config)
-        working-directory:  ${{ github.workspace }}/libAudio-rs/clib/deps/pkgconf
+        working-directory:  ${{ github.workspace }}/libAudio-rs/clib
       - name: Setup Rust
         run: |
           rustup toolchain install stable-x86_64-pc-windows-msvc
