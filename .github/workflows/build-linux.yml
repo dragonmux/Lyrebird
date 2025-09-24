@@ -39,6 +39,15 @@ jobs:
         with:
           lfs: true
           submodules: true
+      - name: Upgrade pip + wheel
+        if: matrix.os.name == 'jammy'
+        shell: bash
+        run: |
+          sudo python3 -m pip install --upgrade pip setuptools wheel
+      - name: Setup Meson + Ninja
+        run: |
+          sudo python3 -m pip install --break-system-packages meson ninja
+        working-directory: ${{ runner.temp }}
       - name: Setup Rust
         run: rustup update stable
       - name: Install cargo-llvm-cov
