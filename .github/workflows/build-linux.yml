@@ -84,6 +84,6 @@ jobs:
         with:
           name: lyrebird-${{ matrix.os.id }}
           path: |
-		  	build/release/lyrebird
-		  	build/release/libOptimFROG.so.0
+            build/release/lyrebird
+            build/release/libOptimFROG.so.0
           if-no-files-found: error

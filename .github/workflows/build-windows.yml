@@ -95,8 +95,8 @@ jobs:
         with:
           name: lyrebird-${{ matrix.os }}-msvc
           path: |
-		  	build/release/lyrebird.exe
-		  	build/release/libOptimFROG.dll
+            build/release/lyrebird.exe
+            build/release/libOptimFROG.dll
           if-no-files-found: error
 
   build-mingw:
@@ -182,6 +182,6 @@ jobs:
         with:
           name: lyrebird-${{ matrix.os }}-${{ matrix.sys }}
           path: |
-		  	build/release/lyrebird.exe
-		  	build/release/libOptimFROG.dll
+            build/release/lyrebird.exe
+            build/release/libOptimFROG.dll
           if-no-files-found: error
