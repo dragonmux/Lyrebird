@@ -36,6 +36,10 @@ jobs:
           "GITHUB_WORKSPACE=$(pwd)" >> $env:GITHUB_ENV
           "PKG_CONFIG_PATH=$HOME/deps/lib/pkgconfig,$HOME/deps/share/pkgconfig" >> $env:GITHUB_ENV
           "PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1" >> $env:GITHUB_ENV
+      - name: Setup compiler
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86_64
       - name: Checkout Lyrebird
         uses: actions/checkout@v5
         with:
