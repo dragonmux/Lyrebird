@@ -82,7 +82,8 @@ fn emitLinkOptions(buildDir: &Path)
 	// Output link libraries needed to make things happy and work
 	println!("cargo::rustc-link-lib=Audio");
 	println!("cargo::rustc-link-lib=substrate");
-	println!("cargo::rustc-link-lib=OpenAL");
+	println!("cargo::rustc-link-lib=openal");
+	println!("cargo::rustc-link-lib=fmt");
 	println!("cargo::rustc-link-lib=faac_drm");
 	println!("cargo::rustc-link-lib=faad");
 	println!("cargo::rustc-link-lib=FLAC");
@@ -106,6 +107,7 @@ fn emitLinkOptions(buildDir: &Path)
 	emitSearchPath(buildDir.join("libAudio"));
 	emitSearchPath(buildDir.join("deps/substrate/impl"));
 	emitSearchPath(buildDir.join("deps/openal-soft"));
+	emitSearchPath(buildDir.join("deps/fmt-11.1.1"));
 	emitSearchPath(buildDir.join("deps/faac"));
 	emitSearchPath(buildDir.join("deps/faad2/libfaad"));
 	emitSearchPath(buildDir.join("deps/flac-1.4.2/src/libFLAC"));
