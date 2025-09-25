@@ -26,7 +26,7 @@ fn main()
 	let config = meson::Config::new().options(options);
 
 	// Tell Cargo how/where to find the build results
-	emitLinkOptions(buildPath.as_path());
+	emitLinkOptions(buildPath.as_path(), &env::var("CARGO_CFG_TARGET_OS").unwrap());
 	// Tell Cargo what constitutes a need to re-run
 	println!("cargo::rerun-if-changed=build.rs");
 	println!("cargo::rerun-if-changed=clib");
@@ -77,12 +77,19 @@ fn main()
 	).unwrap();
 }
 
-fn emitLinkOptions(buildDir: &Path)
+fn emitLinkOptions(buildDir: &Path, targetOS: &str)
 {
 	// Output link libraries needed to make things happy and work
 	println!("cargo::rustc-link-lib=Audio");
 	println!("cargo::rustc-link-lib=substrate");
-	println!("cargo::rustc-link-lib=openal");
+	if targetOS == "windows"
+	{
+		println!("cargo::rustc-link-lib=OpenAL32");
+	}
+	else
+	{
+		println!("cargo::rustc-link-lib=openal");
+	}
 	println!("cargo::rustc-link-lib=fmt");
 	println!("cargo::rustc-link-lib=faac_drm");
 	println!("cargo::rustc-link-lib=faad");
