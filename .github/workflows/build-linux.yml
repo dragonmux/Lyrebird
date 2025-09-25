@@ -36,7 +36,7 @@ jobs:
           echo "GITHUB_WORKSPACE=`pwd`" >> $GITHUB_ENV
       - name: Install dependencies
         run: |
-          sudo apt-get install libpipewire-0.3-dev libdbus-1-dev
+          sudo apt-get install libpipewire-0.3-dev libdbus-1-dev libpulse-dev libasound2-dev
       - name: Checkout Lyrebird
         uses: actions/checkout@v5
         with:
