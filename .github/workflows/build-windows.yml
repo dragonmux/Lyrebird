@@ -15,8 +15,6 @@ concurrency:
 
 jobs:
   build-windows:
-    # Remove once OpenAL ported to Meson properly
-    if: false
     name: '${{ matrix.os }} (msvc)'
     runs-on: ${{ matrix.os }}
     defaults:
@@ -109,8 +107,6 @@ jobs:
           if-no-files-found: error
 
   build-mingw:
-    # Remove once OpenAL ported to Meson properly
-    if: false
     name: '${{ matrix.os }} (${{ matrix.sys }})'
     runs-on: ${{ matrix.os }}
     defaults:
