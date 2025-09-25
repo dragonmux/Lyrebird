@@ -87,6 +87,8 @@ jobs:
           if-no-files-found: error
 
   build-macos-homebrew:
+    # Remove once OpenAL ported to Meson properly
+    if: false
     name: '${{ matrix.os }} (homebrew)'
     runs-on: ${{ matrix.os }}
     strategy:
