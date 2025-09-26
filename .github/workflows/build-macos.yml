@@ -81,7 +81,7 @@ jobs:
           name: lyrebird-${{ matrix.os.id }}
           path: |
             build/release/lyrebird
-            build/release/libOptimFROG.dylib
+            build/release/libOptimFROG.0.dylib
           if-no-files-found: error
 
   build-macos-homebrew:
@@ -149,5 +149,5 @@ jobs:
           name: lyrebird-${{ matrix.os.id }}
           path: |
             build/release/lyrebird
-            build/release/libOptimFROG.dylib
+            build/release/libOptimFROG.0.dylib
           if-no-files-found: error
