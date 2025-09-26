@@ -100,13 +100,19 @@ fn emitLinkOptions(buildDir: &Path, targetOS: TargetOS, targetArch: TargetArch)
 	// Output link libraries needed to make things happy and work
 	println!("cargo::rustc-link-lib=Audio");
 	println!("cargo::rustc-link-lib=substrate");
-	if targetOS == TargetOS::Windows
+	match targetOS
 	{
-		println!("cargo::rustc-link-lib=OpenAL32");
-	}
-	else
-	{
-		println!("cargo::rustc-link-lib=openal");
+		TargetOS::Windows => println!("cargo::rustc-link-lib=OpenAL32"),
+		TargetOS::MacOS =>
+		{
+			println!("cargo::rustc-link-lib=openal");
+			// For now just assume that all frameworks we might depend on are present and required -
+			// doing anything else is a giant pain and headache! >_<
+			println!("cargo::rustc-link-lib=framework=CoreFoundation");
+			println!("cargo::rustc-link-lib=framework=AudioToolbox");
+			println!("cargo::rustc-link-lib=framework=CoreAudio");
+		},
+		_ => println!("cargo::rustc-link-lib=openal"),
 	}
 	println!("cargo::rustc-link-lib=fmt");
 	println!("cargo::rustc-link-lib=faac_drm");
