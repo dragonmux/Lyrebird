@@ -113,7 +113,7 @@ fn emitLinkOptions(buildDir: &Path, targetOS: &str)
 	// Output where to find all those moving pieces
 	emitSearchPath(buildDir.join("libAudio"));
 	emitSearchPath(buildDir.join("deps/substrate/impl"));
-	emitSearchPath(buildDir.join("deps/openal-soft"));
+	emitSearchPath(buildDir.join("deps/openal"));
 	emitSearchPath(buildDir.join("deps/fmt-11.1.1"));
 	emitSearchPath(buildDir.join("deps/faac"));
 	emitSearchPath(buildDir.join("deps/faad2/libfaad"));
