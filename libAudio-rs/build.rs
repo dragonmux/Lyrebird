@@ -3,11 +3,28 @@
 
 use std::collections::HashMap;
 use std::env;
+use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use meson_next as meson;
 use cc::Build;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum TargetOS
+{
+	Linux,
+	Windows,
+	MacOS,
+	Unknown
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum TargetArch
+{
+	AMD64,
+	Unknown
+}
 
 fn main()
 {
@@ -25,8 +42,12 @@ fn main()
 	// Build a Meson configuration for this
 	let config = meson::Config::new().options(options);
 
+	// Convert the target OS and architecture values into enum values
+	let targetOS = TargetOS::from(env::var("CARGO_CFG_TARGET_OS").unwrap().as_str());
+	let targetArch = TargetArch::from(env::var("CARGO_CFG_TARGET_ARCH").unwrap().as_str());
+
 	// Tell Cargo how/where to find the build results
-	emitLinkOptions(buildPath.as_path(), &env::var("CARGO_CFG_TARGET_OS").unwrap());
+	emitLinkOptions(buildPath.as_path(), targetOS, targetArch);
 	// Tell Cargo what constitutes a need to re-run
 	println!("cargo::rerun-if-changed=build.rs");
 	println!("cargo::rerun-if-changed=clib");
@@ -41,33 +62,30 @@ fn main()
 	// Ask Meson to run the build
 	meson::build("clib", buildDir, config);
 
-	// Figure out which version of OptimFROG to use and put it onto the search path
-	let targetOS =
-		match env::var("CARGO_CFG_TARGET_OS").unwrap().as_str()
-		{
-			"linux" => "Linux",
-			"macos" => "OSX",
-			"windows" => "Win",
-			_ => panic!("Unable to build and link with OptimFROG on this OS"),
-		};
-	let targetArch =
-		match env::var("CARGO_CFG_TARGET_ARCH").unwrap().as_str()
-		{
-			"x86_64" => "x64",
-			_ => panic!("Unable to build and link with OptimFROG on this CPU architecture"),
-		};
+	// Figure out which version of OptimFROG to use (if any) and put it onto the search path
+	if targetOS != TargetOS::Unknown && targetArch != TargetArch::Unknown
+	{
+		let manifestPath = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+		let depsPath = manifestPath.join("clib/deps");
+		let optimFROGPath = depsPath.join(format!("OptimFROG_{targetOS}_{targetArch}_5100/SDK/Library"));
+		emitSearchPath(optimFROGPath.clone());
 
-	let manifestPath = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-	let depsPath = manifestPath.join("clib/deps");
-	let optimFROGPath = depsPath.join(format!("OptimFROG_{targetOS}_{targetArch}_5100/SDK/Library"));
-	emitSearchPath(optimFROGPath.clone());
-
-	// Now copy the library object to the build directory
-	let _ = fs::copy
-	(
-		optimFROGPath.join("libOptimFROG.so.0"),
-		buildPath.parent().unwrap().join("libOptimFROG.so.0"),
-	).unwrap();
+		// Now copy the library object to the build directory
+		let _ = match targetOS
+		{
+			TargetOS::Linux => fs::copy
+			(
+				optimFROGPath.join("libOptimFROG.so.0"),
+				buildPath.parent().unwrap().join("libOptimFROG.so.0"),
+			),
+			TargetOS::MacOS => fs::copy
+			(
+				optimFROGPath.join("libOptimFROG.0.dylib"),
+				buildPath.parent().unwrap().join("libOptimFROG.0.dylib"),
+			),
+			_ => Ok(0),
+		}.unwrap();
+	}
 
 	// Copy libmpc's common library so we can make proper use of it (OpenAL has one too and that shadows this)
 	let _ = fs::copy
@@ -77,12 +95,12 @@ fn main()
 	).unwrap();
 }
 
-fn emitLinkOptions(buildDir: &Path, targetOS: &str)
+fn emitLinkOptions(buildDir: &Path, targetOS: TargetOS, targetArch: TargetArch)
 {
 	// Output link libraries needed to make things happy and work
 	println!("cargo::rustc-link-lib=Audio");
 	println!("cargo::rustc-link-lib=substrate");
-	if targetOS == "windows"
+	if targetOS == TargetOS::Windows
 	{
 		println!("cargo::rustc-link-lib=OpenAL32");
 	}
@@ -109,7 +127,11 @@ fn emitLinkOptions(buildDir: &Path, targetOS: &str)
 	println!("cargo::rustc-link-lib=mpccommon");
 	println!("cargo::rustc-link-lib=wavpack");
 	println!("cargo::rustc-link-lib=z");
-	println!("cargo::rustc-link-lib=OptimFROG");
+	// Only include OptimFROG if it's an OS and architecture it can be used on
+	if targetOS != TargetOS::Unknown && targetArch != TargetArch::Unknown
+	{
+		println!("cargo::rustc-link-lib=OptimFROG");
+	}
 	// Output where to find all those moving pieces
 	emitSearchPath(buildDir.join("libAudio"));
 	emitSearchPath(buildDir.join("deps/substrate/impl"));
@@ -137,4 +159,72 @@ fn emitLinkOptions(buildDir: &Path, targetOS: &str)
 fn emitSearchPath(path: PathBuf)
 {
 	println!("cargo::rustc-link-search=native={}", path.to_str().unwrap());
+}
+
+impl From<&str> for TargetOS
+{
+	fn from(value: &str) -> Self
+	{
+		match value
+		{
+			"linux" => TargetOS::Linux,
+			"macos" => TargetOS::MacOS,
+			"windows" => TargetOS::Windows,
+			_ => TargetOS::Unknown,
+		}
+	}
+}
+
+impl Into<&'static str> for &TargetOS
+{
+	fn into(self) -> &'static str
+	{
+		match self
+		{
+			TargetOS::Linux => "Linux",
+			TargetOS::MacOS => "OSX",
+			TargetOS::Windows => "Win",
+			_ => panic!("Unable to build and link with OptimFROG on this OS"),
+		}
+	}
+}
+
+impl Display for TargetOS
+{
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+	{
+		fmt.write_str(self.into())
+	}
+}
+
+impl From<&str> for TargetArch
+{
+	fn from(value: &str) -> Self
+	{
+		match value
+		{
+			"x86_64" => TargetArch::AMD64,
+			_ => TargetArch::Unknown,
+		}
+	}
+}
+
+impl Into<&'static str> for &TargetArch
+{
+	fn into(self) -> &'static str
+	{
+		match self
+		{
+			TargetArch::AMD64 => "x64",
+			_ => panic!("Unable to build and link with OptimFROG on this CPU architecture"),
+		}
+	}
+}
+
+impl Display for TargetArch
+{
+	fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+	{
+		fmt.write_str(self.into())
+	}
 }
