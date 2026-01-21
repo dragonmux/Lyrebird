@@ -237,7 +237,7 @@ impl MusicLibrary
 		Ok(())
 	}
 
-	pub fn directories(&self) -> impl Iterator<Item = ListItem>
+	pub fn directories(&self) -> impl Iterator<Item = ListItem<'_>>
 	{
 		// Chain together the base library path, and the directories found within the library
 		iter::once(&self.basePath)
@@ -277,7 +277,7 @@ impl MusicLibrary
 	pub fn directoryCount(&self) -> usize
 		{ self.dirs.len() + 1 }
 
-	pub fn filesFor(&self, dirIndex: Option<usize>) -> Option<impl Iterator<Item = ListItem>>
+	pub fn filesFor(&self, dirIndex: Option<usize>) -> Option<impl Iterator<Item = ListItem<'_>>>
 	{
 		// Find the entry from the directories that describes the requested index
 		dirIndex

@@ -43,7 +43,7 @@ impl Playlist
 		self.add(fileName);
 	}
 
-	pub fn contents(&self) -> impl Iterator<Item = ListItem>
+	pub fn contents(&self) -> impl Iterator<Item = ListItem<'_>>
 	{
 		self.entries
 			.iter()
