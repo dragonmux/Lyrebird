@@ -98,14 +98,14 @@ fn main()
 fn emitLinkOptions(buildDir: &Path, targetOS: TargetOS, targetArch: TargetArch)
 {
 	// Output link libraries needed to make things happy and work
-	println!("cargo::rustc-link-lib=Audio");
-	println!("cargo::rustc-link-lib=substrate");
+	println!("cargo::rustc-link-lib=static=Audio");
+	println!("cargo::rustc-link-lib=static=substrate");
 	match targetOS
 	{
-		TargetOS::Windows => println!("cargo::rustc-link-lib=OpenAL32"),
+		TargetOS::Windows => println!("cargo::rustc-link-lib=static=OpenAL32"),
 		TargetOS::MacOS =>
 		{
-			println!("cargo::rustc-link-lib=openal");
+			println!("cargo::rustc-link-lib=static=openal");
 			// For now just assume that all frameworks we might depend on are present and required -
 			// doing anything else is a giant pain and headache! >_<
 			println!("cargo::rustc-link-lib=framework=CoreFoundation");
@@ -114,25 +114,25 @@ fn emitLinkOptions(buildDir: &Path, targetOS: TargetOS, targetArch: TargetArch)
 		},
 		_ => println!("cargo::rustc-link-lib=openal"),
 	}
-	println!("cargo::rustc-link-lib=fmt");
-	println!("cargo::rustc-link-lib=faac_drm");
-	println!("cargo::rustc-link-lib=faad");
-	println!("cargo::rustc-link-lib=FLAC");
-	println!("cargo::rustc-link-lib=id3tag");
-	println!("cargo::rustc-link-lib=mad");
-	println!("cargo::rustc-link-lib=mp3lame");
-	println!("cargo::rustc-link-lib=vorbisenc");
-	println!("cargo::rustc-link-lib=vorbisfile");
-	println!("cargo::rustc-link-lib=vorbis");
-	println!("cargo::rustc-link-lib=opusenc");
-	println!("cargo::rustc-link-lib=opusfile");
-	println!("cargo::rustc-link-lib=opus");
-	println!("cargo::rustc-link-lib=ogg");
-	println!("cargo::rustc-link-lib=mp4v2");
-	println!("cargo::rustc-link-lib=mpcdec");
-	println!("cargo::rustc-link-lib=mpccommon");
-	println!("cargo::rustc-link-lib=wavpack");
-	println!("cargo::rustc-link-lib=z");
+	println!("cargo::rustc-link-lib=static=fmt");
+	println!("cargo::rustc-link-lib=static=faac_drm");
+	println!("cargo::rustc-link-lib=static=faad");
+	println!("cargo::rustc-link-lib=static=FLAC");
+	println!("cargo::rustc-link-lib=static=id3tag");
+	println!("cargo::rustc-link-lib=static=mad");
+	println!("cargo::rustc-link-lib=static=mp3lame");
+	println!("cargo::rustc-link-lib=static=vorbisenc");
+	println!("cargo::rustc-link-lib=static=vorbisfile");
+	println!("cargo::rustc-link-lib=static=vorbis");
+	println!("cargo::rustc-link-lib=static=opusenc");
+	println!("cargo::rustc-link-lib=static=opusfile");
+	println!("cargo::rustc-link-lib=static=opus");
+	println!("cargo::rustc-link-lib=static=ogg");
+	println!("cargo::rustc-link-lib=static=mp4v2");
+	println!("cargo::rustc-link-lib=static=mpcdec");
+	println!("cargo::rustc-link-lib=static=mpccommon");
+	println!("cargo::rustc-link-lib=static=wavpack");
+	println!("cargo::rustc-link-lib=static=z");
 	// Only include OptimFROG if it's an OS and architecture it can be used on
 	if targetOS != TargetOS::Unknown && targetArch != TargetArch::Unknown
 	{
@@ -158,7 +158,7 @@ fn emitLinkOptions(buildDir: &Path, targetOS: TargetOS, targetArch: TargetArch)
 	emitSearchPath(buildDir.join("deps/libmpc/common"));
 	emitSearchPath(buildDir.join("deps/libmpc/libmpcdec"));
 	emitSearchPath(buildDir.join("deps/wavpack"));
-	emitSearchPath(buildDir.join("deps/zlib-1.2.13"));
+	emitSearchPath(buildDir.join("deps/zlib-1.3.1"));
 }
 
 #[expect(clippy::needless_pass_by_value, reason = "this should take &Path, but it's easier this way")]
