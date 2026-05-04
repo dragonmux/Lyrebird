@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Music player written in Rust based on libAudio"
 license = "BSD-3-Clause"
 authors = ["Rachel Mant <git@dragonmux.network>"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 color-eyre = "0.6.3"

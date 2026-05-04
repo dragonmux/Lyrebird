@@ -31,7 +31,7 @@ pub enum AudioType
 	SNDH = 19,
 }
 
-extern "C"
+unsafe extern "C"
 {
 	// General API functions
 	pub fn audioCloseFile(audioFile: *mut c_void) -> c_int;
