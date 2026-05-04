@@ -81,6 +81,7 @@ fn main()
 	options.insert("bindings", "false");
 	options.insert("default_library", "static");
 	options.insert("wrap_mode", "forcefallback");
+	options.insert("utilities", "false");
 
 	// Ask CC for a Build object to use and figure out what toolchain is there
 	let mut cxxBuild = Build::new();
