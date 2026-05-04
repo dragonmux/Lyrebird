@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 use std::env;
+use std::ffi::OsStr;
 use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -26,6 +27,48 @@ enum TargetArch
 	Unknown
 }
 
+struct PathResolver
+{
+	searchPath: Option<Vec<PathBuf>>,
+}
+
+impl PathResolver
+{
+	/// Construct a new PathResolver for $PATH
+	pub fn new() -> Self
+	{
+		// Extract $PATH and turn it into an Option<String>
+		let envPath = env::var("PATH").ok();
+		// Now have it split into a search path and construct the resolver
+		Self
+		{
+			searchPath: envPath
+				.as_deref()
+				.map(OsStr::new)
+				.map(|value| env::split_paths(value).collect())
+		}
+	}
+
+	/// Find a tool on $PATH if possible
+	pub fn find(&self, tool: &str) -> Option<PathBuf>
+	{
+		let check_executable = |toolPath: PathBuf| -> Option<PathBuf>
+		{
+			toolPath.exists().then_some(toolPath)
+		};
+
+		self.searchPath
+			.as_ref()
+			.and_then(|searchPath|
+			{
+				searchPath
+					.iter()
+					.filter_map(|path| check_executable(path.join(tool)))
+					.nth(0)
+			})
+	}
+}
+
 fn main()
 {
 	// Figure out where the build is to go into
@@ -38,6 +81,30 @@ fn main()
 	options.insert("bindings", "false");
 	options.insert("default_library", "static");
 	options.insert("wrap_mode", "forcefallback");
+
+	// Ask CC for a Build object to use and figure out what toolchain is there
+	let mut cxxBuild = Build::new();
+	let cxx = cxxBuild.get_compiler();
+
+	// If it's a GCC-like compiler
+	if cxx.is_like_gnu() {
+		// If possible, let's try and find Clang and use that
+		let pathResolver = PathResolver::new();
+		let clang = pathResolver.find("clang");
+		let clangpp = pathResolver.find("clang++");
+
+		// If we found clang(++), set  CC to use it
+		if let Some(clang) = clang && let Some(clangpp) = clangpp {
+			unsafe
+			{
+				env::set_var("CC", clang);
+				env::set_var("CXX", clangpp);
+			}
+		} else {
+			// Turn LTO off, at least that way the build'll work
+			options.insert("b_lto", "false");
+		}
+	}
 
 	// Build a Meson configuration for this
 	let config = meson::Config::new().options(options);
@@ -53,8 +120,7 @@ fn main()
 	println!("cargo::rerun-if-changed=clib");
 
 	// Ask cc to figure out where the heck the C++ stdlib is and emit linkage to it
-	Build::new()
-		.cpp(true)
+	cxxBuild.cpp(true)
 		.std("c++17")
 		.file("dummy.cxx")
 		.compile("dummy");
@@ -112,7 +178,7 @@ fn emitLinkOptions(buildDir: &Path, targetOS: TargetOS, targetArch: TargetArch)
 			println!("cargo::rustc-link-lib=framework=AudioToolbox");
 			println!("cargo::rustc-link-lib=framework=CoreAudio");
 		},
-		_ => println!("cargo::rustc-link-lib=openal"),
+		_ => println!("cargo::rustc-link-lib=static=openal"),
 	}
 	println!("cargo::rustc-link-lib=static=fmt");
 	println!("cargo::rustc-link-lib=static=faac_drm");
