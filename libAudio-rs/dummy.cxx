@@ -1,0 +1,4 @@
+namespace dummy
+{
+	void noop() { }
+}
