@@ -13,6 +13,8 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::error;
 
+use crate::track::{Artist, ArtistID};
+
 #[derive(Serialize, Deserialize)]
 pub struct MusicLibrary
 {
@@ -25,6 +27,9 @@ pub struct MusicLibrary
 	dirs: BTreeSet<PathBuf>,
 	/// Map of directories to a list of files in that directory which are music
 	files: BTreeMap<PathBuf, BTreeSet<PathBuf>>,
+
+	#[serde(skip)]
+	artists: BTreeMap<ArtistID, Artist>,
 
 	#[serde(skip)]
 	discoveryThread: Option<JoinHandle<Result<()>>>,
@@ -96,6 +101,8 @@ impl MusicLibrary
 					cacheFile: cacheFile.to_path_buf(),
 					dirs: BTreeSet::new(),
 					files: BTreeMap::new(),
+
+					artists: BTreeMap::new(),
 
 					discoveryThread: None,
 					discoveryCancellation: CancellationToken::new(),
@@ -272,5 +279,24 @@ impl MusicLibrary
 		{
 			self.files.get(dir)
 		}
+	}
+
+	/// Look up an artist by name to get an ArtistID
+	pub fn lookupArtist(&mut self, artistName: &str) -> ArtistID
+	{
+		// See if we can locate a given artist in the list
+		for (id, artist) in &self.artists
+		{
+			if artist.name() == artistName
+			{
+				return *id
+			}
+		}
+		// If not, then construct a new one
+		let artistID = self.artists
+			.last_key_value()
+			.map_or_else(|| ArtistID::new(0), |(id, _)| id.next());
+		self.artists.insert(artistID, Artist::new(artistName));
+		artistID
 	}
 }
