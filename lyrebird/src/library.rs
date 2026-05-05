@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{create_dir_all, File};
+use std::ops::DerefMut;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::iter;
 
@@ -13,7 +15,7 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::error;
 
-use crate::track::{Album, AlbumID, Artist, ArtistID};
+use crate::track::{Album, AlbumID, Artist, ArtistID, Track, TrackID};
 
 #[derive(Serialize, Deserialize)]
 pub struct MusicLibrary
@@ -29,6 +31,8 @@ pub struct MusicLibrary
 	files: BTreeMap<PathBuf, BTreeSet<PathBuf>>,
 
 	#[serde(skip)]
+	tracks: BTreeMap<TrackID, Track>,
+	#[serde(skip)]
 	artists: BTreeMap<ArtistID, Artist>,
 	#[serde(skip)]
 	albums: BTreeMap<AlbumID, Album>,
@@ -42,6 +46,9 @@ pub struct MusicLibrary
 	treeNodeIcon: String,
 	#[serde(skip, default = "defaultLeafIcon")]
 	treeLeafIcon: String,
+
+	#[serde(skip)]
+	nextTrackID: AtomicU64,
 }
 
 fn defaultTreeIcon() -> String
@@ -104,6 +111,7 @@ impl MusicLibrary
 					dirs: BTreeSet::new(),
 					files: BTreeMap::new(),
 
+					tracks: BTreeMap::new(),
 					artists: BTreeMap::new(),
 					albums: BTreeMap::new(),
 
@@ -112,6 +120,8 @@ impl MusicLibrary
 
 					treeNodeIcon: defaultTreeIcon(),
 					treeLeafIcon: defaultLeafIcon(),
+
+					nextTrackID: AtomicU64::default(),
 				}
 			)
 		);
@@ -215,25 +225,27 @@ impl MusicLibrary
 				}
 			}
 			// Else if it's a file, see if it's audio
-			else
-			{
-				// Check if this file is an audio file, and if it is..
-				if !AudioFile::isAudio(path.as_path())
-				{
-					continue;
-				}
+			else if let Some(file) = AudioFile::readFile(&path) {
+				// Grab a lock on the library for the next few ops
+				let mut library = Self::writeLock(library)?;
 
 				// See if this file's directory is already in the map
 				let filePath = path.parent()
 					.ok_or_eyre("File does not have a valid path parent")?;
-				if !Self::readLock(library)?.files.contains_key(filePath)
+				if !library.files.contains_key(filePath)
 				{
-					Self::writeLock(library)?.files.insert(filePath.to_path_buf(), BTreeSet::new());
+					library.files.insert(filePath.to_path_buf(), BTreeSet::new());
 				}
 				// Now we definitely have a vec to use, look the path up and add the file
-				Self::writeLock(library)?.files.get_mut(filePath)
+				library.files.get_mut(filePath)
 					.ok_or_eyre("Failed to look file's path up in file map")?
 					.insert(path);
+
+				// Convert the file into a track and insert it into the available track list
+				let trackID = library.nextTrackID
+					.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+				let track = Track::new(file, trackID, library.deref_mut())?;
+				library.tracks.insert(track.id(), track);
 			}
 			// If we're being asked to stop, stop
 			if Self::readLock(library)?.discoveryCancellation.is_cancelled()
