@@ -3,11 +3,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use std::{ffi::OsStr, iter};
+use std::iter;
 
 use color_eyre::eyre::{self, OptionExt, Result};
 use libAudio::audioFile::AudioFile;
-use ratatui::{text::Line, widgets::ListItem};
 use serde::{Deserialize, Serialize};
 use tokio::spawn;
 use tokio::task::JoinHandle;
@@ -237,72 +236,8 @@ impl MusicLibrary
 		Ok(())
 	}
 
-	pub fn directories(&self) -> impl Iterator<Item = ListItem<'_>>
-	{
-		// Chain together the base library path, and the directories found within the library
-		iter::once(&self.basePath)
-			.chain(self.dirs.iter())
-			.map
-			(
-				// Turn the directories into ListItem's
-				|directory|
-				{
-					// If the directory is absolute, it's the base path
-					if directory.is_absolute()
-					{
-						// Display that with the tree node icon and be done
-						let text = [self.treeNodeIcon.clone(), directory.to_string_lossy().to_string()];
-						ListItem::new(Line::from_iter(text))
-					}
-					else
-					{
-						// Otherwise, figure out how deep this entry is in the tree
-						let indentLevel = directory.iter().count();
-						// Build the prefix of pipes from that
-						let mut prefix = "│ ".repeat(indentLevel - 1);
-						prefix.insert(0, ' ');
-						// Turn the resulting prefix, icon and directory name into a nice ListItem
-						let text =
-						[
-							prefix,
-							self.treeLeafIcon.clone(),
-							directory.file_name().unwrap_or_else(|| OsStr::new("")).to_string_lossy().to_string(),
-						];
-						ListItem::new(Line::from_iter(text))
-					}
-				}
-			)
-	}
-
 	pub fn directoryCount(&self) -> usize
 		{ self.dirs.len() + 1 }
-
-	pub fn filesFor(&self, dirIndex: Option<usize>) -> Option<impl Iterator<Item = ListItem<'_>>>
-	{
-		// Find the entry from the directories that describes the requested index
-		dirIndex
-			.and_then(|index| iter::once(&self.basePath).chain(self.dirs.iter()).nth(index))
-			// Extract what files are in that directory
-			.and_then(|dir| self.filesIn(dir))
-			.map
-			(
-				|files|
-				{
-					files
-						.iter()
-						.map
-						(
-							|file|
-							{
-								ListItem::new
-								(
-									file.file_name().unwrap_or_else(|| OsStr::new("")).to_string_lossy()
-								)
-							}
-						)
-				}
-			)
-	}
 
 	pub fn filesCount(&self, dirIndex: Option<usize>) -> usize
 	{
