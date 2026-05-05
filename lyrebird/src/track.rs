@@ -2,13 +2,18 @@
 
 use std::path::PathBuf;
 
+use color_eyre::eyre::Result;
+use libAudio::audioFile::AudioFile;
+
+use crate::library::MusicLibrary;
+
 /// Represents a track in a music library
 pub struct Track
 {
 	/// Unique 64-bit identifier for the track
 	id: u64,
 	/// Path to the file holding this track
-	file: PathBuf,
+	fileName: PathBuf,
 	/// Total length of the track in seconds
 	totalLength: u64,
 	/// Title of the track
@@ -19,6 +24,7 @@ pub struct Track
 	album: Option<AlbumID>
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 /// Unique strongly typed identifier for a track
 pub struct TrackID(u64);
 
@@ -44,6 +50,63 @@ pub struct Album
 /// Unique strongly typed identifier for an album
 pub struct AlbumID(u64);
 
+impl Track
+{
+	/// Create a new Track from an AudioFile with a given ID
+	pub fn new(file: AudioFile, trackID: u64, library: &mut MusicLibrary) -> Result<Self>
+	{
+		// Extract the file's metadata
+		let fileInfo = file.fileInfo();
+		// Try and construct a title for the track
+		let title = fileInfo
+			.title()?
+			// If it doesn't have a title, try to use the file name
+			.unwrap_or_else(||
+				{
+					let fileName = file
+						.path()
+						.file_name()
+						// If there isn't a file name (??) then use the full path
+						.unwrap_or_else(|| file.path().as_os_str());
+					fileName.to_string_lossy().to_string()
+				}
+			);
+
+		// Look up the track's artist
+		let artist = fileInfo
+			.artist()?
+			.map(|artistName| library.lookupArtist(&artistName));
+
+		// Look up the track's album
+		let album = fileInfo
+			.album()?
+			.map(|albumName| library.lookupAlbum(&albumName));
+
+		// Create the complete Track object and return
+		let track = Self
+		{
+			id: trackID,
+			fileName: file.path().to_path_buf(),
+			totalLength: fileInfo.totalTime(),
+			title,
+			artist,
+			album,
+		};
+
+		// Add the track to the artist it's made by
+		artist.map(|artistID| library.mutArtistFor(artistID).addTrack(track.id()));
+		// Add the track to the album it's from
+		album.map(|albumID| library.mutAlbumFor(albumID).addTrack(track.id()));
+
+		Ok(track)
+	}
+
+	pub fn id(&self) -> TrackID
+	{
+		TrackID(self.id)
+	}
+}
+
 impl Artist
 {
 	pub fn new(artistName: &str) -> Self
@@ -53,6 +116,11 @@ impl Artist
 			name: artistName.to_string(),
 			tracks: Vec::new(),
 		}
+	}
+
+	pub fn addTrack(&mut self, track: TrackID)
+	{
+		self.tracks.push(track);
 	}
 
 	pub fn name(&self) -> &str
@@ -85,6 +153,11 @@ impl Album
 			name: albumName.to_string(),
 			tracks: Vec::new(),
 		}
+	}
+
+	pub fn addTrack(&mut self, track: TrackID)
+	{
+		self.tracks.push(track);
 	}
 
 	pub fn name(&self) -> &str
