@@ -40,6 +40,7 @@ pub struct Album
 	tracks: Vec<TrackID>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 /// Unique strongly typed identifier for an album
 pub struct AlbumID(u64);
 
@@ -69,6 +70,38 @@ impl ArtistID
 	}
 
 	/// Construct a new ArtistID with the next value to this one
+	pub fn next(&self) -> Self
+	{
+		Self(self.0 + 1)
+	}
+}
+
+impl Album
+{
+	pub fn new(albumName: &str) -> Self
+	{
+		Self
+		{
+			name: albumName.to_string(),
+			tracks: Vec::new(),
+		}
+	}
+
+	pub fn name(&self) -> &str
+	{
+		&self.name
+	}
+}
+
+impl AlbumID
+{
+	/// Construct a new AlbumID with a specific ID value
+	pub fn new(id: u64) -> Self
+	{
+		Self(id)
+	}
+
+	/// Construct a new AlbumID with the next value to this one
 	pub fn next(&self) -> Self
 	{
 		Self(self.0 + 1)
