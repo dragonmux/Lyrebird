@@ -321,4 +321,30 @@ impl MusicLibrary
 		self.albums.insert(albumID, Album::new(albumName));
 		albumID
 	}
+
+	/// Find the Artist object associated with a particular ArtistID and return it by reference
+	pub fn artistFor(&self, artistID: ArtistID) -> &Artist
+	{
+		&self.artists[&artistID]
+	}
+
+	/// Find the Artist object associated with a particular ArtistID and return a mutable reference to it
+	pub fn mutArtistFor(&mut self, artistID: ArtistID) -> &mut Artist
+	{
+		// This is safe because it's impossible to get an ArtistID that's not valid
+		unsafe { self.artists.get_mut(&artistID).unwrap_unchecked() }
+	}
+
+	/// Find the Album object associated with a particular AlbumID and return it by reference
+	pub fn albumFor(&self, albumID: AlbumID) -> &Album
+	{
+		&self.albums[&albumID]
+	}
+
+	/// Find the Album object associated with a particular AlbumID and return a mutable reference to it
+	pub fn mutAlbumFor(&mut self, albumID: AlbumID) -> &mut Album
+	{
+		// This is safe because it's impossible to get an AlbumID that's not valid
+		unsafe { self.albums.get_mut(&albumID).unwrap_unchecked() }
+	}
 }
