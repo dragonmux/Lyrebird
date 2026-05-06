@@ -7,16 +7,21 @@ use iced::
 	Alignment, Background, Border, Color, Element, Event, Length, Padding, Rectangle, Shadow, Size, Theme, overlay,
 	touch, window
 };
-use iced::widget::{button::Status, text};
+use iced::widget::{Row, button::Status, container, text};
 use iced_core::widget::{Operation, Tree, tree};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer};
 
 use crate::messages::Message;
 
 /// A widget that draws a set of tabs providing equidistant space by default
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct TabBar
+pub struct TabBar<TabEnum>
+where
+	TabEnum: Default + TabBarEnum + Clone + Copy,
 {
+	/// The title for this tab bar, displayed on the left
+	title: &'static str,
+	/// The currently active tab on the bar
+	activeTab: TabEnum,
 }
 
 struct TabButton<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
@@ -42,13 +47,67 @@ pub trait TabBarEnum
 where Self:
 	Sized
 {
-	type Type;
+	type Type: TabBarEnum;
 
 	fn tabs<'a>() -> &'a[Self::Type];
 	fn name(&self) -> &'static str;
+	fn value(&self) -> usize;
 	fn message_for(&self) -> Message;
 }
 
+impl<TabEnum> TabBar<TabEnum>
+where
+	TabEnum: Default + TabBarEnum + Clone + Copy,
+{
+	pub fn new(title: &'static str) -> Self
+	{
+		Self
+		{
+			title,
+			activeTab: TabEnum::default(),
+		}
+	}
+
+	pub fn view(&self) -> Element<'_, Message>
+	{
+		let tabs = TabEnum::tabs();
+		let mut layout = Row::with_capacity(tabs.len() + 1);
+		let title = container(self.title)
+			.width(Length::FillPortion(1))
+			.align_x(Alignment::Start)
+			.align_y(Alignment::Center)
+			.padding(Padding {
+				top: 5.0,
+				bottom: 5.0,
+				right: 10.0,
+				left: 25.0,
+			});
+
+		layout = layout.push(title);
+		for tab in tabs
+		{
+			layout = layout.push
+			(
+				TabButton::new
+				(
+					format!("{} {}", tab.value(), tab.name()),
+					tab.message_for()
+				)
+			);
+		}
+		layout.width(Length::Fill).into()
+	}
+
+	pub fn switchTo(&mut self, tab: TabEnum)
+	{
+		self.activeTab = tab;
+	}
+
+	pub fn activeTab(&self) -> TabEnum
+	{
+		self.activeTab
+	}
+}
 
 impl<'a, Message, Theme, Renderer> TabButton<'a, Message, Theme, Renderer>
 where

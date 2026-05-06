@@ -55,16 +55,13 @@ impl TabBarEnum for Tab
 		}
 	}
 
+	fn value(&self) -> usize
+	{
+		*self as usize
+	}
+
 	fn message_for(&self) -> Message
 	{
 		Message::SwitchTo(self.clone())
-	}
-}
-
-impl Tab
-{
-	const fn value(self) -> usize
-	{
-		self as usize
 	}
 }
