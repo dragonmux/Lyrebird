@@ -11,10 +11,11 @@ use iced_futures::backend::default::Executor;
 use iced_widget::text;
 use tokio::sync::mpsc::{channel, Receiver};
 
-use crate::messages::Message;
+use crate::messages::{Message, Tab};
 use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, Song};
 use crate::playlists::Playlists;
+use crate::widgets::tabBar::{TabBar, TabBarEnum};
 use crate::{config::Config, libraryTree::LibraryTree};
 
 /// Represents the state of the main window of Lyrebird
@@ -22,7 +23,8 @@ pub struct MainWindowState
 {
 	exit: bool,
 
-	libraryTree: LibraryTree,
+	tabBar: TabBar<Tab>,
+
 	optionsPanel: OptionsPanel,
 	playlists: Playlists,
 
@@ -66,11 +68,8 @@ impl MainWindowState
 		{
 			exit: false,
 
-			libraryTree: LibraryTree::new
-			(
-				&paths.cache_dir().join("library.json"),
-				&config.libraryPath,
-			)?,
+			tabBar: TabBar::new("Lyrebird"),
+
 			optionsPanel: OptionsPanel::new(),
 			playlists: Playlists::new(),
 
@@ -83,6 +82,7 @@ impl MainWindowState
 	{
 		match message
 		{
+			Message::SwitchTo(tab) => self.tabBar.switchTo(tab),
 			_ => {},
 		}
 		Task::none()
@@ -90,9 +90,9 @@ impl MainWindowState
 
 	pub fn view(&self, _mainWindow: &MainWindow) -> Element<'_, Message>
 	{
-		let header = text!("Header");
+		let header = self.tabBar.view();
 		let footer = text!("Footer");
-		let content = text!("Content")
+		let content = text!("{} content", self.tabBar.activeTab().name())
 			.center()
 			.height(Length::Fill);
 
