@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+use crate::messages::Message;
+
 /// A widget that draws a set of tabs providing equidistant space by default
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct TabBar
@@ -10,6 +12,17 @@ pub struct TabBar
 	firstTabDivider: bool,
 	/// Should we show the divider after the last tab?
 	lastTabDivider: bool,
+}
+
+pub trait TabBarEnum
+where Self:
+	Sized
+{
+	type Type;
+
+	fn tabs<'a>() -> &'a[Self::Type];
+	fn name(&self) -> &'static str;
+	fn message_for(&self) -> Message;
 }
 
 // Functions for TabBar that care about the lifetime component
