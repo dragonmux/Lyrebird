@@ -14,6 +14,7 @@ use window::MainWindow;
 mod config;
 mod library;
 mod libraryTree;
+mod messages;
 mod options;
 mod playback;
 mod playlist;
