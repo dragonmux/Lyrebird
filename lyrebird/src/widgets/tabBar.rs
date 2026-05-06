@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
+
+use iced::mouse::{self, Cursor};
 use iced::theme::palette;
-use iced::{Background, Border, Color, Shadow, Theme, theme};
-use iced::widget::button::Status;
+use iced::
+{
+	Alignment, Background, Border, Color, Element, Event, Length, Padding, Rectangle, Shadow, Size, Theme, overlay,
+	touch, window
+};
+use iced::widget::{button::Status, text};
+use iced_core::widget::{Operation, Tree, tree};
+use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer};
 
 use crate::messages::Message;
 
@@ -9,12 +17,25 @@ use crate::messages::Message;
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct TabBar
 {
-	/// The index of the selected tabs
-	selected: Option<usize>,
-	/// Should we show the divider before the first tab?
-	firstTabDivider: bool,
-	/// Should we show the divider after the last tab?
-	lastTabDivider: bool,
+}
+
+struct TabButton<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
+where
+	Theme: Catalog,
+{
+	content: Element<'a, Message, Theme, Renderer>,
+	onPress: Message,
+	width: Length,
+	height: Length,
+	padding: Padding,
+	class: Theme::Class<'a>,
+	status: Status,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+struct TabButtonState
+{
+	pressed: bool
 }
 
 pub trait TabBarEnum
@@ -28,43 +49,319 @@ where Self:
 	fn message_for(&self) -> Message;
 }
 
-// Functions for TabBar that care about the lifetime component
-impl TabBar
+
+impl<'a, Message, Theme, Renderer> TabButton<'a, Message, Theme, Renderer>
+where
+	Theme: Catalog + text::Catalog + 'a,
+	Renderer: iced_core::text::Renderer + 'a,
 {
-	/// Construct a new tab bar
-	pub fn new() -> Self
+	pub fn new(value: String, onPress: Message) -> Self
 	{
-		// Construct a tab bar state with defaults for everything else
 		Self
 		{
-			selected: None,
-			firstTabDivider: false,
-			lastTabDivider: false,
+			content: text(value).align_x(Alignment::Start).into(),
+			onPress,
+			width: Length::FillPortion(1),
+			height: Length::Shrink,
+			padding: Padding {
+				top: 5.0,
+				bottom: 5.0,
+				right: 10.0,
+				left: 10.0,
+			},
+			class: Theme::tabButtonDefault(),
+			status: Status::Active,
+		}
+	}
+}
+
+impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for TabButton<'a, Message, Theme, Renderer>
+where
+	Message: Clone,
+	Renderer: iced_core::text::Renderer,
+	Theme: Catalog,
+{
+	fn tag(&self) -> tree::Tag
+	{
+		tree::Tag::of::<TabButtonState>()
+	}
+
+	fn state(&self) -> tree::State
+	{
+		tree::State::new(TabButtonState::default())
+	}
+
+	fn children(&self) -> Vec<Tree>
+	{
+		vec![Tree::new(&self.content)]
+	}
+
+	fn diff(&self, tree: &mut Tree)
+	{
+		tree.diff_children(&[&self.content]);
+	}
+
+	fn size(&self) -> Size<Length>
+	{
+		Size
+		{
+			width: self.width,
+			height: self.height
 		}
 	}
 
-	/// Set which tab is selected
-    #[must_use = "method moves the value of self and returns the modified value"]
-	pub fn select<T: Into<Option<usize>>>(mut self, selected: T) -> Self
+	fn layout
+	(
+		&mut self,
+		tree: &mut Tree,
+		renderer: &Renderer,
+		limits: &layout::Limits,
+	) -> layout::Node
 	{
-		self.selected = selected.into();
-		self
+		layout::padded
+		(
+			limits,
+			self.width,
+			self.height,
+			self.padding,
+			|limits|
+			{
+				self.content
+					.as_widget_mut()
+					.layout(&mut tree.children[0], renderer, limits)
+			},
+		)
 	}
 
-	/// Sets whether to show a divider before the first tab
-    #[must_use = "method moves the value of self and returns the modified value"]
-	pub fn firstTabDivider(mut self, show: bool) -> Self
+	fn operate
+	(
+		&mut self,
+		tree: &mut Tree,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
 	{
-		self.firstTabDivider = show;
-		self
+		operation.container(None, layout.bounds());
+		operation.traverse(&mut |operation|
+		{
+			self.content
+				.as_widget_mut()
+				.operate(&mut tree.children[0], layout.children().next().unwrap(), renderer, operation);
+		});
 	}
 
-	/// Sets the string to use as the divider between tabs (defaults to a line drawing vertical line)
-    #[must_use = "method moves the value of self and returns the modified value"]
-	pub fn lastTabDivider(mut self, show: bool) -> Self
+	fn update
+	(
+		&mut self,
+		tree: &mut Tree,
+		event: &Event,
+		layout: Layout<'_>,
+		cursor: Cursor,
+		renderer: &Renderer,
+		clipboard: &mut dyn Clipboard,
+		shell: &mut Shell<'_, Message>,
+		viewport: &Rectangle,
+	)
 	{
-		self.lastTabDivider = show;
-		self
+		self.content
+			.as_widget_mut()
+			.update
+			(
+				&mut tree.children[0],
+				event,
+				layout.children().next().unwrap(),
+				cursor,
+				renderer,
+				clipboard,
+				shell,
+				viewport
+			);
+
+		if shell.is_event_captured()
+		{
+			return;
+		}
+
+		let bounds = layout.bounds();
+
+		match event
+		{
+			Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) |
+			Event::Touch(touch::Event::FingerPressed { .. }) =>
+			{
+				if cursor.is_over(bounds)
+				{
+					let state = tree.state.downcast_mut::<TabButtonState>();
+					state.pressed = true;
+					shell.capture_event();
+				}
+			},
+			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) |
+			Event::Touch(touch::Event::FingerLifted { .. }) =>
+			{
+				let state = tree.state.downcast_mut::<TabButtonState>();
+				if state.pressed
+				{
+					state.pressed = false;
+					if cursor.is_over(bounds)
+					{
+						shell.publish(self.onPress.clone());
+					}
+
+					shell.capture_event();
+				}
+			},
+			Event::Touch(touch::Event::FingerLost { .. }) =>
+				tree.state.downcast_mut::<TabButtonState>().pressed = false,
+			_ => {},
+		}
+
+		let currentStatus = if cursor.is_over(bounds)
+		{
+			let state = tree.state.downcast_ref::<TabButtonState>();
+
+			if state.pressed
+			{
+				Status::Pressed
+			}
+			else
+			{
+				Status::Hovered
+			}
+		}
+		else
+		{
+			Status::Active
+		};
+
+		if let Event::Window(window::Event::RedrawRequested(_)) = event
+		{
+			self.status = currentStatus;
+		}
+		else if self.status != currentStatus
+		{
+			shell.request_redraw();
+		}
+	}
+
+	fn draw
+	(
+		&self,
+		tree: &Tree,
+		renderer: &mut Renderer,
+		theme: &Theme,
+		_style: &renderer::Style,
+		layout: Layout<'_>,
+		cursor: Cursor,
+		viewport: &Rectangle,
+	)
+	{
+		let bounds = layout.bounds();
+		let contentLayout = layout.children().next().unwrap();
+		let style = theme.style(&self.class, self.status);
+
+		if style.background.is_some() ||
+			style.shadow.color.a > 0.0
+		{
+			renderer.fill_quad
+			(
+				renderer::Quad
+				{
+					bounds: bounds.shrink(Padding::default().left(4.0)),
+					border: style.border,
+					shadow: style.shadow,
+					snap: false
+				},
+				style.background.unwrap_or_else(|| Background::Color(Color::TRANSPARENT)),
+			);
+		}
+
+		renderer.fill_quad
+		(
+			renderer::Quad
+			{
+				bounds: Rectangle::new(
+					bounds.anchor
+					(
+						Size { width: 4.0, height: bounds.height },
+						Alignment::Start,
+						Alignment::Center
+					),
+					Size { width: 4.0, height: bounds.height },
+				),
+				border: Border::default(),
+				shadow: Shadow::default(),
+				snap: false
+			},
+			style.text_color,
+		);
+
+		self.content
+			.as_widget()
+			.draw
+			(
+				&tree.children[0],
+				renderer,
+				theme,
+				&renderer::Style { text_color: style.text_color },
+				contentLayout,
+				cursor,
+				viewport,
+			);
+	}
+
+	fn mouse_interaction
+	(
+		&self,
+		_tree: &Tree,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		_viewport: &Rectangle,
+		_renderer: &Renderer,
+	) -> mouse::Interaction
+	{
+		if cursor.is_over(layout.bounds())
+		{
+			mouse::Interaction::Pointer
+		}
+		else
+		{
+			mouse::Interaction::default()
+		}
+	}
+
+	fn overlay<'b>
+	(
+		&'b mut self,
+		tree: &'b mut Tree,
+		layout: Layout<'b>,
+		renderer: &Renderer,
+		viewport: &Rectangle,
+		translation: iced::Vector,
+	) -> Option<overlay::Element<'b, Message, Theme, Renderer>>
+	{
+		self.content.as_widget_mut().overlay
+		(
+			&mut tree.children[0],
+			layout.children().next().unwrap(),
+			renderer,
+			viewport,
+			translation
+		)
+	}
+}
+
+impl<'a, Message, Theme, Renderer> From<TabButton<'a, Message, Theme, Renderer>>
+	for Element<'a, Message, Theme, Renderer>
+where
+	Message: Clone + 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
+{
+	fn from(tabButton: TabButton<'a, Message, Theme, Renderer>) -> Self
+	{
+		Self::new(tabButton)
 	}
 }
 
