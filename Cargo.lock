@@ -1723,6 +1723,7 @@ dependencies = [
  "color-eyre",
  "directories",
  "iced",
+ "iced_core",
  "iced_widget",
  "itertools",
  "libAudio",

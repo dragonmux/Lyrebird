@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
+use iced::theme::palette;
+use iced::{Background, Border, Color, Shadow, Theme, theme};
+use iced::widget::button::Status;
 
 use crate::messages::Message;
 
@@ -65,16 +68,81 @@ impl TabBar
 	}
 }
 
-// Trait so that default construction works
-impl Default for TabBar
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct Style
+{
+    pub background: Option<Background>,
+    pub text_color: Color,
+    pub border: Border,
+    pub shadow: Shadow,
+}
+
+impl Default for Style
 {
 	fn default() -> Self
 	{
-		Self::new()
+		Self
+		{
+			background: None,
+			text_color: Color::BLACK,
+			border: Border::default(),
+			shadow: Shadow::default(),
+		}
 	}
 }
 
-// Functions for the tab bar that are agnostic of the lifetime component
-impl TabBar
+trait Catalog
 {
+	type Class<'a>;
+	fn tabButtonDefault<'a>() -> Self::Class<'a>;
+	fn style(&self, class: &Self::Class<'_>, status: Status) -> Style;
+}
+
+type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, Status) -> Style + 'a>;
+
+impl Catalog for Theme
+{
+	type Class<'a> = StyleFn<'a, Self>;
+
+	fn tabButtonDefault<'a>() -> Self::Class<'a>
+	{
+		Box::new(normalTabButton)
+	}
+
+	fn style(&self, class: &Self::Class<'_>, status: Status) -> Style
+	{
+		class(self, status)
+	}
+}
+
+fn normalTabButton(theme: &Theme, status: Status) -> Style
+{
+	let palette = theme.extended_palette();
+	let base = styled(palette.primary.base);
+
+	match status
+	{
+		Status::Active => base,
+		Status::Pressed => Style
+		{
+			background: Some(Background::Color(palette.primary.weak.color)),
+			..base
+		},
+		Status::Hovered => Style
+		{
+			background: Some(Background::Color(palette.primary.strong.color)),
+			..base
+		},
+		Status::Disabled => unreachable!(),
+	}
+}
+
+fn styled(pair: palette::Pair) -> Style
+{
+	Style
+	{
+		background: Some(Background::Color(pair.color)),
+		text_color: pair.text,
+		..Style::default()
+	}
 }

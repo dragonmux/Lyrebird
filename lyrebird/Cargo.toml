@@ -10,6 +10,7 @@ edition = "2024"
 color-eyre = "0.6.3"
 directories = "6.0.0"
 iced = { version = "0.14.0", features = ["tokio"] }
+iced_core = "0.14.0"
 iced_widget = "0.14.2"
 itertools = "^0.14"
 libAudio = { version = "0.1.0", path = "../libAudio-rs" }
