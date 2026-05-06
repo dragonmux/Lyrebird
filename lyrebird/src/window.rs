@@ -4,18 +4,23 @@ use std::time::Duration;
 
 use color_eyre::Result;
 use directories::ProjectDirs;
+use iced::alignment::Horizontal;
+use iced::{Element, Length, Program, Renderer, Settings, Task, Theme, window};
+use iced::widget::column;
+use iced_futures::backend::default::Executor;
+use iced_widget::text;
 use tokio::sync::mpsc::{channel, Receiver};
 
+use crate::messages::Message;
 use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, Song};
 use crate::playlists::Playlists;
 use crate::{config::Config, libraryTree::LibraryTree};
 
-/// Represents the main window of Lyrebird
-pub struct MainWindow
+/// Represents the state of the main window of Lyrebird
+pub struct MainWindowState
 {
 	exit: bool,
-	activeTab: Tab,
 
 	libraryTree: LibraryTree,
 	optionsPanel: OptionsPanel,
@@ -25,21 +30,8 @@ pub struct MainWindow
 	errorState: Option<String>
 }
 
-#[derive(Clone, Copy)]
-enum Tab
-{
-	LibraryTree = 0,
-	Options = 3,
-	Playlists = 4,
-}
-
-impl Tab
-{
-	const fn value(self) -> usize
-	{
-		self as usize
-	}
-}
+/// Represents the main window of Lyrebird itself
+pub struct MainWindow;
 
 pub enum Operation
 {
@@ -65,15 +57,14 @@ impl Operation
 	}
 }
 
-impl MainWindow
+impl MainWindowState
 {
-	/// Set up a new main window, building the style pallet needed
-	pub fn new(paths: &ProjectDirs, config: &mut Config) -> Result<Self>
+	/// Set up the main window state
+	pub fn new(_mainWindow: &MainWindow) -> Self
 	{
-		Ok(Self
+		Self
 		{
 			exit: false,
-			activeTab: Tab::LibraryTree,
 
 			libraryTree: LibraryTree::new
 			(
@@ -85,42 +76,38 @@ impl MainWindow
 
 			currentlyPlaying: None,
 			errorState: None,
-		})
-	}
-
-	/// Run the program window until an exit-causing event occurs
-	pub async fn run(&mut self) -> Result<()>
-	{
-		// Set up a redraw timer
-		let mut frameTimer = tokio::time::interval(Duration::from_secs(1).div_f32(50.0));
-
-		// Until the user's asked us to exit
-		while !self.exit
-		{
-			// If we're not discovering the library tree any more, check if we don't need to join the background
-			// thread for discovery
-			if !self.libraryTree.isDiscovering()
-			{
-				self.libraryTree.maybeJoinDiscovery().await?;
-			}
-			// See if there's something to do from one of our event sources
-			tokio::select!
-			{
-				// Redraw the terminal every 50th of a second while discovery runs
-				_ = frameTimer.tick(), if self.libraryTree.isDiscovering() =>
-					{ },
-				// If there is a file playing, check to see if it's giving us any notifications
-				Some(notification) = self.playbackNotification(), if self.currentlyPlaying.is_some() =>
-					{ self.handlePlaybackNotification(&notification)? },
-			}
 		}
-		Ok(())
 	}
 
-	fn quit(&mut self) -> Result<()>
+	pub fn update(&mut self, _mainWindow: &MainWindow, message: Message) -> Task<Message>
 	{
-		self.exit = true;
-		self.libraryTree.writeCache()
+		match message
+		{
+			_ => {},
+		}
+		Task::none()
+	}
+
+	pub fn view(&self, _mainWindow: &MainWindow) -> Element<'_, Message>
+	{
+		let header = text!("Header");
+		let footer = text!("Footer");
+		let content = text!("Content")
+			.center()
+			.height(Length::Fill);
+
+		let layout = column!
+		[
+			header,
+			content,
+			footer,
+		];
+
+		layout
+			.width(Length::Fill)
+			.height(Length::Fill)
+			.align_x(Horizontal::Center)
+			.into()
 	}
 
 	fn playSong(&mut self, fileName: &Path) -> Result<()>
@@ -219,5 +206,63 @@ fn durationAsString(duration: Duration) -> String
 		let minutes = seconds / 60;
 		let seconds = seconds % 60;
 		format!("{minutes:2}:{seconds:02}")
+	}
+}
+
+impl MainWindow
+{
+	// Set up a new main window, loading the music library and config settings
+	pub fn new(_paths: &ProjectDirs, _config: &mut Config) -> Result<Self>
+	{
+		Ok(Self)
+	}
+}
+
+impl Program for MainWindow
+{
+	type State = MainWindowState;
+	type Message = Message;
+	type Theme = Theme;
+	type Renderer = Renderer;
+	type Executor = Executor;
+
+	fn name() -> &'static str
+	{
+		"Lyrebird"
+	}
+
+	fn title(&self, _state: &MainWindowState, _window: window::Id) -> String
+	{
+		Self::name().to_string()
+	}
+
+	fn theme(&self, _state: &MainWindowState, _window: window::Id) -> Option<Theme>
+	{
+		Some(Theme::Dark)
+	}
+
+	fn boot(&self) -> (MainWindowState, Task<Message>)
+	{
+		(MainWindowState::new(self), Task::none())
+	}
+
+	fn update(&self, state: &mut MainWindowState, message: Message) -> Task<Message>
+	{
+		state.update(self, message)
+	}
+
+	fn view<'a>(&self, state: &'a MainWindowState, _windowID: window::Id) -> Element<'a, Message>
+	{
+		state.view(self)
+	}
+
+	fn settings(&self) -> Settings
+	{
+		Settings::default()
+	}
+
+	fn window(&self) -> Option<window::Settings>
+	{
+		Some(window::Settings::default())
 	}
 }

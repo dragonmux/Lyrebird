@@ -23,9 +23,9 @@ mod track;
 mod widgets;
 mod window;
 
-#[tokio::main(flavor = "multi_thread")]
-async fn main() -> Result<()>
+fn main() -> Result<()>
 {
+	color_eyre::install()?;
 	tracing_subscriber::registry()
 		.with
 		(
@@ -41,10 +41,10 @@ async fn main() -> Result<()>
 	let mut config = Config::read(&paths)?;
 
 	// Set up the main window w/ the configuration
-	let mut mainWindow = MainWindow::new(&paths, &mut config)?;
+	let mainWindow = MainWindow::new(&paths, &mut config)?;
 	// Now run the main window of Lyrebird till the user exits the program
-	let result = mainWindow.run().await;
+    let result = iced_winit::run(mainWindow);
 	// Re-serialise the user's config as our last step
 	config.write(&paths)?;
-	result
+	Ok(result?)
 }
