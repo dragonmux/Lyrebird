@@ -93,6 +93,7 @@ where
 		let tabs = TabEnum::tabs();
 		let mut layout = Row::with_capacity(tabs.len() + 1);
 		let title = container(self.title)
+			.style(tabBarTitleStyle)
 			.width(Length::FillPortion(1))
 			.align_x(Alignment::Start)
 			.align_y(Alignment::Center)
@@ -456,5 +457,20 @@ impl Default for Style
 			seperatorColor: Color::BLACK,
 			border: Border::default(),
 		}
+	}
+}
+
+fn tabBarTitleStyle(theme: &Theme) -> container::Style
+{
+	let class = <Theme as Catalog>::default();
+	let style = Catalog::style(theme, &class, Status::Active);
+
+	container::Style
+	{
+		text_color: Some(style.titleColor),
+		background: style.background,
+		border: style.border,
+		shadow: Shadow::default(),
+		snap: false
 	}
 }
