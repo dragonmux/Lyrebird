@@ -5,16 +5,16 @@ use std::time::Duration;
 use color_eyre::Result;
 use directories::ProjectDirs;
 use iced::alignment::Horizontal;
-use iced::{Element, Length, Program, Renderer, Settings, Task, Theme, window};
-use iced::widget::column;
+use iced::{Element, Length, Program, Renderer, Settings, Task, window};
 use iced_futures::backend::default::Executor;
-use iced_widget::text;
+use iced_widget::{Column, text};
 use tokio::sync::mpsc::{channel, Receiver};
 
 use crate::messages::{Message, Tab};
 use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, Song};
 use crate::playlists::Playlists;
+use crate::theme::Theme;
 use crate::widgets::tabBar::{TabBar, TabBarEnum};
 use crate::{config::Config, libraryTree::LibraryTree};
 
@@ -88,7 +88,7 @@ impl MainWindowState
 		Task::none()
 	}
 
-	pub fn view(&self, _mainWindow: &MainWindow) -> Element<'_, Message>
+	pub fn view(&self, _mainWindow: &MainWindow) -> Element<'_, Message, Theme>
 	{
 		let header = self.tabBar.view();
 		let footer = text!("Footer");
@@ -96,12 +96,12 @@ impl MainWindowState
 			.center()
 			.height(Length::Fill);
 
-		let layout = column!
-		[
+		let layout = Column::with_children
+		([
 			header,
-			content,
-			footer,
-		];
+			content.into(),
+			footer.into(),
+		]);
 
 		layout
 			.width(Length::Fill)
@@ -238,7 +238,7 @@ impl Program for MainWindow
 
 	fn theme(&self, _state: &MainWindowState, _window: window::Id) -> Option<Theme>
 	{
-		Some(Theme::Dark)
+		Some(<Theme as Default>::default())
 	}
 
 	fn boot(&self) -> (MainWindowState, Task<Message>)
@@ -251,7 +251,7 @@ impl Program for MainWindow
 		state.update(self, message)
 	}
 
-	fn view<'a>(&self, state: &'a MainWindowState, _windowID: window::Id) -> Element<'a, Message>
+	fn view<'a>(&self, state: &'a MainWindowState, _windowID: window::Id) -> Element<'a, Message, Theme>
 	{
 		state.view(self)
 	}

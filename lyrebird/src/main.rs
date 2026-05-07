@@ -19,6 +19,7 @@ mod options;
 mod playback;
 mod playlist;
 mod playlists;
+mod theme;
 mod track;
 mod widgets;
 mod window;
