@@ -68,7 +68,9 @@ where
 		}
 	}
 
-	pub fn view(&self) -> Element<'_, Message>
+	pub fn view<'a, Theme>(&'a self) -> Element<'a, Message, Theme>
+	where
+		Theme: container::Catalog + text::Catalog + Catalog + 'a
 	{
 		let tabs = TabEnum::tabs();
 		let mut layout = Row::with_capacity(tabs.len() + 1);
@@ -128,7 +130,7 @@ where
 				right: 10.0,
 				left: 10.0,
 			},
-			class: Theme::tabButtonDefault(),
+			class: <Theme as Catalog>::default(),
 			status: Status::Active,
 		}
 	}
@@ -320,8 +322,7 @@ where
 		let contentLayout = layout.children().next().unwrap();
 		let style = theme.style(&self.class, self.status);
 
-		if style.background.is_some() ||
-			style.shadow.color.a > 0.0
+		if let Some(background) = style.background
 		{
 			renderer.fill_quad
 			(
@@ -329,10 +330,10 @@ where
 				{
 					bounds: bounds.shrink(Padding::default().left(4.0)),
 					border: style.border,
-					shadow: style.shadow,
+					shadow: Shadow::default(),
 					snap: false
 				},
-				style.background.unwrap_or_else(|| Background::Color(Color::TRANSPARENT)),
+				background,
 			);
 		}
 
@@ -353,7 +354,7 @@ where
 				shadow: Shadow::default(),
 				snap: false
 			},
-			style.text_color,
+			style.seperatorColor,
 		);
 
 		self.content
@@ -363,7 +364,7 @@ where
 				&tree.children[0],
 				renderer,
 				theme,
-				&renderer::Style { text_color: style.text_color },
+				&renderer::Style { text_color: style.tabTextColor },
 				contentLayout,
 				cursor,
 				viewport,
@@ -425,12 +426,14 @@ where
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct Style
+pub struct Style
 {
     pub background: Option<Background>,
-    pub text_color: Color,
+    pub titleColor: Color,
+    pub tabTextColor: Color,
+    pub tabNumberColor: Color,
+    pub seperatorColor: Color,
     pub border: Border,
-    pub shadow: Shadow,
 }
 
 impl Default for Style
@@ -440,29 +443,31 @@ impl Default for Style
 		Self
 		{
 			background: None,
-			text_color: Color::BLACK,
+			titleColor: Color::BLACK,
+			tabTextColor: Color::BLACK,
+			tabNumberColor: Color::BLACK,
+			seperatorColor: Color::BLACK,
 			border: Border::default(),
-			shadow: Shadow::default(),
 		}
 	}
 }
 
-trait Catalog
+pub trait Catalog
 {
 	type Class<'a>;
-	fn tabButtonDefault<'a>() -> Self::Class<'a>;
+	fn default<'a>() -> Self::Class<'a>;
 	fn style(&self, class: &Self::Class<'_>, status: Status) -> Style;
 }
 
-type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, Status) -> Style + 'a>;
+pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, Status) -> Style + 'a>;
 
 impl Catalog for Theme
 {
 	type Class<'a> = StyleFn<'a, Self>;
 
-	fn tabButtonDefault<'a>() -> Self::Class<'a>
+	fn default<'a>() -> Self::Class<'a>
 	{
-		Box::new(normalTabButton)
+		Box::new(normal)
 	}
 
 	fn style(&self, class: &Self::Class<'_>, status: Status) -> Style
@@ -471,7 +476,7 @@ impl Catalog for Theme
 	}
 }
 
-fn normalTabButton(theme: &Theme, status: Status) -> Style
+fn normal(theme: &Theme, status: Status) -> Style
 {
 	let palette = theme.extended_palette();
 	let base = styled(palette.primary.base);
@@ -498,7 +503,10 @@ fn styled(pair: palette::Pair) -> Style
 	Style
 	{
 		background: Some(Background::Color(pair.color)),
-		text_color: pair.text,
+		titleColor: pair.text,
+		tabTextColor: pair.text,
+		tabNumberColor: pair.text,
+		seperatorColor: pair.text,
 		..Style::default()
 	}
 }
