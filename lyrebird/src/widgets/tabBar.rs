@@ -55,6 +55,26 @@ where Self:
 	fn message_for(&self) -> Message;
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Style
+{
+    pub background: Option<Background>,
+    pub titleColor: Color,
+    pub tabTextColor: Color,
+    pub tabNumberColor: Color,
+    pub seperatorColor: Color,
+    pub border: Border,
+}
+
+pub trait Catalog
+{
+	type Class<'a>;
+	fn default<'a>() -> Self::Class<'a>;
+	fn style(&self, class: &Self::Class<'_>, status: Status) -> Style;
+}
+
+pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, Status) -> Style + 'a>;
+
 impl<TabEnum> TabBar<TabEnum>
 where
 	TabEnum: Default + TabBarEnum + Clone + Copy,
@@ -425,17 +445,6 @@ where
 	}
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Style
-{
-    pub background: Option<Background>,
-    pub titleColor: Color,
-    pub tabTextColor: Color,
-    pub tabNumberColor: Color,
-    pub seperatorColor: Color,
-    pub border: Border,
-}
-
 impl Default for Style
 {
 	fn default() -> Self
@@ -451,15 +460,6 @@ impl Default for Style
 		}
 	}
 }
-
-pub trait Catalog
-{
-	type Class<'a>;
-	fn default<'a>() -> Self::Class<'a>;
-	fn style(&self, class: &Self::Class<'_>, status: Status) -> Style;
-}
-
-pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, Status) -> Style + 'a>;
 
 impl Catalog for Theme
 {
