@@ -5,7 +5,7 @@ use std::time::Duration;
 use color_eyre::Result;
 use directories::ProjectDirs;
 use iced::alignment::Horizontal;
-use iced::{Element, Length, Program, Renderer, Settings, Task, window};
+use iced::{Length, Program, Settings, Task, window};
 use iced_futures::backend::default::Executor;
 use iced_widget::{Column, text};
 use tokio::sync::mpsc::{channel, Receiver};
@@ -15,6 +15,7 @@ use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, Song};
 use crate::playlists::Playlists;
 use crate::theme::Theme;
+use crate::widgets::{Element, Renderer};
 use crate::widgets::tabBar::{TabBar, TabBarEnum};
 use crate::{config::Config, libraryTree::LibraryTree};
 
@@ -88,7 +89,7 @@ impl MainWindowState
 		Task::none()
 	}
 
-	pub fn view(&self, _mainWindow: &MainWindow) -> Element<'_, Message, Theme>
+	pub fn view(&self, _mainWindow: &MainWindow) -> Element<'_, Message>
 	{
 		let header = self.tabBar.view();
 		let footer = text!("Footer");
@@ -251,7 +252,7 @@ impl Program for MainWindow
 		state.update(self, message)
 	}
 
-	fn view<'a>(&self, state: &'a MainWindowState, _windowID: window::Id) -> Element<'a, Message, Theme>
+	fn view<'a>(&self, state: &'a MainWindowState, _windowID: window::Id) -> Element<'a, Message>
 	{
 		state.view(self)
 	}

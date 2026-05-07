@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 use iced::mouse::{self, Cursor};
-use iced::theme::palette;
 use iced::
 {
-	Alignment, Background, Border, Color, Element, Event, Length, Padding, Rectangle, Shadow, Size, Theme, overlay,
-	touch, window
+	Alignment, Background, Border, Color, Event, Length, Padding, Rectangle, Shadow, Size, overlay, touch, window
 };
 use iced::widget::{Row, button::Status, container, text};
 use iced_core::widget::{Operation, Tree, tree};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer};
 
 use crate::messages::Message;
+use crate::theme::{self, Theme};
+use crate::widgets::Element;
 
 /// A widget that draws a set of tabs providing equidistant space by default
 pub struct TabBar<TabEnum>
@@ -24,11 +24,11 @@ where
 	activeTab: TabEnum,
 }
 
-struct TabButton<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
+struct TabButton<'a, Message, Theme = theme::Theme, Renderer = iced::Renderer>
 where
 	Theme: Catalog,
 {
-	content: Element<'a, Message, Theme, Renderer>,
+	content: iced::Element<'a, Message, Theme, Renderer>,
 	onPress: Message,
 	width: Length,
 	height: Length,
@@ -88,9 +88,7 @@ where
 		}
 	}
 
-	pub fn view<'a, Theme>(&'a self) -> Element<'a, Message, Theme>
-	where
-		Theme: container::Catalog + text::Catalog + Catalog + 'a
+	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
 		let tabs = TabEnum::tabs();
 		let mut layout = Row::with_capacity(tabs.len() + 1);
@@ -433,7 +431,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> From<TabButton<'a, Message, Theme, Renderer>>
-	for Element<'a, Message, Theme, Renderer>
+	for iced::Element<'a, Message, Theme, Renderer>
 where
 	Message: Clone + 'a,
 	Theme: Catalog + 'a,
@@ -458,55 +456,5 @@ impl Default for Style
 			seperatorColor: Color::BLACK,
 			border: Border::default(),
 		}
-	}
-}
-
-impl Catalog for Theme
-{
-	type Class<'a> = StyleFn<'a, Self>;
-
-	fn default<'a>() -> Self::Class<'a>
-	{
-		Box::new(normal)
-	}
-
-	fn style(&self, class: &Self::Class<'_>, status: Status) -> Style
-	{
-		class(self, status)
-	}
-}
-
-fn normal(theme: &Theme, status: Status) -> Style
-{
-	let palette = theme.extended_palette();
-	let base = styled(palette.primary.base);
-
-	match status
-	{
-		Status::Active => base,
-		Status::Pressed => Style
-		{
-			background: Some(Background::Color(palette.primary.weak.color)),
-			..base
-		},
-		Status::Hovered => Style
-		{
-			background: Some(Background::Color(palette.primary.strong.color)),
-			..base
-		},
-		Status::Disabled => unreachable!(),
-	}
-}
-
-fn styled(pair: palette::Pair) -> Style
-{
-	Style
-	{
-		background: Some(Background::Color(pair.color)),
-		titleColor: pair.text,
-		tabTextColor: pair.text,
-		tabNumberColor: pair.text,
-		seperatorColor: pair.text,
-		..Style::default()
 	}
 }
