@@ -131,7 +131,7 @@ impl Default for Styles
 			header: Header
 			{
 				background: Color::from_rgb8(0x44, 0x44, 0x44),
-				programName: TextStyle { colour: Color::from_rgb8(0x34, 0x65, 0xa4) },
+				programName: TextStyle { colour: Color::from_rgb8(0x53, 0x82, 0xb9) },
 				tab: TabBar
 				{
 					button: TabButton

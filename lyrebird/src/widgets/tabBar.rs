@@ -8,7 +8,7 @@ use iced::
 use iced::widget::{button::Status, text};
 use iced_core::widget::{Operation, Tree, tree};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer};
-use iced_widget::row;
+use iced_widget::{container, row};
 
 use crate::messages::Message;
 use crate::theme::{self, Theme};
@@ -122,16 +122,28 @@ where
 	where
 		TabEnum: Default + TabBarEnum + Clone + Copy,
 	{
+		// Allocate a container for all the sub-elements of the tab bar
 		let mut children = Vec::with_capacity(tabs.len() + 1);
+		// Add in to the container the title
 		children.push
 		(
-			text(title)
-				.style(tabBarTitleStyle)
+			container(
+				text(title)
+					.style(tabBarTitleStyle)
+			)
+				.style(theme::container::transparent)
 				.width(Length::FillPortion(1))
 				.align_x(Alignment::Start)
 				.align_y(Alignment::Center)
+				.padding(Padding {
+					top: 2.0,
+					bottom: 2.0,
+					right: 5.0,
+					left: 15.0,
+				})
 				.into()
 		);
+		// Then add in all the tab buttons
 		children.extend
 		(
 		tabs
@@ -187,7 +199,7 @@ where
 		limits: &layout::Limits,
 	) -> layout::Node
 	{
-		let node = layout::flex::resolve
+		layout::flex::resolve
 		(
 			layout::flex::Axis::Horizontal,
 			renderer,
@@ -199,9 +211,7 @@ where
 			Alignment::Center,
 			&mut self.children,
 			&mut tree.children
-		);
-
-		node
+		)
 	}
 
 	fn draw(
@@ -230,19 +240,6 @@ where
 			},
 			tabBarStyle.background.unwrap_or_else(|| Background::Color(Color::TRANSPARENT)),
 		);
-		// let tabs = TabEnum::tabs();
-		// let mut layout = Row::with_capacity(tabs.len() + 1);
-		// let title = container(self.title)
-		// 	.style(tabBarTitleStyle)
-		// 	.width(Length::FillPortion(1))
-		// 	.align_x(Alignment::Start)
-		// 	.align_y(Alignment::Center)
-		// 	.padding(Padding {
-		// 		top: 5.0,
-		// 		bottom: 5.0,
-		// 		right: 10.0,
-		// 		left: 25.0,
-		// 	});
 
 		// Draw in the tab seperators
 		for index in 0..self.children.len() - 1
@@ -323,10 +320,10 @@ where
 			width: Length::FillPortion(1),
 			height: Length::Shrink,
 			padding: Padding {
-				top: 5.0,
-				bottom: 5.0,
-				right: 10.0,
-				left: 10.0,
+				top: 2.0,
+				bottom: 2.0,
+				right: 5.0,
+				left: 5.0,
 			},
 			class: <Theme as Catalog>::default(),
 			status: Status::Active,

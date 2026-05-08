@@ -14,7 +14,7 @@ use crate::messages::{Message, Tab};
 use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, Song};
 use crate::playlists::Playlists;
-use crate::theme::Theme;
+use crate::theme::{self, Theme};
 use crate::widgets::{Element, Renderer};
 use crate::widgets::tabBar::{TabBar, TabBarEnum};
 use crate::{config::Config, libraryTree::LibraryTree};

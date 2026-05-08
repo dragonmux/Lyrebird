@@ -30,3 +30,8 @@ pub fn root(theme: &Theme) -> Style
 		..Default::default()
 	}
 }
+
+pub fn transparent(_theme: &Theme) -> Style
+{
+	Style::default()
+}
