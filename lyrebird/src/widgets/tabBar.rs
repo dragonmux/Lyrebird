@@ -214,6 +214,52 @@ where
 		)
 	}
 
+	fn operate
+	(
+		&mut self,
+		tree: &mut Tree,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
+	{
+		operation.container(None, layout.bounds());
+		for ((child, tree), layout) in self.children
+			.iter_mut()
+			.zip(&mut tree.children)
+			.zip(layout.children())
+		{
+			operation.traverse(&mut |operation|
+			{
+				child
+					.as_widget_mut()
+					.operate(tree, layout, renderer, operation);
+			});
+		}
+	}
+
+	fn update
+	(
+		&mut self,
+		tree: &mut Tree,
+		event: &Event,
+		layout: Layout<'_>,
+		cursor: Cursor,
+		renderer: &Renderer,
+		clipboard: &mut dyn Clipboard,
+		shell: &mut Shell<'_, Message>,
+		viewport: &Rectangle,
+	)
+	{
+		for ((child, tree), layout) in self.children
+			.iter_mut()
+			.zip(&mut tree.children)
+			.zip(layout.children())
+		{
+			child.as_widget_mut().update(tree, event, layout, cursor, renderer, clipboard, shell, viewport);
+		}
+	}
+
 	fn draw(
 		&self,
 		tree: &Tree,
