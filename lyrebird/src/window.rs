@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use color_eyre::Result;
 use directories::ProjectDirs;
@@ -15,6 +14,7 @@ use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, Song};
 use crate::playlists::Playlists;
 use crate::theme::{self, Theme};
+use crate::widgets::trackProgress::TrackProgress;
 use crate::widgets::{Element, Renderer};
 use crate::widgets::tabBar::{TabBar, TabBarEnum};
 use crate::{config::Config, libraryTree::LibraryTree};
@@ -92,7 +92,7 @@ impl MainWindowState
 	pub fn view(&self, _mainWindow: &MainWindow) -> Element<'_, Message>
 	{
 		let header = self.tabBar.view();
-		let footer = text!("Footer");
+		let footer = TrackProgress::new(self.currentlyPlaying.as_ref().map(|(track, _)| track));
 		let content = text!("{} content", self.tabBar.activeTab().name())
 			.style(theme::text::general)
 			.center()
@@ -193,21 +193,6 @@ impl MainWindowState
 			_ => {},
 		}
 		Ok(())
-	}
-}
-
-fn durationAsString(duration: Duration) -> String
-{
-	if duration.is_zero()
-	{
-		"--:--".to_string()
-	}
-	else
-	{
-		let seconds = duration.as_secs();
-		let minutes = seconds / 60;
-		let seconds = seconds % 60;
-		format!("{minutes:2}:{seconds:02}")
 	}
 }
 
