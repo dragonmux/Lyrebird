@@ -36,21 +36,22 @@ pub struct Header
 pub struct Footer
 {
 	pub background: Color,
+	pub seperator: Color,
 }
 
 pub struct TabBar
 {
-	button: TabButton,
-	seperator: Color,
-	border: Color,
+	pub button: TabButton,
+	pub seperator: Color,
+	pub border: Color,
 }
 
 pub struct TabButton
 {
-	normal: TextStyle,
-	selected: TextStyle,
-	hover: TextStyle,
-	number: TextStyle,
+	pub normal: TextStyle,
+	pub selected: TextStyle,
+	pub hover: TextStyle,
+	pub number: TextStyle,
 }
 
 pub struct Text
@@ -155,6 +156,7 @@ impl Default for Styles
 			footer: Footer
 			{
 				background: Color::from_rgb8(0x44, 0x44, 0x44),
+				seperator: Color::from_rgb8(0x34, 0x65, 0xa4),
 			}
 		}
 	}

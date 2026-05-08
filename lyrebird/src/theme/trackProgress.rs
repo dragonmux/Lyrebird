@@ -24,6 +24,7 @@ fn footer(theme: &Theme) -> Style
 
 	Style
 	{
-		background: Some(iced::Background::Color(styles.footer.background))
+		background: Some(iced::Background::Color(styles.footer.background)),
+		seperatorColour: styles.footer.seperator,
 	}
 }

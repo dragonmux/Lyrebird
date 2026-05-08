@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use iced::{Alignment, Background, Border, Color, Length, Padding, Rectangle, Shadow, Size, mouse::Cursor};
+use iced::{Alignment, Background, Border, Color, Length, Padding, Point, Rectangle, Shadow, Size, mouse::Cursor};
 use iced_core::{Layout, Widget, layout, renderer, widget::Tree};
 use iced_widget::{row, text};
 
@@ -23,6 +23,7 @@ where
 pub struct Style
 {
     pub background: Option<Background>,
+    pub seperatorColour: Color,
 }
 
 pub trait Catalog
@@ -159,6 +160,34 @@ where
 			},
 			barStyle.background.unwrap_or_else(|| Background::Color(Color::TRANSPARENT)),
 		);
+
+		// Draw in the chunk seperators
+		for index in 0..self.children.len() - 1
+		{
+			// Get the bounds of the widgets left and right of this seperator position
+			let boundLeft = layout.child(index).bounds();
+			let boundRight = layout.child(index + 1).bounds();
+			let topLeft = Point::new(boundLeft.x + boundLeft.width , boundLeft.y);
+			let gapWidth = boundRight.x - topLeft.x;
+			// Calculate a new bounds that fills that gap
+			let bounds = Rectangle::new
+			(
+				topLeft,
+				Size::new(gapWidth, boundLeft.height)
+			);
+			// Draw a box in that spot using the seperator colour
+			renderer.fill_quad
+			(
+				renderer::Quad
+				{
+					bounds: bounds,
+					border: Border::default(),
+					shadow: Shadow::default(),
+					snap: false
+				},
+				Background::Color(barStyle.seperatorColour)
+			);
+		}
 
 		// Draw in the track progress sub-widgets
 		for ((child, tree), layout) in self.children
