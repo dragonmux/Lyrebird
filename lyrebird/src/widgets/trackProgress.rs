@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use iced::{Alignment, Length, Padding, Rectangle, Size, mouse::Cursor};
+use iced::{Alignment, Background, Border, Color, Length, Padding, Rectangle, Shadow, Size, mouse::Cursor};
 use iced_core::{Layout, Widget, layout, renderer, widget::Tree};
 use iced_widget::{row, text};
 
@@ -10,12 +10,29 @@ use crate::{messages::Message, playback::Song, theme::Theme};
 
 pub struct TrackProgress<'a, Theme, Renderer = iced::Renderer>
 where
+	Theme: Catalog,
 	Renderer: iced_core::Renderer,
 {
 	children: Vec<iced::Element<'a, Message, Theme, Renderer>>,
 	width: Length,
 	height: Length,
+	class: Theme::Class<'a>,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Style
+{
+    pub background: Option<Background>,
+}
+
+pub trait Catalog
+{
+	type Class<'a>;
+	fn default<'a>() -> Self::Class<'a>;
+	fn style(&self, class: &Self::Class<'_>) -> Style;
+}
+
+pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
 
 fn durationAsString(duration: Option<Duration>) -> String
 {
@@ -34,6 +51,7 @@ fn durationAsString(duration: Option<Duration>) -> String
 
 impl<'a, Renderer> TrackProgress<'a, Theme, Renderer>
 where
+	Theme: Catalog + 'a,
 	Renderer: iced_core::text::Renderer + 'a
 {
 	pub fn new(track: Option<&'a Song>) -> Self
@@ -60,13 +78,15 @@ where
 		{
 			children,
 			width: Length::Fill,
-			height: Length::Shrink
+			height: Length::Shrink,
+			class: <Theme as Catalog>::default(),
 		}
 	}
 }
 
 impl<'a, Theme, Renderer> Widget<Message, Theme, Renderer> for TrackProgress<'a, Theme, Renderer>
 where
+	Theme: Catalog,
 	Renderer: iced_core::Renderer
 {
 	fn children(&self) -> Vec<Tree>
@@ -123,6 +143,23 @@ where
 		viewport: &Rectangle,
 	)
 	{
+		// Extract widget bounds and styling information
+		let bounds = layout.bounds();
+		let barStyle = theme.style(&self.class);
+
+		// Draw in the background for the widget
+		renderer.fill_quad
+		(
+			renderer::Quad
+			{
+				bounds: bounds,
+				border: Border::default(),
+				shadow: Shadow::default(),
+				snap: false
+			},
+			barStyle.background.unwrap_or_else(|| Background::Color(Color::TRANSPARENT)),
+		);
+
 		// Draw in the track progress sub-widgets
 		for ((child, tree), layout) in self.children
 			.iter()
@@ -137,7 +174,7 @@ where
 impl<'a, Theme, Renderer> From<TrackProgress<'a, Theme, Renderer>>
 	for iced::Element<'a, Message, Theme, Renderer>
 where
-	Theme: 'a,
+	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + 'a,
 {
 	fn from(tabBarWidget: TrackProgress<'a, Theme, Renderer>) -> Self

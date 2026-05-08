@@ -5,6 +5,7 @@ use iced::{Color, theme};
 pub mod container;
 pub mod tabBar;
 pub mod text;
+pub mod trackProgress;
 
 pub enum Theme
 {
@@ -16,6 +17,7 @@ pub struct Styles
 {
 	pub general: General,
 	pub header: Header,
+	pub footer: Footer,
 	pub text: Text,
 }
 
@@ -29,6 +31,11 @@ pub struct Header
 	pub background: Color,
 	pub programName: TextStyle,
 	pub tab: TabBar,
+}
+
+pub struct Footer
+{
+	pub background: Color,
 }
 
 pub struct TabBar
@@ -145,6 +152,10 @@ impl Default for Styles
 					border: Color::from_rgb8(0x34, 0x65, 0xa4),
 				}
 			},
+			footer: Footer
+			{
+				background: Color::from_rgb8(0x44, 0x44, 0x44),
+			}
 		}
 	}
 }
