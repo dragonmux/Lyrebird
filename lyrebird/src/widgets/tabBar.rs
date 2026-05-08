@@ -29,16 +29,10 @@ where
 	Theme: Catalog + text::Catalog,
 	Renderer: iced_core::text::Renderer,
 {
-	tabs: Vec<TabButton<'a, Message, Theme, Renderer>>,
 	children: Vec<iced::Element<'a, Message, Theme, Renderer>>,
 	width: Length,
 	height: Length,
 	class: <Theme as Catalog>::Class<'a>,
-}
-
-struct TabPlaceholder
-{
-	height: f32,
 }
 
 struct TabButton<'a, Message, Theme = theme::Theme, Renderer = iced::Renderer>
@@ -137,14 +131,9 @@ where
 				.align_y(Alignment::Center)
 				.into()
 		);
-		for _ in 1..children.capacity()
-		{
-			children.push(iced::Element::new(TabPlaceholder { height: 0.0 }));
-		}
-
-		Self
-		{
-			tabs: tabs
+		children.extend
+		(
+		tabs
 				.iter()
 				.map
 				(
@@ -155,9 +144,13 @@ where
 							format!("{} {}", tab.value(), tab.name()),
 							tab.message_for()
 						)
+							.into()
 					}
 				)
-				.collect(),
+		);
+
+		Self
+		{
 			children,
 			width: Length::Fill,
 			height: Length::Shrink,
@@ -254,20 +247,6 @@ where
 		// 		left: 25.0,
 		// 	});
 
-		// layout = layout.push(title);
-		// for tab in tabs
-		// {
-		// 	layout = layout.push
-		// 	(
-		// 		TabButton::new
-		// 		(
-		// 			format!("{} {}", tab.value(), tab.name()),
-		// 			tab.message_for()
-		// 		)
-		// 	);
-		// }
-		// layout.width(Length::Fill).into()
-
 		// Draw in the tab seperators
 		for index in 0..self.children.len() - 1
 		{
@@ -316,39 +295,6 @@ where
 	fn from(tabBarWidget: TabBarWidget<'a, Theme, Renderer>) -> Self
 	{
 		Self::new(tabBarWidget)
-	}
-}
-
-impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer> for TabPlaceholder
-where
-	Renderer: iced_core::Renderer,
-{
-	fn size(&self) -> Size<Length> {
-		Size {
-			width: Length::Shrink,
-			height: Length::Shrink,
-		}
-	}
-
-	fn layout(
-		&mut self,
-		_tree: &mut Tree,
-		_renderer: &Renderer,
-		_limits: &layout::Limits,
-	) -> layout::Node {
-		layout::Node::new(Size { width: 0.0, height: 0.0 })
-	}
-
-	fn draw(
-		&self,
-		_tree: &Tree,
-		_renderer: &mut Renderer,
-		_theme: &Theme,
-		_style: &renderer::Style,
-		_layout: Layout<'_>,
-		_cursor: mouse::Cursor,
-		_viewport: &Rectangle,
-	) {
 	}
 }
 
@@ -559,45 +505,9 @@ where
 		viewport: &Rectangle,
 	)
 	{
-		let bounds = layout.bounds();
-		let contentLayout = layout.children().next().unwrap();
 		let style = theme.style(&self.class, self.status);
 
-		if let Some(background) = style.background
-		{
-			renderer.fill_quad
-			(
-				renderer::Quad
-				{
-					bounds: bounds.shrink(Padding::default().left(4.0)),
-					border: style.border,
-					shadow: Shadow::default(),
-					snap: false
-				},
-				background,
-			);
-		}
-
-		renderer.fill_quad
-		(
-			renderer::Quad
-			{
-				bounds: Rectangle::new(
-					bounds.anchor
-					(
-						Size { width: 4.0, height: bounds.height },
-						Alignment::Start,
-						Alignment::Center
-					),
-					Size { width: 4.0, height: bounds.height },
-				),
-				border: Border::default(),
-				shadow: Shadow::default(),
-				snap: false
-			},
-			style.seperatorColour,
-		);
-
+		// Background and seperator drawing's taken care of in TabBarWidget, so just deal with the button content itself.
 		self.content
 			.as_widget()
 			.draw
@@ -606,7 +516,7 @@ where
 				renderer,
 				theme,
 				&renderer::Style { text_color: style.tabTextColor },
-				contentLayout,
+				layout.child(0),
 				cursor,
 				viewport,
 			);
