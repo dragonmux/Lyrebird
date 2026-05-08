@@ -5,7 +5,7 @@ use iced::
 {
 	Alignment, Background, Border, Color, Event, Length, Padding, Rectangle, Shadow, Size, overlay, touch, window
 };
-use iced::widget::{Row, button::Status, container, text};
+use iced::widget::{button::Status, text};
 use iced_core::widget::{Operation, Tree, tree};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer};
 
@@ -119,9 +119,8 @@ where
 	}
 }
 
-impl<'a, Theme, Renderer> TabBarWidget<'a, Theme, Renderer>
+impl<'a, Renderer> TabBarWidget<'a, Theme, Renderer>
 where
-	Theme: Catalog + text::Catalog + 'a,
 	Renderer: iced_core::text::Renderer + 'a,
 {
 	pub fn new<TabEnum>(title: &'a str, tabs: &[TabEnum]) -> Self
@@ -129,7 +128,15 @@ where
 		TabEnum: Default + TabBarEnum + Clone + Copy,
 	{
 		let mut children = Vec::with_capacity(tabs.len() + 1);
-		children.push(text(title).into());
+		children.push
+		(
+			text(title)
+				.style(tabBarTitleStyle)
+				.width(Length::FillPortion(1))
+				.align_x(Alignment::Start)
+				.align_y(Alignment::Center)
+				.into()
+		);
 		for _ in 1..children.capacity()
 		{
 			children.push(iced::Element::new(TabPlaceholder { height: 0.0 }));
@@ -190,7 +197,7 @@ where
 		limits: &layout::Limits,
 	) -> layout::Node
 	{
-		layout::flex::resolve
+		let node = layout::flex::resolve
 		(
 			layout::flex::Axis::Horizontal,
 			renderer,
@@ -202,7 +209,9 @@ where
 			Alignment::Center,
 			&mut self.children,
 			&mut tree.children
-		)
+		);
+
+		node
 	}
 
 	fn draw(
@@ -217,7 +226,7 @@ where
 	)
 	{
 		let bounds = layout.bounds();
-		let style = Catalog::style(theme, &self.class, Status::Active);
+		let tabBarStyle = Catalog::style(theme, &self.class, Status::Active);
 
 		renderer.fill_quad
 		(
@@ -228,7 +237,7 @@ where
 				shadow: Shadow::default(),
 				snap: false
 			},
-			style.background.unwrap_or_else(|| Background::Color(Color::TRANSPARENT)),
+			tabBarStyle.background.unwrap_or_else(|| Background::Color(Color::TRANSPARENT)),
 		);
 		// let tabs = TabEnum::tabs();
 		// let mut layout = Row::with_capacity(tabs.len() + 1);
@@ -257,6 +266,13 @@ where
 		// 	);
 		// }
 		// layout.width(Length::Fill).into()
+		for ((child, tree), layout) in self.children
+			.iter()
+			.zip(&tree.children)
+			.zip(layout.children())
+		{
+			child.as_widget().draw(tree, renderer, theme, style, layout, cursor, viewport);
+		}
 	}
 }
 
@@ -635,17 +651,13 @@ impl Default for Style
 	}
 }
 
-fn tabBarTitleStyle(theme: &Theme) -> container::Style
+fn tabBarTitleStyle(theme: &Theme) -> text::Style
 {
 	let class = <Theme as Catalog>::default();
 	let style = Catalog::style(theme, &class, Status::Active);
 
-	container::Style
+	text::Style
 	{
-		text_color: Some(style.titleColor),
-		background: style.background,
-		border: style.border,
-		shadow: Shadow::default(),
-		snap: false
+		color: Some(style.titleColor),
 	}
 }
