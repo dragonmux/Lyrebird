@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 use iced::Border;
-use iced_widget::button::Status;
 
-use crate::{theme::{Styles, Theme}, widgets::tabBar::{Catalog, Style, StyleFn}};
+use crate::{theme::{Styles, Theme}, widgets::tabBar::{Catalog, State, Style, StyleFn}};
 
 impl Catalog for Theme
 {
@@ -14,14 +13,14 @@ impl Catalog for Theme
 		Box::new(header)
 	}
 
-	fn style(&self, class: &Self::Class<'_>, status: Status) -> Style
+	fn style(&self, class: &Self::Class<'_>, status: State) -> Style
 	{
 		class(self, status)
 	}
 }
 
 /// Styler for when a TabBar is used as the program header
-pub fn header(theme: &Theme, status: Status) -> Style
+pub fn header(theme: &Theme, status: State) -> Style
 {
 	// Extract the styling information and construct a base style
 	let styles = theme.styles();
@@ -31,21 +30,19 @@ pub fn header(theme: &Theme, status: Status) -> Style
 	match status
 	{
 		// TabButton is just pressable but not pressed
-		Status::Active => base,
-		// TabButton is actively selected
-		Status::Pressed => Style
+		State::Normal => base,
+		// TabButton is actively pressed or selected
+		State::Pressed | State::Selected => Style
 		{
 			tabTextColor: styles.header.tab.button.selected.colour,
 			..base
 		},
 		// TabButton is being hovered over
-		Status::Hovered => Style
+		State::Hovered => Style
 		{
 			tabTextColor: styles.header.tab.button.hover.colour,
 			..base
 		},
-		// TabButtons cannot be disabled
-		Status::Disabled => unreachable!(),
 	}
 }
 

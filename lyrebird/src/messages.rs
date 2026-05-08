@@ -2,7 +2,7 @@
 
 use crate::widgets::tabBar::TabBarEnum;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Tab
 {
 	LibraryTree = 1,

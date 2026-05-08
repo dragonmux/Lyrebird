@@ -5,7 +5,7 @@ use iced::
 {
 	Alignment, Background, Border, Color, Event, Length, Padding, Point, Rectangle, Shadow, Size, overlay, touch, window
 };
-use iced::widget::{button::Status, text};
+use iced::widget::text;
 use iced_core::widget::{Operation, Tree, tree};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer};
 use iced_widget::{container, row};
@@ -46,7 +46,20 @@ where
 	height: Length,
 	padding: Padding,
 	class: Theme::Class<'a>,
-	status: Status,
+	state: State,
+}
+
+/// The possible states of a [`TabButton`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum State {
+    /// The [`TabButton`] can be pressed.
+    Normal,
+    /// The [`TabButton`] can be pressed and it is being hovered.
+    Hovered,
+    /// The [`TabButton`] is being pressed.
+    Pressed,
+    /// The [`TabButton`] represents the currently selected tab.
+    Selected,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -57,7 +70,7 @@ struct TabButtonState
 
 pub trait TabBarEnum
 where Self:
-	Sized
+	Sized + PartialEq + Eq
 {
 	fn tabs<'a>() -> &'a[Self];
 	fn name(&self) -> &'static str;
@@ -80,10 +93,10 @@ pub trait Catalog
 {
 	type Class<'a>;
 	fn default<'a>() -> Self::Class<'a>;
-	fn style(&self, class: &Self::Class<'_>, status: Status) -> Style;
+	fn style(&self, class: &Self::Class<'_>, status: State) -> Style;
 }
 
-pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, Status) -> Style + 'a>;
+pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, State) -> Style + 'a>;
 
 impl<TabEnum> TabBar<TabEnum>
 where
@@ -100,7 +113,7 @@ where
 
 	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
-		TabBarWidget::new(self.title, TabEnum::tabs()).into()
+		TabBarWidget::new(self.title, TabEnum::tabs(), self.activeTab).into()
 	}
 
 	pub fn switchTo(&mut self, tab: TabEnum)
@@ -118,9 +131,9 @@ impl<'a, Renderer> TabBarWidget<'a, Theme, Renderer>
 where
 	Renderer: iced_core::text::Renderer + 'a,
 {
-	pub fn new<TabEnum>(title: &'a str, tabs: &[TabEnum]) -> Self
+	pub fn new<TabEnum>(title: &'a str, tabs: &[TabEnum], activeTab: TabEnum) -> Self
 	where
-		TabEnum: Default + TabBarEnum + Clone + Copy,
+		TabEnum: Default + TabBarEnum + Clone + Copy + PartialEq + Eq,
 	{
 		// Allocate a container for all the sub-elements of the tab bar
 		let mut children = Vec::with_capacity(tabs.len() + 1);
@@ -152,7 +165,13 @@ where
 				(
 					|tab: &TabEnum|
 					{
-						TabButton::new(tab.value(), tab.name(), tab.message_for())
+						TabButton::new
+						(
+							tab.value(),
+							tab.name(),
+							tab.message_for(),
+							&activeTab == tab
+						)
 							.into()
 					}
 				)
@@ -272,7 +291,7 @@ where
 	)
 	{
 		let bounds = layout.bounds();
-		let tabBarStyle = Catalog::style(theme, &self.class, Status::Active);
+		let tabBarStyle = Catalog::style(theme, &self.class, State::Normal);
 
 		// Draw in the background for the bar
 		renderer.fill_quad
@@ -344,7 +363,7 @@ where
 	Theme: Catalog + text::Catalog + 'a,
 	Renderer: iced_core::text::Renderer + 'a,
 {
-	pub fn new(number: usize, value: &'a str, onPress: Message) -> Self
+	pub fn new(number: usize, value: &'a str, onPress: Message, selected: bool) -> Self
 	{
 		Self
 		{
@@ -372,7 +391,7 @@ where
 				left: 5.0,
 			},
 			class: <Theme as Catalog>::default(),
-			status: Status::Active,
+			state: if selected { State::Selected } else { State::Normal },
 		}
 	}
 }
@@ -519,31 +538,34 @@ where
 			_ => {},
 		}
 
-		let currentStatus = if cursor.is_over(bounds)
+		if self.state != State::Selected
 		{
-			let state = tree.state.downcast_ref::<TabButtonState>();
-
-			if state.pressed
+			let currentStatus = if cursor.is_over(bounds)
 			{
-				Status::Pressed
+				let state = tree.state.downcast_ref::<TabButtonState>();
+
+				if state.pressed
+				{
+					State::Pressed
+				}
+				else
+				{
+					State::Hovered
+				}
 			}
 			else
 			{
-				Status::Hovered
-			}
-		}
-		else
-		{
-			Status::Active
-		};
+				State::Normal
+			};
 
-		if let Event::Window(window::Event::RedrawRequested(_)) = event
-		{
-			self.status = currentStatus;
-		}
-		else if self.status != currentStatus
-		{
-			shell.request_redraw();
+			if let Event::Window(window::Event::RedrawRequested(_)) = event
+			{
+				self.state = currentStatus;
+			}
+			else if self.state != currentStatus
+			{
+				shell.request_redraw();
+			}
 		}
 	}
 
@@ -559,7 +581,7 @@ where
 		viewport: &Rectangle,
 	)
 	{
-		let style = theme.style(&self.class, self.status);
+		let style = theme.style(&self.class, self.state);
 
 		// Background and seperator drawing's taken care of in TabBarWidget, so just deal with the button content itself.
 		self.content
@@ -649,7 +671,7 @@ impl Default for Style
 fn tabButtonNumberStyle(theme: &Theme) -> text::Style
 {
 	let class = <Theme as Catalog>::default();
-	let style = Catalog::style(theme, &class, Status::Active);
+	let style = Catalog::style(theme, &class, State::Normal);
 
 	text::Style
 	{
@@ -660,7 +682,7 @@ fn tabButtonNumberStyle(theme: &Theme) -> text::Style
 fn tabBarTitleStyle(theme: &Theme) -> text::Style
 {
 	let class = <Theme as Catalog>::default();
-	let style = Catalog::style(theme, &class, Status::Active);
+	let style = Catalog::style(theme, &class, State::Normal);
 
 	text::Style
 	{
