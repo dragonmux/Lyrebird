@@ -295,7 +295,7 @@ where
 	}
 }
 
-impl<'a, Message, Theme, Renderer> TabButton<'a, Message, Theme, Renderer>
+impl<'a, Message, Renderer> TabButton<'a, Message, Theme, Renderer>
 where
 	Message: 'a,
 	Theme: Catalog + text::Catalog + 'a,
@@ -308,8 +308,13 @@ where
 			content: row
 			(
 				[
-					text(number).align_x(Alignment::Center).into(),
-					text(value).align_x(Alignment::Start).into()
+					text(number)
+						.style(tabButtonNumberStyle)
+						.align_x(Alignment::Center)
+						.into(),
+					text(value)
+						.align_x(Alignment::Start)
+						.into()
 				]
 			)
 				.spacing(10.0)
@@ -595,6 +600,17 @@ impl Default for Style
 			seperatorColour: Color::BLACK,
 			border: Border::default(),
 		}
+	}
+}
+
+fn tabButtonNumberStyle(theme: &Theme) -> text::Style
+{
+	let class = <Theme as Catalog>::default();
+	let style = Catalog::style(theme, &class, Status::Active);
+
+	text::Style
+	{
+		color: Some(style.tabNumberColor)
 	}
 }
 

@@ -94,6 +94,7 @@ impl MainWindowState
 		let header = self.tabBar.view();
 		let footer = text!("Footer");
 		let content = text!("{} content", self.tabBar.activeTab().name())
+			.style(theme::text::general)
 			.center()
 			.height(Length::Fill);
 

@@ -10,7 +10,7 @@ impl Catalog for Theme
 
 	fn default<'a>() -> Self::Class<'a>
 	{
-		Box::new(general)
+		Box::new(|_theme| Style::default())
 	}
 
 	fn style(&self, class: &Self::Class<'_>) -> Style
