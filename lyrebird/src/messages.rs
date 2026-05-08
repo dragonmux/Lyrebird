@@ -36,8 +36,6 @@ impl Default for Tab
 
 impl TabBarEnum for Tab
 {
-	type Type = Self;
-
 	fn tabs<'a>() -> &'a[Self]
 	{
 		&[Self::LibraryTree, Self::Artists, Self::Albums, Self::Options, Self::Playlists]
