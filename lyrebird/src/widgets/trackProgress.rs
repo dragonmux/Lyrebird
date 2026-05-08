@@ -4,9 +4,9 @@ use std::time::Duration;
 
 use iced::{Alignment, Background, Border, Color, Length, Padding, Point, Rectangle, Shadow, Size, mouse::Cursor};
 use iced_core::{Layout, Widget, layout, renderer, widget::Tree};
-use iced_widget::{row, text};
+use iced_widget::{container, row, text};
 
-use crate::{messages::Message, playback::Song, theme::Theme};
+use crate::{messages::Message, playback::Song, theme::{self, Theme}};
 
 pub struct TrackProgress<'a, Theme, Renderer = iced::Renderer>
 where
@@ -59,7 +59,17 @@ where
 	{
 		let children = vec!
 		[
-			text(track.map_or_else(|| "Nothing playing", |song| &song.description()))
+			container(text(track.map_or_else(|| "Nothing playing", |song| &song.description())))
+				.style(theme::container::transparent)
+				.width(Length::FillPortion(4))
+				.align_x(Alignment::Start)
+				.align_y(Alignment::Center)
+				.padding(Padding {
+					top: 2.0,
+					bottom: 2.0,
+					right: 5.0,
+					left: 5.0,
+				})
 				.into(),
 			row
 			(
@@ -71,7 +81,15 @@ where
 						.into(),
 				]
 			)
+				.width(Length::FillPortion(1))
 				.spacing(5.0)
+				.align_y(Alignment::Center)
+				.padding(Padding {
+					top: 2.0,
+					bottom: 2.0,
+					right: 5.0,
+					left: 5.0,
+				})
 				.into(),
 		];
 
