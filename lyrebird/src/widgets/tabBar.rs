@@ -8,6 +8,7 @@ use iced::
 use iced::widget::{button::Status, text};
 use iced_core::widget::{Operation, Tree, tree};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer};
+use iced_widget::row;
 
 use crate::messages::Message;
 use crate::theme::{self, Theme};
@@ -139,11 +140,7 @@ where
 				(
 					|tab: &TabEnum|
 					{
-						TabButton::new
-						(
-							format!("{} {}", tab.value(), tab.name()),
-							tab.message_for()
-						)
+						TabButton::new(tab.value(), tab.name(), tab.message_for())
 							.into()
 					}
 				)
@@ -300,14 +297,23 @@ where
 
 impl<'a, Message, Theme, Renderer> TabButton<'a, Message, Theme, Renderer>
 where
+	Message: 'a,
 	Theme: Catalog + text::Catalog + 'a,
 	Renderer: iced_core::text::Renderer + 'a,
 {
-	pub fn new(value: String, onPress: Message) -> Self
+	pub fn new(number: usize, value: &'a str, onPress: Message) -> Self
 	{
 		Self
 		{
-			content: text(value).align_x(Alignment::Start).into(),
+			content: row
+			(
+				[
+					text(number).align_x(Alignment::Center).into(),
+					text(value).align_x(Alignment::Start).into()
+				]
+			)
+				.spacing(10.0)
+				.into(),
 			onPress,
 			width: Length::FillPortion(1),
 			height: Length::Shrink,
