@@ -58,7 +58,7 @@ fn headerBase(styles: &Styles) -> Style
 		titleColor: styles.header.programName.colour,
 		tabTextColor:  styles.header.tab.button.normal.colour,
 		tabNumberColor: styles.header.tab.button.number.colour,
-		seperatorColor: styles.header.tab.seperator,
+		seperatorColour: styles.header.tab.seperator,
 		border: Border
 		{
 			color: styles.header.tab.border,

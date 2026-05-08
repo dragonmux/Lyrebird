@@ -3,7 +3,7 @@
 use iced::mouse::{self, Cursor};
 use iced::
 {
-	Alignment, Background, Border, Color, Event, Length, Padding, Rectangle, Shadow, Size, overlay, touch, window
+	Alignment, Background, Border, Color, Event, Length, Padding, Point, Rectangle, Shadow, Size, overlay, touch, window
 };
 use iced::widget::{button::Status, text};
 use iced_core::widget::{Operation, Tree, tree};
@@ -77,7 +77,7 @@ pub struct Style
     pub titleColor: Color,
     pub tabTextColor: Color,
     pub tabNumberColor: Color,
-    pub seperatorColor: Color,
+    pub seperatorColour: Color,
     pub border: Border,
 }
 
@@ -228,6 +228,7 @@ where
 		let bounds = layout.bounds();
 		let tabBarStyle = Catalog::style(theme, &self.class, Status::Active);
 
+		// Draw in the background for the bar
 		renderer.fill_quad
 		(
 			renderer::Quad
@@ -266,6 +267,36 @@ where
 		// 	);
 		// }
 		// layout.width(Length::Fill).into()
+
+		// Draw in the tab seperators
+		for index in 0..self.children.len() - 1
+		{
+			// Get the bounds of the widgets left and right of this seperator position
+			let boundLeft = layout.child(index).bounds();
+			let boundRight = layout.child(index + 1).bounds();
+			let topLeft = Point::new(boundLeft.x + boundLeft.width , boundLeft.y);
+			let gapWidth = boundRight.x - topLeft.x;
+			// Calculate a new bounds that fills that gap
+			let bounds = Rectangle::new
+			(
+				topLeft,
+				Size::new(gapWidth, boundLeft.height)
+			);
+			// Draw a box in that spot using the seperator colour
+			renderer.fill_quad
+			(
+				renderer::Quad
+				{
+					bounds: bounds,
+					border: Border::default(),
+					shadow: Shadow::default(),
+					snap: false
+				},
+				Background::Color(tabBarStyle.seperatorColour)
+			);
+		}
+
+		// Draw in the individual tab widgets
 		for ((child, tree), layout) in self.children
 			.iter()
 			.zip(&tree.children)
@@ -564,7 +595,7 @@ where
 				shadow: Shadow::default(),
 				snap: false
 			},
-			style.seperatorColor,
+			style.seperatorColour,
 		);
 
 		self.content
@@ -645,7 +676,7 @@ impl Default for Style
 			titleColor: Color::BLACK,
 			tabTextColor: Color::BLACK,
 			tabNumberColor: Color::BLACK,
-			seperatorColor: Color::BLACK,
+			seperatorColour: Color::BLACK,
 			border: Border::default(),
 		}
 	}
