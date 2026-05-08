@@ -24,6 +24,23 @@ where
 	activeTab: TabEnum,
 }
 
+struct TabBarWidget<'a, Theme, Renderer = iced::Renderer>
+where
+	Theme: Catalog + text::Catalog,
+	Renderer: iced_core::text::Renderer,
+{
+	tabs: Vec<TabButton<'a, Message, Theme, Renderer>>,
+	children: Vec<iced::Element<'a, Message, Theme, Renderer>>,
+	width: Length,
+	height: Length,
+	class: <Theme as Catalog>::Class<'a>,
+}
+
+struct TabPlaceholder
+{
+	height: f32,
+}
+
 struct TabButton<'a, Message, Theme = theme::Theme, Renderer = iced::Renderer>
 where
 	Theme: Catalog,
@@ -47,9 +64,7 @@ pub trait TabBarEnum
 where Self:
 	Sized
 {
-	type Type: TabBarEnum;
-
-	fn tabs<'a>() -> &'a[Self::Type];
+	fn tabs<'a>() -> &'a[Self];
 	fn name(&self) -> &'static str;
 	fn value(&self) -> usize;
 	fn message_for(&self) -> Message;
@@ -90,33 +105,7 @@ where
 
 	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
-		let tabs = TabEnum::tabs();
-		let mut layout = Row::with_capacity(tabs.len() + 1);
-		let title = container(self.title)
-			.style(tabBarTitleStyle)
-			.width(Length::FillPortion(1))
-			.align_x(Alignment::Start)
-			.align_y(Alignment::Center)
-			.padding(Padding {
-				top: 5.0,
-				bottom: 5.0,
-				right: 10.0,
-				left: 25.0,
-			});
-
-		layout = layout.push(title);
-		for tab in tabs
-		{
-			layout = layout.push
-			(
-				TabButton::new
-				(
-					format!("{} {}", tab.value(), tab.name()),
-					tab.message_for()
-				)
-			);
-		}
-		layout.width(Length::Fill).into()
+		TabBarWidget::new(self.title, TabEnum::tabs()).into()
 	}
 
 	pub fn switchTo(&mut self, tab: TabEnum)
@@ -127,6 +116,192 @@ where
 	pub fn activeTab(&self) -> TabEnum
 	{
 		self.activeTab
+	}
+}
+
+impl<'a, Theme, Renderer> TabBarWidget<'a, Theme, Renderer>
+where
+	Theme: Catalog + text::Catalog + 'a,
+	Renderer: iced_core::text::Renderer + 'a,
+{
+	pub fn new<TabEnum>(title: &'a str, tabs: &[TabEnum]) -> Self
+	where
+		TabEnum: Default + TabBarEnum + Clone + Copy,
+	{
+		let mut children = Vec::with_capacity(tabs.len() + 1);
+		children.push(text(title).into());
+		for _ in 1..children.capacity()
+		{
+			children.push(iced::Element::new(TabPlaceholder { height: 0.0 }));
+		}
+
+		Self
+		{
+			tabs: tabs
+				.iter()
+				.map
+				(
+					|tab: &TabEnum|
+					{
+						TabButton::new
+						(
+							format!("{} {}", tab.value(), tab.name()),
+							tab.message_for()
+						)
+					}
+				)
+				.collect(),
+			children,
+			width: Length::Fill,
+			height: Length::Shrink,
+			class: <Theme as Catalog>::default(),
+		}
+	}
+}
+
+impl<'a, Theme, Renderer> Widget<Message, Theme, Renderer> for TabBarWidget<'a, Theme, Renderer>
+where
+	Theme: Catalog + text::Catalog,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer,
+{
+	fn children(&self) -> Vec<Tree>
+	{
+		self.children.iter().map(Tree::new).collect()
+	}
+
+	fn diff(&self, tree: &mut Tree)
+	{
+		tree.diff_children(&self.children);
+	}
+
+	fn size(&self) -> Size<Length>
+	{
+		Size
+		{
+			width: self.width,
+			height: self.height
+		}
+	}
+
+	fn layout(
+		&mut self,
+		tree: &mut Tree,
+		renderer: &Renderer,
+		limits: &layout::Limits,
+	) -> layout::Node
+	{
+		layout::flex::resolve
+		(
+			layout::flex::Axis::Horizontal,
+			renderer,
+			limits,
+			self.width,
+			self.height,
+			Padding::ZERO,
+			2.0,
+			Alignment::Center,
+			&mut self.children,
+			&mut tree.children
+		)
+	}
+
+	fn draw(
+		&self,
+		tree: &Tree,
+		renderer: &mut Renderer,
+		theme: &Theme,
+		style: &renderer::Style,
+		layout: Layout<'_>,
+		cursor: iced_core::mouse::Cursor,
+		viewport: &Rectangle,
+	)
+	{
+		let bounds = layout.bounds();
+		let style = Catalog::style(theme, &self.class, Status::Active);
+
+		renderer.fill_quad
+		(
+			renderer::Quad
+			{
+				bounds: bounds,
+				border: Border::default(),
+				shadow: Shadow::default(),
+				snap: false
+			},
+			style.background.unwrap_or_else(|| Background::Color(Color::TRANSPARENT)),
+		);
+		// let tabs = TabEnum::tabs();
+		// let mut layout = Row::with_capacity(tabs.len() + 1);
+		// let title = container(self.title)
+		// 	.style(tabBarTitleStyle)
+		// 	.width(Length::FillPortion(1))
+		// 	.align_x(Alignment::Start)
+		// 	.align_y(Alignment::Center)
+		// 	.padding(Padding {
+		// 		top: 5.0,
+		// 		bottom: 5.0,
+		// 		right: 10.0,
+		// 		left: 25.0,
+		// 	});
+
+		// layout = layout.push(title);
+		// for tab in tabs
+		// {
+		// 	layout = layout.push
+		// 	(
+		// 		TabButton::new
+		// 		(
+		// 			format!("{} {}", tab.value(), tab.name()),
+		// 			tab.message_for()
+		// 		)
+		// 	);
+		// }
+		// layout.width(Length::Fill).into()
+	}
+}
+
+impl<'a, Theme, Renderer> From<TabBarWidget<'a, Theme, Renderer>>
+	for iced::Element<'a, Message, Theme, Renderer>
+where
+	Theme: Catalog + text::Catalog + 'a,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
+{
+	fn from(tabBarWidget: TabBarWidget<'a, Theme, Renderer>) -> Self
+	{
+		Self::new(tabBarWidget)
+	}
+}
+
+impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer> for TabPlaceholder
+where
+	Renderer: iced_core::Renderer,
+{
+	fn size(&self) -> Size<Length> {
+		Size {
+			width: Length::Shrink,
+			height: Length::Shrink,
+		}
+	}
+
+	fn layout(
+		&mut self,
+		_tree: &mut Tree,
+		_renderer: &Renderer,
+		_limits: &layout::Limits,
+	) -> layout::Node {
+		layout::Node::new(Size { width: 0.0, height: 0.0 })
+	}
+
+	fn draw(
+		&self,
+		_tree: &Tree,
+		_renderer: &mut Renderer,
+		_theme: &Theme,
+		_style: &renderer::Style,
+		_layout: Layout<'_>,
+		_cursor: mouse::Cursor,
+		_viewport: &Rectangle,
+	) {
 	}
 }
 
