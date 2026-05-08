@@ -27,8 +27,8 @@ where
 
 struct TabBarWidget<'a, Theme, Renderer = iced::Renderer>
 where
-	Theme: Catalog + text::Catalog,
-	Renderer: iced_core::text::Renderer,
+	Theme: Catalog,
+	Renderer: iced_core::Renderer,
 {
 	children: Vec<iced::Element<'a, Message, Theme, Renderer>>,
 	width: Length,
@@ -189,8 +189,8 @@ where
 
 impl<'a, Theme, Renderer> Widget<Message, Theme, Renderer> for TabBarWidget<'a, Theme, Renderer>
 where
-	Theme: Catalog + text::Catalog,
-	Renderer: iced_core::Renderer + iced_core::text::Renderer,
+	Theme: Catalog,
+	Renderer: iced_core::Renderer,
 {
 	fn children(&self) -> Vec<Tree>
 	{
@@ -286,7 +286,7 @@ where
 		theme: &Theme,
 		style: &renderer::Style,
 		layout: Layout<'_>,
-		cursor: iced_core::mouse::Cursor,
+		cursor: Cursor,
 		viewport: &Rectangle,
 	)
 	{
@@ -348,8 +348,8 @@ where
 impl<'a, Theme, Renderer> From<TabBarWidget<'a, Theme, Renderer>>
 	for iced::Element<'a, Message, Theme, Renderer>
 where
-	Theme: Catalog + text::Catalog + 'a,
-	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + 'a,
 {
 	fn from(tabBarWidget: TabBarWidget<'a, Theme, Renderer>) -> Self
 	{
