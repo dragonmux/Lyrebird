@@ -2,50 +2,83 @@
 
 use std::time::Duration;
 
-use iced::{Length, Rectangle, Size, mouse::Cursor};
+use iced::{Alignment, Length, Padding, Rectangle, Size, mouse::Cursor};
 use iced_core::{Layout, Widget, layout, renderer, widget::Tree};
+use iced_widget::{row, text};
 
-use crate::{messages::Message, playback::Song};
+use crate::{messages::Message, playback::Song, theme::Theme};
 
-pub struct TrackProgress<'a>
+pub struct TrackProgress<'a, Theme, Renderer = iced::Renderer>
+where
+	Renderer: iced_core::Renderer,
 {
-	track: Option<&'a Song>,
+	children: Vec<iced::Element<'a, Message, Theme, Renderer>>,
 	width: Length,
 	height: Length,
 }
 
-impl<'a> TrackProgress<'a>
+fn durationAsString(duration: Option<Duration>) -> String
 {
-	pub fn new(track: Option<&'a Song>) -> Self
-	{
-		Self
-		{
-			track,
-			width: Length::Fill,
-			height: Length::Shrink
-		}
-	}
-}
-
-fn durationAsString(duration: Duration) -> String
-{
-	if duration.is_zero()
-	{
-		"--:--".to_string()
-	}
-	else
+	if let Some(duration) = duration && !duration.is_zero()
 	{
 		let seconds = duration.as_secs();
 		let minutes = seconds / 60;
 		let seconds = seconds % 60;
 		format!("{minutes:2}:{seconds:02}")
 	}
+	else
+	{
+		"--:--".to_string()
+	}
 }
 
-impl<'a, Theme, Renderer> Widget<Message, Theme, Renderer> for TrackProgress<'a>
+impl<'a, Renderer> TrackProgress<'a, Theme, Renderer>
+where
+	Renderer: iced_core::text::Renderer + 'a
+{
+	pub fn new(track: Option<&'a Song>) -> Self
+	{
+		let children = vec!
+		[
+			text(track.map_or_else(|| "Nothing playing", |song| &song.description()))
+				.into(),
+			row
+			(
+				[
+					text(durationAsString(track.map(|song| song.playedDuration())))
+						.into(),
+					text("/").into(),
+					text(durationAsString(track.and_then(|song| song.songDuration())))
+						.into(),
+				]
+			)
+				.spacing(5.0)
+				.into(),
+		];
+
+		Self
+		{
+			children,
+			width: Length::Fill,
+			height: Length::Shrink
+		}
+	}
+}
+
+impl<'a, Theme, Renderer> Widget<Message, Theme, Renderer> for TrackProgress<'a, Theme, Renderer>
 where
 	Renderer: iced_core::Renderer
 {
+	fn children(&self) -> Vec<Tree>
+	{
+		self.children.iter().map(Tree::new).collect()
+	}
+
+	fn diff(&self, tree: &mut Tree)
+	{
+		tree.diff_children(&self.children);
+	}
+
 	fn size(&self) -> Size<Length>
 	{
 		Size
@@ -63,7 +96,19 @@ where
 		limits: &layout::Limits,
 	) -> layout::Node
 	{
-		layout::Node::new(limits.min())
+		layout::flex::resolve
+		(
+			layout::flex::Axis::Horizontal,
+			renderer,
+			limits,
+			self.width,
+			self.height,
+			Padding::ZERO,
+			2.0,
+			Alignment::Center,
+			&mut self.children,
+			&mut tree.children
+		)
 	}
 
 	fn draw
@@ -78,17 +123,24 @@ where
 		viewport: &Rectangle,
 	)
 	{
-		//
+		// Draw in the track progress sub-widgets
+		for ((child, tree), layout) in self.children
+			.iter()
+			.zip(&tree.children)
+			.zip(layout.children())
+		{
+			child.as_widget().draw(tree, renderer, theme, style, layout, cursor, viewport);
+		}
 	}
 }
 
-impl<'a, Theme, Renderer> From<TrackProgress<'a>>
+impl<'a, Theme, Renderer> From<TrackProgress<'a, Theme, Renderer>>
 	for iced::Element<'a, Message, Theme, Renderer>
 where
 	Theme: 'a,
 	Renderer: iced_core::Renderer + 'a,
 {
-	fn from(tabBarWidget: TrackProgress<'a>) -> Self
+	fn from(tabBarWidget: TrackProgress<'a, Theme, Renderer>) -> Self
 	{
 		Self::new(tabBarWidget)
 	}

@@ -95,10 +95,10 @@ impl Song
 		description
 	}
 
-	// Return a copy of the description of what this song is
-	pub fn description(&self) -> String
+	// Return a reference to a description of what the song is
+	pub fn description(&self) -> &str
 	{
-		self.description.clone()
+		&self.description
 	}
 
 	// Extract how long the song runs for
