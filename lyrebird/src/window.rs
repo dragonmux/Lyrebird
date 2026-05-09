@@ -92,7 +92,10 @@ impl MainWindowState
 	pub fn view(&self, _mainWindow: &MainWindow) -> Element<'_, Message>
 	{
 		let header = self.tabBar.view();
-		let footer = TrackProgress::new(self.currentlyPlaying.as_ref().map(|(track, _)| track));
+		let footer = TrackProgress::new
+		(
+			self.currentlyPlaying.as_ref().map(|(track, _)| track)
+		);
 		let content = text!("{} content", self.tabBar.activeTab().name())
 			.style(theme::text::general)
 			.center()

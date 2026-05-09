@@ -2,9 +2,9 @@
 
 use std::time::Duration;
 
-use iced::{Alignment, Background, Border, Color, Length, Padding, Point, Rectangle, Shadow, Size, mouse::Cursor};
+use iced::{Alignment, Background, Border, Color, Length, Padding, Point, Rectangle, Shadow, Size, border::Radius, mouse::Cursor};
 use iced_core::{Layout, Widget, layout, renderer, widget::Tree};
-use iced_widget::{container, row, text};
+use iced_widget::{container, progress_bar, row, text};
 
 use crate::{messages::Message, playback::Song, theme::{self, Theme}};
 
@@ -92,6 +92,27 @@ where
 					left: 5.0,
 				})
 				.spacing(5.0)
+				.into(),
+			container
+			(
+				progress_bar
+				(
+					track.and_then
+					(
+						|song| song.songDuration()).map_or_else(|| 0.0..=1.0, |duration| 0.0..=duration.as_secs_f32()
+					),
+					track.map_or_else(|| 0.0, |song| song.playedDuration().as_secs_f32()),
+				)
+					.style(playbackProgressStyle)
+					.girth(Length::Fixed(10.0))
+			)
+				.style(theme::container::transparent)
+				.padding(Padding {
+					top: 2.0,
+					bottom: 2.0,
+					right: 5.0,
+					left: 5.0,
+				})
 				.into(),
 		];
 
@@ -233,5 +254,23 @@ where
 	fn from(tabBarWidget: TrackProgress<'a, Theme, Renderer>) -> Self
 	{
 		Self::new(tabBarWidget)
+	}
+}
+
+fn playbackProgressStyle(theme: &Theme) -> progress_bar::Style
+{
+	let class = <Theme as Catalog>::default();
+	let style = Catalog::style(theme, &class);
+
+	progress_bar::Style
+	{
+		background: style.background.unwrap_or_else(|| Background::Color(Color::TRANSPARENT)),
+		bar: Background::Color(style.textColour),
+		border: Border
+		{
+			color: style.seperatorColour,
+			width: 1.0,
+			radius: Radius::new(5.0)
+		},
 	}
 }

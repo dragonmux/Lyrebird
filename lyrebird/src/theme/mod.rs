@@ -3,6 +3,7 @@
 use iced::{Color, theme};
 
 pub mod container;
+pub mod progressBar;
 pub mod tabBar;
 pub mod text;
 pub mod trackProgress;
