@@ -652,22 +652,6 @@ where
 	}
 }
 
-impl Default for Style
-{
-	fn default() -> Self
-	{
-		Self
-		{
-			background: None,
-			titleColour: Color::BLACK,
-			tabTextColour: Color::BLACK,
-			tabNumberColour: Color::BLACK,
-			seperatorColour: Color::BLACK,
-			border: Border::default(),
-		}
-	}
-}
-
 fn tabButtonNumberStyle(theme: &Theme) -> text::Style
 {
 	let class = <Theme as Catalog>::default();
