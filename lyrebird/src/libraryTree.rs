@@ -3,11 +3,12 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 use color_eyre::eyre::{self, Result};
-use iced::Length;
-use iced_widget::Row;
+use iced::{Length, Padding};
+use iced_widget::{Row, container, text};
 
 use crate::library::MusicLibrary;
 use crate::messages::Message;
+use crate::theme::container::roundedBox;
 use crate::widgets::Element;
 use crate::window::Operation;
 
@@ -39,11 +40,46 @@ impl LibraryTree
 	{
 		let layout = Row::with_children
 		([
+			container
+			(
+				text("Directory Tree")
+			)
+				.style(roundedBox)
+				.width(Length::FillPortion(1))
+				.height(Length::Fill)
+				.padding(Padding {
+					top: 2.0,
+					bottom: 2.0,
+					right: 5.0,
+					left: 5.0,
+				})
+				.into(),
+			container
+			(
+				text("Files")
+			)
+				.style(roundedBox)
+				.width(Length::FillPortion(2))
+				.height(Length::Fill)
+				.padding(Padding {
+					top: 2.0,
+					bottom: 2.0,
+					right: 5.0,
+					left: 5.0,
+				})
+				.into(),
 		]);
 
 		layout
 			.width(Length::Fill)
 			.height(Length::Fill)
+			.spacing(5.0)
+			.padding(Padding {
+				top: 5.0,
+				bottom: 5.0,
+				right: 5.0,
+				left: 5.0,
+			})
 			.into()
 	}
 

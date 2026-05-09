@@ -25,6 +25,7 @@ pub struct Styles
 pub struct General
 {
 	pub background: Color,
+	pub border: Color,
 }
 
 pub struct Header
@@ -134,6 +135,7 @@ impl Default for Styles
 			general: General
 			{
 				background: Color::from_rgb8(0x11, 0x11, 0x11),
+				border: Color::from_rgb8(0x77, 0x77, 0x77),
 			},
 			text: Text
 			{

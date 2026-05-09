@@ -32,7 +32,7 @@ pub fn general(theme: &Theme) -> Style
 		{
 			color: styles.text.general.colour,
 			width: 1.0,
-			radius: Radius::new(5.0),
+			radius: 5.0.into(),
 		},
 	}
 }

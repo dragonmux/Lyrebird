@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::Background;
+use iced::{Background, Border};
 use iced_widget::container::{Catalog, Style, StyleFn};
 
 use super::Theme;
@@ -23,6 +23,7 @@ impl Catalog for Theme
 pub fn root(theme: &Theme) -> Style
 {
 	let styles = theme.styles();
+
 	Style
 	{
 		background: Some(Background::Color(styles.general.background)),
@@ -34,4 +35,20 @@ pub fn root(theme: &Theme) -> Style
 pub fn transparent(_theme: &Theme) -> Style
 {
 	Style::default()
+}
+
+pub fn roundedBox(theme: &Theme) -> Style
+{
+	let styles = theme.styles();
+
+	Style
+	{
+		border: Border
+		{
+			color: styles.general.border,
+			width: 1.0,
+			radius: 5.0.into(),
+		},
+		..Default::default()
+	}
 }
