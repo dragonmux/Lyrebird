@@ -126,7 +126,7 @@ impl MusicLibrary
 			)
 		);
 
-		Self::backgroundDiscover(&library, library.clone(), basePath.to_path_buf())?;
+		// Self::backgroundDiscover(&library, library.clone(), basePath.to_path_buf())?;
 
 		Ok(library)
 	}

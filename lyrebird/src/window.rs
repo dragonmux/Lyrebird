@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock};
 
 use color_eyre::Result;
 use directories::ProjectDirs;
@@ -9,6 +10,7 @@ use iced_futures::backend::default::Executor;
 use iced_widget::{Column, text};
 use tokio::sync::mpsc::{channel, Receiver};
 
+use crate::library::MusicLibrary;
 use crate::messages::{Message, Tab};
 use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, Song};
@@ -26,6 +28,7 @@ pub struct MainWindowState
 
 	tabBar: TabBar<Tab>,
 
+	libraryTree: LibraryTree,
 	optionsPanel: OptionsPanel,
 	playlists: Playlists,
 
@@ -34,7 +37,10 @@ pub struct MainWindowState
 }
 
 /// Represents the main window of Lyrebird itself
-pub struct MainWindow;
+pub struct MainWindow
+{
+	musicLibrary: Arc<RwLock<MusicLibrary>>,
+}
 
 pub enum Operation
 {
@@ -63,7 +69,7 @@ impl Operation
 impl MainWindowState
 {
 	/// Set up the main window state
-	pub fn new(_mainWindow: &MainWindow) -> Self
+	pub fn new(mainWindow: &MainWindow) -> Self
 	{
 		Self
 		{
@@ -71,6 +77,7 @@ impl MainWindowState
 
 			tabBar: TabBar::new("Lyrebird"),
 
+			libraryTree: LibraryTree::new(mainWindow.musicLibrary.clone()),
 			optionsPanel: OptionsPanel::new(),
 			playlists: Playlists::new(),
 
@@ -91,16 +98,26 @@ impl MainWindowState
 
 	pub fn view(&self, _mainWindow: &MainWindow) -> Element<'_, Message>
 	{
+		// Build the window header (view selector) and footer (playback status bar)
 		let header = self.tabBar.view();
 		let footer = TrackProgress::new
 		(
 			self.currentlyPlaying.as_ref().map(|(track, _)| track)
 		);
-		let content = text!("{} content", self.tabBar.activeTab().name())
-			.style(theme::text::general)
-			.center()
-			.height(Length::Fill);
 
+		// Figure out what to display in the main area
+		let content = match self.tabBar.activeTab()
+		{
+			Tab::LibraryTree => self.libraryTree.view(),
+			tab =>
+				text!("{} content", tab.name())
+					.style(theme::text::general)
+					.center()
+					.height(Length::Fill)
+					.into()
+		};
+
+		// Compose the whole lot into a layout
 		let layout = Column::with_children
 		([
 			header,
@@ -108,6 +125,7 @@ impl MainWindowState
 			footer.into(),
 		]);
 
+		// And set that layout up to display things full window size nicely
 		layout
 			.width(Length::Fill)
 			.height(Length::Fill)
@@ -202,9 +220,16 @@ impl MainWindowState
 impl MainWindow
 {
 	// Set up a new main window, loading the music library and config settings
-	pub fn new(_paths: &ProjectDirs, _config: &mut Config) -> Result<Self>
+	pub fn new(paths: &ProjectDirs, config: &mut Config) -> Result<Self>
 	{
-		Ok(Self)
+		Ok(Self
+		{
+			musicLibrary: MusicLibrary::new
+			(
+				&paths.cache_dir().join("library.json"),
+				&config.libraryPath,
+			)?,
+		})
 	}
 }
 
@@ -233,7 +258,10 @@ impl Program for MainWindow
 
 	fn boot(&self) -> (MainWindowState, Task<Message>)
 	{
-		(MainWindowState::new(self), Task::none())
+		(
+			MainWindowState::new(self),
+			Task::none()
+		)
 	}
 
 	fn update(&self, state: &mut MainWindowState, message: Message) -> Task<Message>

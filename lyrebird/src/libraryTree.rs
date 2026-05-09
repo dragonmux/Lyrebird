@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 use color_eyre::eyre::{self, Result};
+use iced::Length;
+use iced_widget::Row;
 
 use crate::library::MusicLibrary;
+use crate::messages::Message;
+use crate::widgets::Element;
 use crate::window::Operation;
 
 pub struct LibraryTree
@@ -22,13 +26,25 @@ enum Side
 
 impl LibraryTree
 {
-	pub fn new(cacheFile: &Path, libraryPath: &Path) -> Result<Self>
+	pub fn new(musicLibrary: Arc<RwLock<MusicLibrary>>) -> Self
 	{
-		Ok(Self
+		Self
 		{
 			activeSide: Side::DirectoryTree,
-			library: MusicLibrary::new(cacheFile, libraryPath)?,
-		})
+			library: musicLibrary,
+		}
+	}
+
+	pub fn view<'a>(&'a self) -> Element<'a, Message>
+	{
+		let layout = Row::with_children
+		([
+		]);
+
+		layout
+			.width(Length::Fill)
+			.height(Length::Fill)
+			.into()
 	}
 
 	pub fn writeCache(&self) -> Result<()>
