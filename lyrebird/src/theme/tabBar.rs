@@ -34,13 +34,13 @@ pub fn header(theme: &Theme, status: State) -> Style
 		// TabButton is actively pressed or selected
 		State::Pressed | State::Selected => Style
 		{
-			tabTextColor: styles.header.tab.button.selected.colour,
+			tabTextColour: styles.header.tab.button.selected.colour,
 			..base
 		},
 		// TabButton is being hovered over
 		State::Hovered => Style
 		{
-			tabTextColor: styles.header.tab.button.hover.colour,
+			tabTextColour: styles.header.tab.button.hover.colour,
 			..base
 		},
 	}
@@ -52,9 +52,9 @@ fn headerBase(styles: &Styles) -> Style
 	Style
 	{
 		background: Some(iced::Background::Color(styles.header.background)),
-		titleColor: styles.header.programName.colour,
-		tabTextColor:  styles.header.tab.button.normal.colour,
-		tabNumberColor: styles.header.tab.button.number.colour,
+		titleColour: styles.header.programName.colour,
+		tabTextColour:  styles.header.tab.button.normal.colour,
+		tabNumberColour: styles.header.tab.button.number.colour,
 		seperatorColour: styles.header.tab.seperator,
 		border: Border
 		{

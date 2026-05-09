@@ -82,9 +82,9 @@ where Self:
 pub struct Style
 {
     pub background: Option<Background>,
-    pub titleColor: Color,
-    pub tabTextColor: Color,
-    pub tabNumberColor: Color,
+    pub titleColour: Color,
+    pub tabTextColour: Color,
+    pub tabNumberColour: Color,
     pub seperatorColour: Color,
     pub border: Border,
 }
@@ -591,7 +591,7 @@ where
 				&tree.children[0],
 				renderer,
 				theme,
-				&renderer::Style { text_color: style.tabTextColor },
+				&renderer::Style { text_color: style.tabTextColour },
 				layout.child(0),
 				cursor,
 				viewport,
@@ -659,9 +659,9 @@ impl Default for Style
 		Self
 		{
 			background: None,
-			titleColor: Color::BLACK,
-			tabTextColor: Color::BLACK,
-			tabNumberColor: Color::BLACK,
+			titleColour: Color::BLACK,
+			tabTextColour: Color::BLACK,
+			tabNumberColour: Color::BLACK,
 			seperatorColour: Color::BLACK,
 			border: Border::default(),
 		}
@@ -675,7 +675,7 @@ fn tabButtonNumberStyle(theme: &Theme) -> text::Style
 
 	text::Style
 	{
-		color: Some(style.tabNumberColor)
+		color: Some(style.tabNumberColour)
 	}
 }
 
@@ -686,6 +686,6 @@ fn tabBarTitleStyle(theme: &Theme) -> text::Style
 
 	text::Style
 	{
-		color: Some(style.titleColor),
+		color: Some(style.titleColour),
 	}
 }
