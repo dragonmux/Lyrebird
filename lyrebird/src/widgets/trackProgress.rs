@@ -22,8 +22,10 @@ where
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Style
 {
+    pub textColour: Color,
     pub background: Option<Background>,
     pub seperatorColour: Color,
+    pub border: Border,
 }
 
 pub trait Catalog
@@ -156,7 +158,7 @@ where
 		tree: &Tree,
 		renderer: &mut Renderer,
 		theme: &Theme,
-		style: &renderer::Style,
+		_style: &renderer::Style,
 		layout: Layout<'_>,
 		cursor: Cursor,
 		viewport: &Rectangle,
@@ -165,6 +167,10 @@ where
 		// Extract widget bounds and styling information
 		let bounds = layout.bounds();
 		let barStyle = theme.style(&self.class);
+		let style = renderer::Style
+		{
+			text_color: barStyle.textColour,
+		};
 
 		// Draw in the background for the widget
 		renderer.fill_quad
@@ -213,7 +219,7 @@ where
 			.zip(&tree.children)
 			.zip(layout.children())
 		{
-			child.as_widget().draw(tree, renderer, theme, style, layout, cursor, viewport);
+			child.as_widget().draw(tree, renderer, theme, &style, layout, cursor, viewport);
 		}
 	}
 }

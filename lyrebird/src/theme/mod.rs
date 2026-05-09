@@ -35,8 +35,10 @@ pub struct Header
 
 pub struct Footer
 {
+	pub text: TextStyle,
 	pub background: Color,
 	pub seperator: Color,
+	pub border: Color,
 }
 
 pub struct TabBar
@@ -155,8 +157,10 @@ impl Default for Styles
 			},
 			footer: Footer
 			{
+				text: TextStyle { colour: Color::from_rgb8(0x53, 0x82, 0xb9) },
 				background: Color::from_rgb8(0x44, 0x44, 0x44),
 				seperator: Color::from_rgb8(0x34, 0x65, 0xa4),
+				border: Color::from_rgb8(0x34, 0x65, 0xa4),
 			}
 		}
 	}
