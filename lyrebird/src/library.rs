@@ -42,23 +42,8 @@ pub struct MusicLibrary
 	#[serde(skip)]
 	discoveryCancellation: CancellationToken,
 
-	#[serde(skip, default = "defaultTreeIcon")]
-	treeNodeIcon: String,
-	#[serde(skip, default = "defaultLeafIcon")]
-	treeLeafIcon: String,
-
 	#[serde(skip)]
 	nextTrackID: AtomicU64,
-}
-
-fn defaultTreeIcon() -> String
-{
-	"╰ ".to_string()
-}
-
-fn defaultLeafIcon() -> String
-{
-	"├ ".to_string()
 }
 
 impl MusicLibrary
@@ -117,9 +102,6 @@ impl MusicLibrary
 
 					discoveryThread: None,
 					discoveryCancellation: CancellationToken::new(),
-
-					treeNodeIcon: defaultTreeIcon(),
-					treeLeafIcon: defaultLeafIcon(),
 
 					nextTrackID: AtomicU64::default(),
 				}

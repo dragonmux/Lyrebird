@@ -14,15 +14,17 @@ use crate::window::Operation;
 
 pub struct LibraryTree
 {
-	activeSide: Side,
 	library: Arc<RwLock<MusicLibrary>>,
 }
 
-#[derive(Clone, Copy)]
-enum Side
+fn defaultTreeIcon() -> String
 {
-	DirectoryTree,
-	Files,
+	"╰ ".to_string()
+}
+
+fn defaultLeafIcon() -> String
+{
+	"├ ".to_string()
 }
 
 impl LibraryTree
@@ -31,7 +33,6 @@ impl LibraryTree
 	{
 		Self
 		{
-			activeSide: Side::DirectoryTree,
 			library: musicLibrary,
 		}
 	}
@@ -104,75 +105,10 @@ impl LibraryTree
 		MusicLibrary::maybeJoinDiscoveryThread(&self.library).await
 	}
 
-	const fn moveLeft(&mut self)
-		{ self.activeSide = Side::DirectoryTree; }
-
-	const fn moveRight(&mut self)
-		{ self.activeSide = Side::Files; }
-
-	fn moveUp(&mut self)
-	{
-		match self.activeSide
-		{
-			Side::DirectoryTree =>
-			{
-			}
-			Side::Files =>
-			{
-			}
-		}
-	}
-
-	fn moveDown(&mut self)
-	{
-		match self.activeSide
-		{
-			Side::DirectoryTree =>
-			{
-			}
-			Side::Files =>
-			{
-			}
-		}
-	}
-
-	fn movePageUp(&mut self)
-	{
-		match self.activeSide
-		{
-			Side::DirectoryTree =>
-			{
-			}
-			Side::Files =>
-			{
-			}
-		}
-	}
-
-	fn movePageDown(&mut self)
-	{
-		match self.activeSide
-		{
-			Side::DirectoryTree =>
-			{
-			}
-			Side::Files =>
-			{
-			}
-		}
-	}
-
 	/// If the currently sellected side is the directory listing, switch to that directory's file listing
 	/// otherwise, if it's the file listing, figure out which one and make a `SongState` for it
 	fn makeSelection(&mut self) -> Option<PathBuf>
 	{
-		match self.activeSide
-		{
-			Side::DirectoryTree => self.activeSide = Side::Files,
-			Side::Files =>
-			{
-			}
-		}
 		None
 	}
 
