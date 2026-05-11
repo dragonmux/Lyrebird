@@ -25,6 +25,7 @@ where
 pub struct Style
 {
 	pub textColour: Color,
+	pub textBackground: Background,
 	pub border: Border,
 }
 
@@ -250,10 +251,28 @@ where
 					height: bounds.height - (titleHeight / 2.0),
 				},
 				border: boxStyle.border,
-				shadow: Shadow::default(),
-				snap: false
+				..Quad::default()
 			},
 			Background::Color(Color::TRANSPARENT)
+		);
+
+		// Draw in the background for the title text
+		renderer.fill_quad
+		(
+			Quad
+			{
+				bounds: titleLayout
+					.bounds()
+					.expand(Padding
+					{
+						top: 0.0,
+						right: self.titlePadding,
+						bottom: 0.0,
+						left: self.titlePadding,
+					}),
+				..Quad::default()
+			},
+			boxStyle.textBackground,
 		);
 
 		// Draw all our subwidgets having completed drawing the borders for them

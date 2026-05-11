@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::Border;
+use iced::{Background, Border};
 
 use crate::widgets::groupBox::{Catalog, Style, StyleFn};
 
@@ -28,6 +28,7 @@ pub fn general(theme: &Theme) -> Style
 	Style
 	{
 		textColour: styles.text.general.colour,
+		textBackground: Background::Color(styles.general.background),
 		border: Border
 		{
 			color: styles.general.border,
