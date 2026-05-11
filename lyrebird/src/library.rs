@@ -72,7 +72,7 @@ impl MusicLibrary
 		{
 			Ok(mut library) => match library.fromCache()
 			{
-				Ok(()) => Message::LibraryLoaded,
+				Ok(_) => Message::LibraryLoaded,
 				Err(error) =>
 				{
 					error!("Failed to load library from cache");
@@ -114,15 +114,54 @@ impl MusicLibrary
 		Ok(())
 	}
 
-	pub async fn discover(_library: Arc<RwLock<Self>>) -> Message
+	pub async fn discover(library: Arc<RwLock<Self>>) -> Message
 	{
-		Message::LibraryDiscovered
+		// Prepare the library for (re-)discovery
+		let directory = match library.write()
+		{
+			Ok(mut library) =>
+			{
+				info!("Preparing library for discovery");
+				// Create brand new maps to discover the library into
+				library.tracks = BTreeMap::new();
+				library.dirs = BTreeMap::new();
+				library.artists = BTreeMap::new();
+				library.albums = BTreeMap::new();
+				// Reset the next track ID back to 0
+				library.nextTrackID.store(0, Ordering::Release);
+				info!("Running discovery in {}", library.basePath.display());
+				library.basePath.clone()
+			},
+			Err(error) =>
+			{
+				error!("Failed to lock library to run discovery into");
+				error!("{}", error);
+				return Message::ConcurrencyError;
+			},
+		};
+		// Now actually run the discovery process
+		match MusicLibrary::recursiveDiscover(&library, &directory)
+		{
+			Ok(_) => Message::LibraryDiscovered,
+			Err(error) =>
+			{
+				error!("Failed to discover library from {}", directory.display());
+				error!("{}", error);
+				Message::LibraryError
+			}
+		}
 	}
 
-	// if !basePath.is_dir()
-	// {
-	// 	return Err(eyre::eyre!("Library path must be a valid directory"));
-	// }
+	fn recursiveDiscover(_library: &RwLock<Self>, directory: &Path) -> Result<()>
+	{
+		// If the base path is not valid, abort
+		if !directory.try_exists()?
+		{
+			return Err(eyre::eyre!("Library root path must be a valid directory"));
+		}
+
+		Ok(())
+	}
 
 	// pub fn writeCache(&self) -> Result<()>
 	// {

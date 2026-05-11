@@ -21,6 +21,7 @@ pub enum Message
 	LibraryDiscover,
 	LibraryDiscovering,
 	LibraryDiscovered,
+	LibraryError,
 	ConcurrencyError,
 	AddToPlaylist,
 	RemoveFromPlaylist,
