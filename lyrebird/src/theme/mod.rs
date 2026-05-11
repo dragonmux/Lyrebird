@@ -5,6 +5,7 @@ use iced::{Color, theme};
 pub mod container;
 pub mod groupBox;
 pub mod progressBar;
+pub mod scrollable;
 pub mod tabBar;
 pub mod text;
 pub mod trackProgress;
@@ -21,6 +22,7 @@ pub struct Styles
 	pub header: Header,
 	pub footer: Footer,
 	pub text: Text,
+	pub scrollbar: Scrollbar,
 }
 
 pub struct General
@@ -68,6 +70,20 @@ pub struct Text
 pub struct TextStyle
 {
 	pub colour: Color,
+}
+
+pub struct Scrollbar
+{
+	pub background: Color,
+	pub scroller: Scroller
+}
+
+pub struct Scroller
+{
+	pub border: Color,
+	pub normal: Color,
+	pub hover: Color,
+	pub drag: Color,
 }
 
 impl Theme
@@ -152,7 +168,7 @@ impl Default for Styles
 				{
 					button: TabButton
 					{
-						normal:  TextStyle { colour: Color::from_rgb8(0x34, 0x65, 0xa4) },
+						normal: TextStyle { colour: Color::from_rgb8(0x34, 0x65, 0xa4) },
 						selected: TextStyle { colour: Color::from_rgb8(0x72, 0x9f, 0xcf) },
 						hover: TextStyle { colour: Color::from_rgb8(0x53, 0x82, 0xb9) },
 						number: TextStyle { colour: Color::from_rgb8(0x72, 0x9f, 0xcf) },
@@ -167,7 +183,18 @@ impl Default for Styles
 				background: Color::from_rgb8(0x33, 0x33, 0x33),
 				seperator: Color::from_rgb8(0x34, 0x65, 0xa4),
 				border: Color::from_rgb8(0x34, 0x65, 0xa4),
-			}
+			},
+			scrollbar: Scrollbar
+			{
+				background: Color::from_rgb8(0x11, 0x11, 0x11),
+				scroller: Scroller
+				{
+					border: Color::from_rgb8(0x27, 0x4b, 0x7b),
+					normal: Color::from_rgb8(0x34, 0x65, 0xa4),
+					hover: Color::from_rgb8(0x53, 0x82, 0xb9),
+					drag: Color::from_rgb8(0x72, 0x9f, 0xcf),
+				},
+			},
 		}
 	}
 }
