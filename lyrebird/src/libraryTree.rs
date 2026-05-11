@@ -104,16 +104,16 @@ impl LibraryTree
 			.into()
 	}
 
-	pub fn writeCache(&self) -> Result<()>
-	{
-		self.library.read()
-			.map_err
-			(
-				|error|
-					eyre::eyre!("While writing library cache: {}", error.to_string())
-			)?
-			.writeCache()
-	}
+	// pub fn writeCache(&self) -> Result<()>
+	// {
+	// 	self.library.read()
+	// 		.map_err
+	// 		(
+	// 			|error|
+	// 				eyre::eyre!("While writing library cache: {}", error.to_string())
+	// 		)?
+	// 		.writeCache()
+	// }
 
 	pub fn isDiscovering(&self) -> bool
 	{

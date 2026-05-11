@@ -224,11 +224,17 @@ impl MainWindow
 	{
 		Ok(Self
 		{
-			musicLibrary: MusicLibrary::new
+			musicLibrary: Arc::new
 			(
-				&paths.cache_dir().join("library.json"),
-				&config.libraryPath,
-			)?,
+				RwLock::new
+				(
+					MusicLibrary::new
+					(
+						&paths.cache_dir().join("library.json"),
+						&config.libraryPath,
+					)
+				)
+			),
 		})
 	}
 }
