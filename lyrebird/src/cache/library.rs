@@ -79,55 +79,62 @@ pub struct LibraryMaps
 
 impl MusicLibrary
 {
-	pub fn to_maps(&self) -> Result<LibraryMaps>
+	pub fn to_maps(self) -> Result<LibraryMaps>
 	{
 		self.try_into()
 	}
 }
 
-impl TryFrom<&MusicLibrary> for LibraryMaps
+fn map_directories(dirs: Vec<Directory>) -> Result<BTreeMap<DirectoryID, library::Directory>>
+{
+	let mut result: BTreeMap<DirectoryID, library::Directory> = BTreeMap::new();
+
+	for dir in dirs
+	{
+		// Make sure the directory's ID doesn't already exist
+		if result.contains_key(&DirectoryID::new(dir.id))
+		{
+			return Err(eyre!("Library cache contains duplicated directory entry"));
+		}
+
+		// If the directory is the root directory, make sure it has the right parent value and is a valid path
+		let path = if dir.id == 0
+		{
+			let path = PathBuf::from(&dir.name);
+			if dir.parentID != 0 || !path.exists()
+			{
+				return Err(eyre!("Library cache contains invalid root directory"));
+			}
+			path
+		}
+		else
+		{
+			// Reconstitute the path for this directory
+			let parent = result.get(&DirectoryID::new(dir.parentID))
+				.ok_or_eyre("Library cache contains an invalid directory entry")?;
+			parent.path().join(&dir.name)
+		};
+
+		// Transmute the directory into a library one
+		result.insert(DirectoryID::new(dir.id), library::Directory::from_path(&path));
+	}
+
+	Ok(result)
+}
+
+impl TryFrom<MusicLibrary> for LibraryMaps
 {
 	type Error = Report;
 
-	fn try_from(library: &MusicLibrary) -> Result<Self>
+	fn try_from(library: MusicLibrary) -> Result<Self>
 	{
+		// Run through all the directories first, so we can have their paths ready to go
+		let dirs = map_directories(library.directories)?;
 		// Set up maps to deserialise the library into
-		let mut dirs: BTreeMap<DirectoryID, library::Directory> = BTreeMap::new();
 		let mut tracks: BTreeMap<TrackID, track::Track> = BTreeMap::new();
 		let mut artists: BTreeMap<ArtistID, track::Artist> = BTreeMap::new();
 		let mut albums: BTreeMap<AlbumID, track::Album> = BTreeMap::new();
 		let mut lastTrackID = None;
-
-		// Run through all the directories first, so we can have their paths ready to go
-		for dir in &library.directories
-		{
-			// Make sure the directory's ID doesn't already exist
-			if dirs.contains_key(&DirectoryID::new(dir.id))
-			{
-				return Err(eyre!("Library cache contains duplicated directory entry"));
-			}
-
-			// If the directory is the root directory, make sure it has the right parent value and is a valid path
-			let path = if dir.id == 0
-			{
-				let path = PathBuf::from(&dir.name);
-				if dir.parentID != 0 || !path.exists()
-				{
-					return Err(eyre!("Library cache contains invalid root directory"));
-				}
-				path
-			}
-			else
-			{
-				// Reconstitute the path for this directory
-				let parent = dirs.get(&DirectoryID::new(dir.parentID))
-					.ok_or_eyre("Library cache contains an invalid directory entry")?;
-				parent.path().join(&dir.name)
-			};
-
-			// Transmute the directory into a library one
-			dirs.insert(DirectoryID::new(dir.id), library::Directory::from_path(&path));
-		}
 
 		// Finally run through all the tracks, looking their directory, artist, and album up and mapping them
 		for track in &library.tracks
