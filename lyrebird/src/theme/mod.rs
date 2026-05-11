@@ -186,7 +186,7 @@ impl Default for Styles
 			},
 			scrollbar: Scrollbar
 			{
-				background: Color::from_rgb8(0x11, 0x11, 0x11),
+				background: Color::from_rgb8(0x22, 0x22, 0x22),
 				scroller: Scroller
 				{
 					border: Color::from_rgb8(0x27, 0x4b, 0x7b),

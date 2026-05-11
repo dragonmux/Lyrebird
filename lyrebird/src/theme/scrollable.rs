@@ -40,19 +40,6 @@ pub fn default(theme: &Theme, status: Status) -> Style
 			..
 		} =>
 		{
-			let horizontalBar = if horizontalHovered
-			{
-				Scroller
-				{
-					background: Background::Color(styles.scrollbar.scroller.hover),
-					..base
-				}
-			}
-			else
-			{
-				base
-			};
-
 			let verticalBar = if verticalHovered
 			{
 				Scroller
@@ -66,20 +53,11 @@ pub fn default(theme: &Theme, status: Status) -> Style
 				base
 			};
 
-			(horizontalBar, verticalBar)
-		},
-		Status::Dragged
-		{
-			is_horizontal_scrollbar_dragged: horizontalDragged,
-			is_vertical_scrollbar_dragged: verticalDragged,
-			..
-		} =>
-		{
-			let horizontalBar = if horizontalDragged
+			let horizontalBar = if horizontalHovered
 			{
 				Scroller
 				{
-					background: Background::Color(styles.scrollbar.scroller.drag),
+					background: Background::Color(styles.scrollbar.scroller.hover),
 					..base
 				}
 			}
@@ -88,6 +66,15 @@ pub fn default(theme: &Theme, status: Status) -> Style
 				base
 			};
 
+			(verticalBar, horizontalBar)
+		},
+		Status::Dragged
+		{
+			is_horizontal_scrollbar_dragged: horizontalDragged,
+			is_vertical_scrollbar_dragged: verticalDragged,
+			..
+		} =>
+		{
 			let verticalBar = if verticalDragged
 			{
 				Scroller
@@ -101,7 +88,20 @@ pub fn default(theme: &Theme, status: Status) -> Style
 				base
 			};
 
-			(horizontalBar, verticalBar)
+			let horizontalBar = if horizontalDragged
+			{
+				Scroller
+				{
+					background: Background::Color(styles.scrollbar.scroller.drag),
+					..base
+				}
+			}
+			else
+			{
+				base
+			};
+
+			(verticalBar, horizontalBar)
 		},
 	};
 
@@ -112,13 +112,13 @@ pub fn default(theme: &Theme, status: Status) -> Style
 		vertical_rail: Rail
 		{
 			background: Some(Background::Color(styles.scrollbar.background)),
-			border: Border::default(),
+			border: Border::default().rounded(5.0),
 			scroller: verticalBar,
 		},
 		horizontal_rail: Rail
 		{
 			background: Some(Background::Color(styles.scrollbar.background)),
-			border: Border::default(),
+			border: Border::default().rounded(5.0),
 			scroller: horizontalBar,
 		},
 		gap: Some(Background::Color(styles.scrollbar.background)),
