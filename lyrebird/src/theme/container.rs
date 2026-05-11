@@ -37,6 +37,7 @@ pub fn transparent(_theme: &Theme) -> Style
 	Style::default()
 }
 
+#[allow(unused)]
 pub fn roundedBox(theme: &Theme) -> Style
 {
 	let styles = theme.styles();

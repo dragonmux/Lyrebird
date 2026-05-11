@@ -4,12 +4,12 @@ use std::sync::{Arc, RwLock};
 
 use color_eyre::eyre::{self, Result};
 use iced::{Length, Padding};
-use iced_widget::{Row, container, text};
+use iced_widget::Row;
 
 use crate::library::MusicLibrary;
 use crate::messages::Message;
-use crate::theme::container::roundedBox;
 use crate::widgets::Element;
+use crate::widgets::groupBox::GroupBox;
 use crate::window::Operation;
 
 pub struct LibraryTree
@@ -41,30 +41,34 @@ impl LibraryTree
 	{
 		let layout = Row::with_children
 		([
-			container
+			GroupBox::new
 			(
-				text("Directory Tree")
+				"Directory Tree"
 			)
-				.style(roundedBox)
 				.width(Length::FillPortion(1))
 				.height(Length::Fill)
-				.padding(Padding {
-					top: 2.0,
-					bottom: 2.0,
+				.titleMargin(5.0)
+				.titlePadding(5.0)
+				.padding(Padding
+				{
+					top: 5.0,
+					bottom: 5.0,
 					right: 5.0,
 					left: 5.0,
 				})
 				.into(),
-			container
+			GroupBox::new
 			(
-				text("Files")
+				"Files"
 			)
-				.style(roundedBox)
 				.width(Length::FillPortion(2))
 				.height(Length::Fill)
-				.padding(Padding {
-					top: 2.0,
-					bottom: 2.0,
+				.titleMargin(5.0)
+				.titlePadding(5.0)
+				.padding(Padding
+				{
+					top: 5.0,
+					bottom: 5.0,
 					right: 5.0,
 					left: 5.0,
 				})
@@ -75,7 +79,8 @@ impl LibraryTree
 			.width(Length::Fill)
 			.height(Length::Fill)
 			.spacing(5.0)
-			.padding(Padding {
+			.padding(Padding
+			{
 				top: 5.0,
 				bottom: 5.0,
 				right: 5.0,
