@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::{Background, Border, Color, Length, Padding, Pixels, Rectangle, Shadow, Size, mouse::Cursor};
+use iced::{Background, Border, Color, Length, Padding, Pixels, Rectangle, Size, mouse::Cursor};
 use iced_core::{Layout, Widget, layout, renderer::{self, Quad}, widget::Tree};
 use iced_widget::{Container, container, text};
-
-use crate::{theme::Theme};
 
 pub struct GroupBox<'a, Message, Theme, Renderer = iced::Renderer>
 where
@@ -276,13 +274,21 @@ where
 		);
 
 		// Draw all our subwidgets having completed drawing the borders for them
-		for ((child, tree), layout) in [&self.title, &self.content]
-			.iter()
-			.zip(&tree.children)
-			.zip(layout.children())
-		{
-			child.as_widget().draw(tree, renderer, theme, style, layout, cursor, viewport);
-		}
+		self.title
+			.as_widget()
+			.draw
+			(
+				&tree.children[0],
+				renderer,
+				theme,
+				&renderer::Style { text_color: boxStyle.textColour },
+				layout.child(0),
+				cursor,
+				viewport
+			);
+		self.content
+			.as_widget()
+			.draw(&tree.children[1], renderer, theme, style, layout.child(1), cursor, viewport);
 	}
 }
 
@@ -296,15 +302,5 @@ where
 	fn from(groupBox: GroupBox<'a, Message, Theme, Renderer>) -> Self
 	{
 		Self::new(groupBox)
-	}
-}
-
-fn boxTitle<'a>(theme: &Theme, class: &StyleFn<'a, Theme>) -> text::Style
-{
-	let style = Catalog::style(theme, class);
-
-	text::Style
-	{
-		color: Some(style.textColour),
 	}
 }
