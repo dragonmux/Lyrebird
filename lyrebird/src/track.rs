@@ -101,6 +101,27 @@ impl Track
 		Ok(track)
 	}
 
+	pub fn fromCache
+	(
+		trackID: u64,
+		fileName: PathBuf,
+		totalLength: u64,
+		title: String,
+		artist: Option<ArtistID>,
+		album: Option<AlbumID>
+	) -> Self
+	{
+		Self
+		{
+			id: trackID,
+			fileName,
+			totalLength,
+			title,
+			artist,
+			album,
+		}
+	}
+
 	pub fn id(&self) -> TrackID
 	{
 		TrackID(self.id)

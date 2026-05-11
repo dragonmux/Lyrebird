@@ -39,15 +39,15 @@ pub struct MusicLibrary
 	nextTrackID: AtomicU64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DirectoryID(u64);
-
 /// Represents a directory in a music library
 pub struct Directory
 {
 	path: PathBuf,
 	tracks: Vec<TrackID>,
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DirectoryID(u64);
 
 impl MusicLibrary
 {
@@ -361,5 +361,31 @@ impl MusicLibrary
 	{
 		// This is safe because it's impossible to get an AlbumID that's not valid
 		unsafe { self.albums.get_mut(&albumID).unwrap_unchecked() }
+	}
+}
+
+impl Directory
+{
+	pub fn from_path(path: &Path) -> Self
+	{
+		Self
+		{
+			path: path.into(),
+			tracks: Vec::new()
+		}
+	}
+
+	pub fn path(&self) -> &Path
+	{
+		&self.path
+	}
+}
+
+impl DirectoryID
+{
+	/// Construct a new DirectoryID with a specific ID value
+	pub fn new(id: u64) -> Self
+	{
+		Self(id)
 	}
 }
