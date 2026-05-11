@@ -86,11 +86,13 @@ impl MainWindowState
 		}
 	}
 
-	pub fn update(&mut self, _mainWindow: &MainWindow, message: Message) -> Task<Message>
+	pub fn update(&mut self, mainWindow: &MainWindow, message: Message) -> Task<Message>
 	{
 		match message
 		{
 			Message::SwitchTo(tab) => self.tabBar.switchTo(tab),
+			Message::LibraryDiscover =>
+				return Task::future(MusicLibrary::discover(mainWindow.musicLibrary.clone())),
 			_ => {},
 		}
 		Task::none()

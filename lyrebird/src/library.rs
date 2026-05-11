@@ -114,6 +114,11 @@ impl MusicLibrary
 		Ok(())
 	}
 
+	pub async fn discover(_library: Arc<RwLock<Self>>) -> Message
+	{
+		Message::LibraryDiscovered
+	}
+
 	// if !basePath.is_dir()
 	// {
 	// 	return Err(eyre::eyre!("Library path must be a valid directory"));
