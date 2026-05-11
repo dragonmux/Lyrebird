@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::{Background, Border, Color, Length, Padding, Pixels, Rectangle, Size, mouse::Cursor};
-use iced_core::{Layout, Widget, layout, renderer::{self, Quad}, widget::Tree};
+use iced::{Background, Border, Color, Event, Length, Padding, Pixels, Rectangle, Size, mouse::Cursor};
+use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer::{self, Quad}, widget::{Operation, Tree}};
 use iced_widget::text;
 
 pub struct GroupBox<'a, Message, Theme, Renderer = iced::Renderer>
@@ -216,6 +216,72 @@ where
 			),
 			vec![titleLayout, contentLayout],
 		)
+	}
+
+	fn operate
+	(
+		&mut self,
+		tree: &mut Tree,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
+	{
+		operation.container(None, layout.bounds());
+		operation.traverse(&mut |operation|
+		{
+			self.title
+				.as_widget_mut()
+				.operate(&mut tree.children[0], layout.child(0), renderer, operation);
+		});
+		operation.traverse(&mut |operation|
+		{
+			self.content
+				.as_widget_mut()
+				.operate(&mut tree.children[1], layout.child(1), renderer, operation);
+		});
+	}
+
+	fn update
+	(
+		&mut self,
+		tree: &mut Tree,
+		event: &Event,
+		layout: Layout<'_>,
+		cursor: Cursor,
+		renderer: &Renderer,
+		clipboard: &mut dyn Clipboard,
+		shell: &mut Shell<'_, Message>,
+		viewport: &Rectangle,
+	)
+	{
+		self.title
+			.as_widget_mut()
+			.update
+			(
+				&mut tree.children[0],
+				event,
+				layout.child(0),
+				cursor,
+				renderer,
+				clipboard,
+				shell,
+				viewport
+			);
+
+		self.content
+			.as_widget_mut()
+			.update
+			(
+				&mut tree.children[1],
+				event,
+				layout.child(1),
+				cursor,
+				renderer,
+				clipboard,
+				shell,
+				viewport
+			);
 	}
 
 	fn draw
