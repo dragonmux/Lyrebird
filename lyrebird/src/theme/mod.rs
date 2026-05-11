@@ -62,6 +62,7 @@ pub struct TabButton
 pub struct Text
 {
 	pub general: TextStyle,
+	pub title: TextStyle,
 }
 
 pub struct TextStyle
@@ -141,10 +142,11 @@ impl Default for Styles
 			text: Text
 			{
 				general: TextStyle { colour: Color::from_rgb8(0xd3, 0xd3, 0xd3), },
+				title: TextStyle { colour: Color::from_rgb8(0x53, 0x82, 0xb9) },
 			},
 			header: Header
 			{
-				background: Color::from_rgb8(0x44, 0x44, 0x44),
+				background: Color::from_rgb8(0x33, 0x33, 0x33),
 				programName: TextStyle { colour: Color::from_rgb8(0x53, 0x82, 0xb9) },
 				tab: TabBar
 				{
@@ -162,7 +164,7 @@ impl Default for Styles
 			footer: Footer
 			{
 				text: TextStyle { colour: Color::from_rgb8(0x53, 0x82, 0xb9) },
-				background: Color::from_rgb8(0x44, 0x44, 0x44),
+				background: Color::from_rgb8(0x33, 0x33, 0x33),
 				seperator: Color::from_rgb8(0x34, 0x65, 0xa4),
 				border: Color::from_rgb8(0x34, 0x65, 0xa4),
 			}

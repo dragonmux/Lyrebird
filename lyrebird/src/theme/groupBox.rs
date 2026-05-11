@@ -27,7 +27,7 @@ pub fn general(theme: &Theme) -> Style
 
 	Style
 	{
-		textColour: styles.text.general.colour,
+		textColour: styles.text.title.colour,
 		textBackground: Background::Color(styles.general.background),
 		border: Border
 		{
