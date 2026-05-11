@@ -2,7 +2,7 @@
 
 use iced::{Background, Border, Color, Length, Padding, Pixels, Rectangle, Size, mouse::Cursor};
 use iced_core::{Layout, Widget, layout, renderer::{self, Quad}, widget::Tree};
-use iced_widget::{Container, container, text};
+use iced_widget::text;
 
 pub struct GroupBox<'a, Message, Theme, Renderer = iced::Renderer>
 where
@@ -39,13 +39,16 @@ pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
 impl<'a, Message, Theme, Renderer> GroupBox<'a, Message, Theme, Renderer>
 where
 	Message: 'a,
-	Theme: Catalog + text::Catalog + container::Catalog + 'a,
+	Theme: Catalog + text::Catalog + 'a,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
 {
 	/// Creates a new [`GroupBox`] with a given title
-	pub fn new(title: impl text::IntoFragment<'a>) -> Self
+	pub fn new
+	(
+		title: impl text::IntoFragment<'a>,
+		content: impl Into<iced_core::Element<'a, Message, Theme, Renderer>>
+	) -> Self
 	{
-		let content: Option<Container<'a, Message, Theme, Renderer>> = None;
 		Self
 		{
 			title: text(title).into(),

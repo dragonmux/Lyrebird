@@ -4,10 +4,12 @@ use std::sync::{Arc, RwLock};
 
 use color_eyre::eyre::{self, Result};
 use iced::{Length, Padding};
-use iced_widget::Row;
+use iced_widget::scrollable::{Direction, Scrollbar};
+use iced_widget::{Container, Row, column, scrollable, space, text};
 
 use crate::library::MusicLibrary;
 use crate::messages::Message;
+use crate::theme::Theme;
 use crate::widgets::Element;
 use crate::widgets::groupBox::GroupBox;
 use crate::window::Operation;
@@ -39,11 +41,23 @@ impl LibraryTree
 
 	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
+		let directoryTree = column([
+			text("meow").into(),
+			space().height(2000).into(),
+			text("flop").into(),
+		]);
+		let trackList: Option<Container<'a, Message, Theme>> = None;
+
 		let layout = Row::with_children
 		([
 			GroupBox::new
 			(
-				"Directory Tree"
+				"Directory Tree",
+				scrollable(directoryTree)
+					.width(Length::Fill)
+					.height(Length::Fill)
+					.spacing(5.0)
+					.direction(Direction::Vertical(Scrollbar::default()))
 			)
 				.width(Length::FillPortion(1))
 				.height(Length::Fill)
@@ -51,15 +65,16 @@ impl LibraryTree
 				.titlePadding(5.0)
 				.padding(Padding
 				{
-					top: 5.0,
-					bottom: 5.0,
-					right: 5.0,
+					top: 2.0,
+					bottom: 2.0,
+					right: 2.0,
 					left: 5.0,
 				})
 				.into(),
 			GroupBox::new
 			(
-				"Files"
+				"Tracks",
+				scrollable(trackList)
 			)
 				.width(Length::FillPortion(2))
 				.height(Length::Fill)
