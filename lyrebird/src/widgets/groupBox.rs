@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::{Background, Border, Color, Event, Length, Padding, Pixels, Rectangle, Size, mouse::Cursor};
+use iced::{Background, Border, Color, Event, Length, Padding, Pixels, Rectangle, Size, mouse};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer::{self, Quad}, widget::{Operation, Tree}};
 use iced_widget::text;
 
@@ -248,7 +248,7 @@ where
 		tree: &mut Tree,
 		event: &Event,
 		layout: Layout<'_>,
-		cursor: Cursor,
+		cursor: mouse::Cursor,
 		renderer: &Renderer,
 		clipboard: &mut dyn Clipboard,
 		shell: &mut Shell<'_, Message>,
@@ -292,7 +292,7 @@ where
 		theme: &Theme,
 		style: &renderer::Style,
 		layout: Layout<'_>,
-		cursor: Cursor,
+		cursor: mouse::Cursor,
 		viewport: &Rectangle,
 	)
 	{
@@ -358,6 +358,31 @@ where
 		self.content
 			.as_widget()
 			.draw(&tree.children[1], renderer, theme, style, layout.child(1), cursor, viewport);
+	}
+
+	fn mouse_interaction
+	(
+		&self,
+		tree: &Tree,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		viewport: &Rectangle,
+		renderer: &Renderer,
+	) -> mouse::Interaction
+	{
+		// Check if the cursor is over the content of the widget
+		if cursor.is_over(layout.child(1).bounds())
+		{
+			// As it is, see what the content wants to do with the mouse and return that
+			self.content
+				.as_widget()
+				.mouse_interaction(&tree.children[1], layout.child(1), cursor, viewport, renderer)
+		}
+		else
+		{
+			// Otherwise make the cursor the default for anywhere else in the widget
+			mouse::Interaction::default()
+		}
 	}
 }
 
