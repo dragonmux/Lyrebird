@@ -22,10 +22,10 @@ where
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Style
 {
-    pub textColour: Color,
-    pub background: Option<Background>,
-    pub seperatorColour: Color,
-    pub border: Border,
+	pub textColour: Color,
+	pub background: Option<Background>,
+	pub seperatorColour: Color,
+	pub border: Border,
 }
 
 pub trait Catalog
@@ -251,9 +251,9 @@ where
 	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + 'a,
 {
-	fn from(tabBarWidget: TrackProgress<'a, Theme, Renderer>) -> Self
+	fn from(trackProgress: TrackProgress<'a, Theme, Renderer>) -> Self
 	{
-		Self::new(tabBarWidget)
+		Self::new(trackProgress)
 	}
 }
 
