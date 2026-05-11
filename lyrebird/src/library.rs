@@ -3,17 +3,18 @@ use std::collections::BTreeMap;
 use std::fs::{create_dir_all, File};
 use std::ops::DerefMut;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::iter;
 
 use color_eyre::eyre::{self, OptionExt, Result};
 use libAudio::audioFile::AudioFile;
-use tokio::spawn;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use tracing::error;
+use tracing::{error, info};
 
+use crate::cache;
+use crate::messages::Message;
 use crate::track::{Album, AlbumID, Artist, ArtistID, Track, TrackID};
 
 /// Represents a music library
@@ -90,14 +91,48 @@ impl MusicLibrary
 	// 	}
 	// }
 
-	/// Construct a library from a cache JSON
-	// pub fn fromCache(cacheFile: &Path) -> Result<Arc<RwLock<Self>>>
-	// {
-	// 	let cache = File::open(cacheFile)?;
-	// 	let mut library: Self = serde_json::from_reader(cache)?;
-	// 	library.cacheFile = cacheFile.to_path_buf();
-	// 	Ok(Arc::new(RwLock::new(library)))
-	// }
+	pub async fn load(library: Arc<RwLock<Self>>) -> Message
+	{
+		match library.write()
+		{
+			Ok(mut library) => match library.fromCache()
+			{
+				Ok(()) => Message::LibraryLoaded,
+				Err(error) =>
+				{
+					error!("Failed to load library from cache");
+					error!("{}", error);
+					info!("Trying to re-discover library");
+					Message::LibraryDiscover
+				}
+			},
+			Err(error) =>
+			{
+				error!("Failed to lock library to read cache into");
+				error!("{}", error);
+				Message::ConcurrencyError
+			},
+		}
+	}
+
+	// Try to load the library from a library cache file
+	fn fromCache(&mut self) -> Result<()>
+	{
+		// Try load the cache and convert it into a set of library maps
+		let library = cache::loadLibrary(&self.cacheFile)?;
+		let maps = library.to_maps()?;
+
+		// Move the maps into this library
+		self.dirs = maps.dirs;
+		self.tracks = maps.tracks;
+		self.artists = maps.artists;
+		self.albums = maps.albums;
+
+		// Update the next track ID value to the one for the loaded library
+		self.nextTrackID.store(maps.nextTrackID.unwrap_or_default(), Ordering::Release);
+
+		Ok(())
+	}
 
 	/// Construct a library from a new base path
 	pub fn fromPath(cacheFile: &Path, basePath: &Path) -> Result<Arc<RwLock<Self>>>

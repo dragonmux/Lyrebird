@@ -16,6 +16,12 @@ pub enum Tab
 pub enum Message
 {
 	SwitchTo(Tab),
+	LibraryLoading,
+	LibraryLoaded,
+	LibraryDiscover,
+	LibraryDiscovering,
+	LibraryDiscovered,
+	ConcurrencyError,
 	AddToPlaylist,
 	RemoveFromPlaylist,
 	PlayPlaylist,

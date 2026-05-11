@@ -266,7 +266,7 @@ impl Program for MainWindow
 	{
 		(
 			MainWindowState::new(self),
-			Task::none()
+			Task::future(MusicLibrary::load(self.musicLibrary.clone()))
 		)
 	}
 
