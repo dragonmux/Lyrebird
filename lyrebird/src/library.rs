@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::collections::BTreeMap;
-use std::fs::{create_dir_all, File};
-use std::ops::DerefMut;
+use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use color_eyre::eyre::{self, Result, eyre};
 use libAudio::audioFile::AudioFile;
-use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 
@@ -33,7 +31,6 @@ pub struct MusicLibrary
 	/// Map of album IDs to albums in the library
 	albums: BTreeMap<AlbumID, Album>,
 
-	discoveryThread: Option<JoinHandle<Result<()>>>,
 	discoveryCancellation: CancellationToken,
 
 	nextTrackID: AtomicU64,
@@ -63,32 +60,11 @@ impl MusicLibrary
 			artists: BTreeMap::new(),
 			albums: BTreeMap::new(),
 
-			discoveryThread: None,
 			discoveryCancellation: CancellationToken::new(),
 
 			nextTrackID: AtomicU64::default(),
 		}
 	}
-
-	// pub fn meow(cacheFile: &Path, basePath: &Path) -> Result<Arc<RwLock<Self>>>
-	// {
-	// 	if cacheFile.exists()
-	// 	{
-	// 		Self::fromCache(cacheFile)
-	// 			.or_else
-	// 			(
-	// 				|report|
-	// 				{
-	// 					error!("Reading library cache failed: {}", report);
-	// 					Self::fromPath(cacheFile, basePath)
-	// 				}
-	// 			)
-	// 	}
-	// 	else
-	// 	{
-	// 		Self::fromPath(cacheFile, basePath)
-	// 	}
-	// }
 
 	pub async fn load(library: Arc<RwLock<Self>>) -> Message
 	{
@@ -158,26 +134,6 @@ impl MusicLibrary
 	// 	// Ask serde to serialise out the library cache
 	// 	Ok(serde_json::to_writer(cache, self)?)
 	// }
-
-	pub fn isDiscovering(&self) -> bool
-	{
-		match &self.discoveryThread
-		{
-			Some(thread) => !thread.is_finished(),
-			None => false,
-		}
-	}
-
-	pub async fn maybeJoinDiscoveryThread(library: &Arc<RwLock<Self>>) -> Result<()>
-	{
-		if Self::readLock(library)?.discoveryThread.is_some()
-		{
-			let thread = Self::writeLock(library)?.discoveryThread.take()
-				.ok_or(eyre::eyre!("Inconsistency in discovery thread state"))?;
-			return thread.await?;
-		}
-		Ok(())
-	}
 
 	// fn backgroundDiscover(localLibrary: &Arc<RwLock<Self>>, library: Arc<RwLock<Self>>, currentDirectory: PathBuf) -> Result<()>
 	// {
