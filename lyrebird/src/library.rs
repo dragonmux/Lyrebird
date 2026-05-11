@@ -5,9 +5,8 @@ use std::ops::DerefMut;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use std::iter;
 
-use color_eyre::eyre::{self, OptionExt, Result};
+use color_eyre::eyre::{self, Result, eyre};
 use libAudio::audioFile::AudioFile;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
@@ -118,6 +117,11 @@ impl MusicLibrary
 	// Try to load the library from a library cache file
 	fn fromCache(&mut self) -> Result<()>
 	{
+		// If the cache file doesn't exist, bail
+		if !self.cacheFile.try_exists()?
+		{
+			return Err(eyre!("Cache file {} does not exist", self.cacheFile.display()));
+		}
 		// Try load the cache and convert it into a set of library maps
 		let library = cache::loadLibrary(&self.cacheFile)?;
 		let maps = library.to_maps()?;
@@ -134,40 +138,10 @@ impl MusicLibrary
 		Ok(())
 	}
 
-	/// Construct a library from a new base path
-	pub fn fromPath(cacheFile: &Path, basePath: &Path) -> Result<Arc<RwLock<Self>>>
-	{
-		if !basePath.is_dir()
-		{
-			return Err(eyre::eyre!("Library path must be a valid directory"));
-		}
-
-		let library = Arc::new
-		(
-			RwLock::new
-			(
-				Self
-				{
-					basePath: basePath.to_path_buf(),
-					cacheFile: cacheFile.to_path_buf(),
-
-					dirs: BTreeMap::new(),
-					tracks: BTreeMap::new(),
-					artists: BTreeMap::new(),
-					albums: BTreeMap::new(),
-
-					discoveryThread: None,
-					discoveryCancellation: CancellationToken::new(),
-
-					nextTrackID: AtomicU64::default(),
-				}
-			)
-		);
-
-		// Self::backgroundDiscover(&library, library.clone(), basePath.to_path_buf())?;
-
-		Ok(library)
-	}
+	// if !basePath.is_dir()
+	// {
+	// 	return Err(eyre::eyre!("Library path must be a valid directory"));
+	// }
 
 	// pub fn writeCache(&self) -> Result<()>
 	// {
