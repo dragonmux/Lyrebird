@@ -343,6 +343,34 @@ where
 			child.as_widget().draw(tree, renderer, theme, style, layout, cursor, viewport);
 		}
 	}
+
+	fn mouse_interaction
+	(
+		&self,
+		tree: &Tree,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		viewport: &Rectangle,
+		renderer: &Renderer,
+	) -> mouse::Interaction
+	{
+		// Go through all the children of the tab bar and see if any of them have the mouse cursor over them
+		for ((child, tree), layout) in self.children
+			.iter()
+			.zip(&tree.children)
+			.zip(layout.children())
+		{
+			// Check the cursor is within the bounds of the child widget
+			if cursor.is_over(layout.bounds())
+			{
+				// See what the child wants to do with the cursor as it has the cursor over it
+				return child.as_widget().mouse_interaction(tree, layout, cursor, viewport, renderer)
+			}
+		}
+
+		// If none of the children are moused over, return the default interaction
+		mouse::Interaction::default()
+	}
 }
 
 impl<'a, Theme, Renderer> From<TabBarWidget<'a, Theme, Renderer>>
@@ -468,7 +496,7 @@ where
 		{
 			self.content
 				.as_widget_mut()
-				.operate(&mut tree.children[0], layout.children().next().unwrap(), renderer, operation);
+				.operate(&mut tree.children[0], layout.child(0), renderer, operation);
 		});
 	}
 
@@ -491,7 +519,7 @@ where
 			(
 				&mut tree.children[0],
 				event,
-				layout.children().next().unwrap(),
+				layout.child(0),
 				cursor,
 				renderer,
 				clipboard,
@@ -631,7 +659,7 @@ where
 		self.content.as_widget_mut().overlay
 		(
 			&mut tree.children[0],
-			layout.children().next().unwrap(),
+			layout.child(0),
 			renderer,
 			viewport,
 			translation
