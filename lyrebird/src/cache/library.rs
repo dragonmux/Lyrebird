@@ -54,18 +54,18 @@ pub struct Track
 pub struct Artist
 {
 	/// Unique 64-bit identifier for the artist
-	id: u64,
+	pub(self) id: u64,
 	/// Name of the artist
-	name: String,
+	pub(self) name: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Album
 {
 	/// Unique 64-bit identifier for the album
-	id: u64,
+	pub(self) id: u64,
 	/// Name of the album
-	name: String,
+	pub(self) name: String,
 }
 
 pub struct LibraryMaps
@@ -122,6 +122,44 @@ fn map_directories(dirs: Vec<Directory>) -> Result<BTreeMap<DirectoryID, library
 	Ok(result)
 }
 
+fn map_artists(artists: Vec<Artist>) -> Result<BTreeMap<ArtistID, track::Artist>>
+{
+	let mut result: BTreeMap<ArtistID, track::Artist> = BTreeMap::new();
+
+	for artist in artists
+	{
+		// Make sure the artist's ID doesn't already exist
+		if result.contains_key(&ArtistID::new(artist.id))
+		{
+			return Err(eyre!("Library cache contains duplicated artist entry"));
+		}
+
+		// Transmute the artist into a library oen
+		result.insert(ArtistID::new(artist.id), track::Artist::new(&artist.name));
+	}
+
+	Ok(result)
+}
+
+fn map_albums(albums: Vec<Album>) -> Result<BTreeMap<AlbumID, track::Album>>
+{
+	let mut result: BTreeMap<AlbumID, track::Album> = BTreeMap::new();
+
+	for album in albums
+	{
+		// Make sure the artist's ID doesn't already exist
+		if result.contains_key(&AlbumID::new(album.id))
+		{
+			return Err(eyre!("Library cache contains duplicated album entry"));
+		}
+
+		// Transmute the album into a library oen
+		result.insert(AlbumID::new(album.id), track::Album::new(&album.name));
+	}
+
+	Ok(result)
+}
+
 impl TryFrom<MusicLibrary> for LibraryMaps
 {
 	type Error = Report;
@@ -130,10 +168,11 @@ impl TryFrom<MusicLibrary> for LibraryMaps
 	{
 		// Run through all the directories first, so we can have their paths ready to go
 		let dirs = map_directories(library.directories)?;
+		// Then through all the artists and albums so we have their IDs to look up
+		let mut artists = map_artists(library.artists)?;
+		let mut albums = map_albums(library.albums)?;
 		// Set up maps to deserialise the library into
 		let mut tracks: BTreeMap<TrackID, track::Track> = BTreeMap::new();
-		let mut artists: BTreeMap<ArtistID, track::Artist> = BTreeMap::new();
-		let mut albums: BTreeMap<AlbumID, track::Album> = BTreeMap::new();
 		let mut lastTrackID = None;
 
 		// Finally run through all the tracks, looking their directory, artist, and album up and mapping them
