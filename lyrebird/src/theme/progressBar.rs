@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::{Border, border::Radius};
+use iced::Border;
 use iced_widget::progress_bar::{Catalog, Style, StyleFn};
 
 use super::Theme;
