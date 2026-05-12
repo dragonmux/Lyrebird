@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::path::PathBuf;
+
 use std::sync::{Arc, RwLock};
 
-use color_eyre::eyre::{self, Result};
 use iced::{Length, Padding};
 use iced_widget::scrollable::{Direction, Scrollbar};
 use iced_widget::{Container, Row, scrollable};
@@ -12,7 +11,6 @@ use crate::messages::Message;
 use crate::theme::Theme;
 use crate::widgets::Element;
 use crate::widgets::groupBox::GroupBox;
-use crate::window::Operation;
 
 pub struct LibraryTree
 {
@@ -102,33 +100,5 @@ impl LibraryTree
 				left: 5.0,
 			})
 			.into()
-	}
-
-	// pub fn writeCache(&self) -> Result<()>
-	// {
-	// 	self.library.read()
-	// 		.map_err
-	// 		(
-	// 			|error|
-	// 				eyre::eyre!("While writing library cache: {}", error.to_string())
-	// 		)?
-	// 		.writeCache()
-	// }
-
-	/// If the currently sellected side is the directory listing, switch to that directory's file listing
-	/// otherwise, if it's the file listing, figure out which one and make a `SongState` for it
-	fn makeSelection(&mut self) -> Option<PathBuf>
-	{
-		None
-	}
-
-	fn playSelection(&mut self) -> Operation
-	{
-		let selection = self.makeSelection();
-		match selection
-		{
-			Some(selection) => Operation::Play(selection),
-			None => Operation::None,
-		}
 	}
 }
