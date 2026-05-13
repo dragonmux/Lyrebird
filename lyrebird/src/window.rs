@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
+
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
@@ -9,6 +10,7 @@ use iced::{Length, Program, Settings, Task, window};
 use iced_futures::backend::default::Executor;
 use iced_widget::{Column, text};
 use tokio::sync::mpsc::{channel, Receiver};
+use tracing::error;
 
 use crate::library::MusicLibrary;
 use crate::messages::{Message, Tab};
@@ -33,7 +35,6 @@ pub struct MainWindowState
 	playlists: Playlists,
 
 	currentlyPlaying: Option<(Song, Receiver<PlaybackState>)>,
-	errorState: Option<String>
 }
 
 /// Represents the main window of Lyrebird itself
@@ -82,7 +83,6 @@ impl MainWindowState
 			playlists: Playlists::new(),
 
 			currentlyPlaying: None,
-			errorState: None,
 		}
 	}
 
@@ -174,7 +174,7 @@ impl MainWindowState
 					let result = song.pause();
 					if let Err(error) = result
 					{
-						self.errorState = Some(error.to_string());
+						error!("{}", error);
 					}
 				},
 				PlaybackState::Paused |
@@ -183,7 +183,7 @@ impl MainWindowState
 					{ song.play(); }
 				PlaybackState::Complete => {}
 				PlaybackState::Unknown(error) =>
-					{ self.errorState = Some(error); }
+					{  }
 			}
 		}
 	}
