@@ -13,6 +13,7 @@ use tracing::{error, info};
 use crate::cache;
 use crate::messages::Message;
 use crate::track::{Album, AlbumID, Artist, ArtistID, Track, TrackID};
+use crate::widgets::treeView::TreeItem;
 
 /// Represents a music library
 pub struct MusicLibrary
@@ -39,7 +40,13 @@ pub struct MusicLibrary
 /// Represents a directory in a music library
 pub struct Directory
 {
+	/// Unique 64-bit identifier for the directory
+	id: u64,
+	/// Filesystem path for this directory
 	path: PathBuf,
+	/// List of directories this directory immediately contains
+	subdirectories: Vec<DirectoryID>,
+	/// List of tracks this directory immediately contains
 	tracks: Vec<TrackID>,
 }
 
@@ -375,11 +382,13 @@ impl MusicLibrary
 
 impl Directory
 {
-	pub fn from_path(path: &Path) -> Self
+	pub fn from_path(id: u64, path: &Path) -> Self
 	{
 		Self
 		{
+			id,
 			path: path.into(),
+			subdirectories: Vec::new(),
 			tracks: Vec::new()
 		}
 	}
@@ -387,6 +396,33 @@ impl Directory
 	pub fn path(&self) -> &Path
 	{
 		&self.path
+	}
+
+	pub fn contents(&self) -> &[TrackID]
+	{
+		&self.tracks
+	}
+}
+
+impl TreeItem for Directory
+{
+	fn displayName(&self) -> String
+	{
+		if self.id == 0
+		{
+			self.path.as_os_str()
+		}
+		else
+		{
+			self.path.file_name().unwrap_or_else(|| self.path.as_os_str())
+		}
+			.to_string_lossy()
+			.to_string()
+	}
+
+	fn children(&self) -> &[&Self]
+	{
+		&[]
 	}
 }
 

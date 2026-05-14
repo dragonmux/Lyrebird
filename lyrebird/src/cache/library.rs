@@ -116,7 +116,7 @@ fn map_directories(dirs: Vec<Directory>) -> Result<BTreeMap<DirectoryID, library
 		};
 
 		// Transmute the directory into a library one
-		result.insert(DirectoryID::new(dir.id), library::Directory::from_path(&path));
+		result.insert(DirectoryID::new(dir.id), library::Directory::from_path(dir.id, &path));
 	}
 
 	Ok(result)
