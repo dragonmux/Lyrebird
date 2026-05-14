@@ -165,12 +165,40 @@ impl MusicLibrary
 		}
 	}
 
-	fn recursiveDiscover(_library: &RwLock<Self>, directory: &Path) -> Result<()>
+	fn recursiveDiscover(library: &RwLock<Self>, directory: &Path) -> Result<()>
 	{
 		// If the base path is not valid, abort
 		if !directory.try_exists()?
 		{
 			return Err(eyre::eyre!("Library root path must be a valid directory"));
+		}
+
+		// Turn this base directory into a root directory entry and add it to the library as the base directory
+		let directory = Directory::from_path(0, directory);
+		let directoryID = directory.id();
+		library.writeLock()?.dirs.insert(directoryID, directory);
+
+		Self::discoverDirectory(library, directoryID)
+	}
+
+	fn discoverDirectory(library: &RwLock<Self>, currentDirectory: DirectoryID) -> Result<()>
+	{
+		// Explore the current directory's contents
+		let contents = library.readLock()?.directoryFor(currentDirectory).path().read_dir()?;
+		// For each entry in the directory
+		for entry in contents
+		{
+			// Extract the path for it
+			let path = entry?.path();
+			// If the entry is a directory
+			if path.is_dir()
+			{
+				//
+			}
+			else
+			{
+				//
+			}
 		}
 
 		Ok(())
@@ -253,9 +281,6 @@ impl MusicLibrary
 	// 	Ok(())
 	// }
 
-	pub fn directoryCount(&self) -> usize
-		{ self.dirs.len() + 1 }
-
 	// pub fn filesCount(&self, dirIndex: Option<usize>) -> usize
 	// {
 	// 	dirIndex
@@ -327,6 +352,19 @@ impl MusicLibrary
 			.map_or_else(|| AlbumID::new(0), |(id, _)| id.next());
 		self.albums.insert(albumID, Album::new(albumName));
 		albumID
+	}
+
+	/// Find the Directory object associated with a particular DirectoryID and return it by reference
+	pub fn directoryFor(&self, directoryID: DirectoryID) -> &Directory
+	{
+		&self.dirs[&directoryID]
+	}
+
+	/// Find the Directory object associated with a particular DirectoryID and return a mutable reference to it
+	pub fn mutDirectoryFor(&mut self, directoryID: DirectoryID) -> &mut Directory
+	{
+		// This is safe because it's impossible to get an DirectoryID that's not valid
+		unsafe { self.dirs.get_mut(&directoryID).unwrap_unchecked() }
 	}
 
 	/// Find the Artist object associated with a particular ArtistID and return it by reference
