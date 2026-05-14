@@ -27,6 +27,7 @@ fn default(theme: &Theme) -> Style
 	{
 		textColour: styles.text.general.colour,
 		treeColour: styles.general.border,
+		backgroundColour: styles.general.background,
 	}
 }
 

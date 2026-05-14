@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::{Background, Color, Length, Rectangle, Size, mouse};
+use iced::{Background, Border, Color, Length, Rectangle, Size, mouse};
 use iced_core::{Layout, Widget, layout, renderer::{self, Quad}, widget::Tree};
 use iced_widget::{column, text};
 
@@ -29,6 +29,7 @@ pub struct Style
 {
 	pub textColour: Color,
 	pub treeColour: Color,
+	pub backgroundColour: Color,
 }
 
 pub trait Catalog
@@ -181,31 +182,72 @@ where
 		let treeStyle = theme.style(&self.class);
 		let style = renderer::Style { text_color: treeStyle.textColour };
 
-		// Draw our entry
-		self.node
-			.as_widget()
-			.draw(&tree.children[0], renderer, theme, &style, layout.child(0), cursor, viewport);
-
 		// Extract the bounds information for the sublayouts
 		let nodeBounds = layout.child(0).bounds();
 		let subtreeBounds = layout.child(1).bounds();
 
-		// Draw in the guide bar for the entries under us
-		renderer.fill_quad(
-			Quad
-			{
-				bounds: Rectangle
+		// Calculate how tall the guide bar should be, and if it's non-zero, draw it
+		let guideHeight = (subtreeBounds.height - (nodeBounds.height / 2.0) + 5.0).max(0.0);
+		if guideHeight > 0.0
+		{
+			// Draw in the guide bar for the entries under us
+			renderer.fill_quad(
+				Quad
 				{
-					x: nodeBounds.x + 8.0,
-					y: nodeBounds.y + nodeBounds.height,
-					width: 1.0,
-					height: (subtreeBounds.height - (nodeBounds.height / 2.0)).min(0.0)
+					bounds: Rectangle
+					{
+						x: nodeBounds.x + 4.0,
+						y: subtreeBounds.y - 5.0,
+						width: 10.0,
+						height: guideHeight,
+					},
+					border: Border
+					{
+						color: treeStyle.treeColour,
+						width: 1.0,
+						radius: 5.0.into(),
+					},
+					..Default::default()
 				},
-				..Default::default()
-			},
-			Background::Color(treeStyle.treeColour)
-		);
+				Background::Color(Color::TRANSPARENT)
+			);
+			// Blot out the regions that drew that shouldn't have been drawn but had to be to make it work
+			renderer.fill_quad
+			(
+				Quad
+				{
+					bounds: Rectangle
+					{
+						x: nodeBounds.x + 4.0,
+						y: subtreeBounds.y - 5.0,
+						width: 10.0,
+						height: 5.0,
+					},
+					..Default::default()
+				},
+				Background::Color(treeStyle.backgroundColour)
+			);
+			renderer.fill_quad
+			(
+				Quad
+				{
+					bounds: Rectangle
+					{
+						x: nodeBounds.x + 9.0,
+						y: subtreeBounds.y - 5.0,
+						width: 5.0,
+						height: guideHeight,
+					},
+					..Default::default()
+				},
+				Background::Color(treeStyle.backgroundColour)
+			);
+		}
 
+		// Draw our entry
+		self.node
+			.as_widget()
+			.draw(&tree.children[0], renderer, theme, &style, layout.child(0), cursor, viewport);
 		// Draw the subtree under us
 		self.subtree
 			.as_widget()
