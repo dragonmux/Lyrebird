@@ -8,7 +8,7 @@ use iced_widget::scrollable::{Direction, Scrollbar};
 use iced_widget::{Container, Row, scrollable};
 
 use crate::library::{Directory, DirectoryID, MusicLibrary};
-use crate::messages::Message;
+use crate::messages::{self, Message};
 use crate::theme::Theme;
 use crate::widgets::Element;
 use crate::widgets::groupBox::GroupBox;
@@ -159,7 +159,7 @@ impl From<&BTreeMap<DirectoryID, Directory>> for DirectoryTree
 	}
 }
 
-impl TreeItem for DirectoryTree
+impl TreeItem<Message> for DirectoryTree
 {
 	fn displayText(&self) -> String
 	{
@@ -169,5 +169,10 @@ impl TreeItem for DirectoryTree
 	fn children(&self) -> &[Self]
 	{
 		&self.children
+	}
+
+	fn selectMessage(&self) -> Message
+	{
+		Message::LibraryTree(messages::LibraryTree::SelectDirectory(self.id))
 	}
 }

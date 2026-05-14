@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+use crate::library::DirectoryID;
 use crate::widgets::tabBar::TabBarEnum;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -23,6 +24,7 @@ pub enum Message
 	LibraryDiscovered,
 	LibraryError,
 	ConcurrencyError,
+	LibraryTree(LibraryTree),
 	AddToPlaylist,
 	RemoveFromPlaylist,
 	PlayPlaylist,
@@ -31,6 +33,12 @@ pub enum Message
 	StopCurrent,
 	NextTrack,
 	PreviousTrack,
+}
+
+#[derive(Clone, Copy)]
+pub enum LibraryTree
+{
+	SelectDirectory(DirectoryID),
 }
 
 impl Default for Tab

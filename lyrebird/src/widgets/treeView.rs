@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::{Alignment, Length, Padding, Rectangle, Size, mouse};
+use iced::{Length, Rectangle, Size, mouse};
 use iced_core::{Layout, Widget, layout, renderer, widget::Tree};
 use iced_widget::{column, text};
 
@@ -13,13 +13,15 @@ where
 	subtree: iced_core::Element<'a, Message, Theme, Renderer>,
 	width: Length,
 	height: Length,
+	selectMessage: Message,
 	class: Theme::Class<'a>,
 }
 
-pub trait TreeItem: Sized
+pub trait TreeItem<Message>: Sized
 {
 	fn displayText(&self) -> String;
 	fn children(&self) -> &[Self];
+	fn selectMessage(&self) -> Message;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -44,7 +46,7 @@ where
 {
 	pub fn new<Model>(model: &Model) -> Self
 	where
-		Model: TreeItem
+		Model: TreeItem<Message>
 	{
 		// Turn all the child items into tree views of their own
 		let subtree = model.children()
@@ -57,6 +59,7 @@ where
 			subtree: column(subtree).into(),
 			width: Length::Shrink,
 			height: Length::Shrink,
+			selectMessage: model.selectMessage(),
 			class: <Theme as Catalog>::default(),
 		}
 	}
