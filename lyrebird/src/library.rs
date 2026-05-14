@@ -280,6 +280,12 @@ impl MusicLibrary
 	// 	Ok(serde_json::to_writer(cache, self)?)
 	// }
 
+	/// Return the path to this [`MusicLibrary`]
+	pub fn libraryPath(&self) -> &Path
+	{
+		&self.basePath
+	}
+
 	/// Look up an artist by name to get an ArtistID
 	pub fn lookupArtist(&mut self, artistName: &str) -> ArtistID
 	{

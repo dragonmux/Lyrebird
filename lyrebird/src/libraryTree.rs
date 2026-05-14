@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 use std::collections::BTreeMap;
+use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
 use iced::{Length, Padding};
@@ -50,7 +51,7 @@ impl LibraryTree
 	{
 		let library = &self.library.read()
 			.expect("Failed to lock library for read");
-		let directoryTree = DirectoryTree::from(library.directories());
+		let directoryTree = DirectoryTree::from(library.deref());
 		let trackList: Option<Container<'a, Message, Theme>> = None;
 
 		let layout = Row::with_children
@@ -150,12 +151,27 @@ impl DirectoryTree
 	}
 }
 
-impl From<&BTreeMap<DirectoryID, Directory>> for DirectoryTree
+impl From<&MusicLibrary> for DirectoryTree
 {
 	/// Convert a directory map into a DirectoryTree structure
-	fn from(map: &BTreeMap<DirectoryID, Directory>) -> Self
+	fn from(library: &MusicLibrary) -> Self
 	{
-		Self::from_map(map, DirectoryID::new(0))
+		let map = library.directories();
+		// If the directory map is empty, synthesise a fake entry
+		if map.is_empty()
+		{
+			Self
+			{
+				id: DirectoryID::new(0),
+				name: library.libraryPath().to_string_lossy().into(),
+				children: Vec::new(),
+			}
+		}
+		// Otherwise turn the map into a DirectoryTree normally
+		else
+		{
+			Self::from_map(map, DirectoryID::new(0))
+		}
 	}
 }
 
