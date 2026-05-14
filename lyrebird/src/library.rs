@@ -53,6 +53,12 @@ pub struct Directory
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DirectoryID(u64);
 
+trait Lockable<T>
+{
+	fn readLock(&self) -> Result<RwLockReadGuard<'_, T>>;
+	fn writeLock(&self) -> Result<RwLockWriteGuard<'_, T>>;
+}
+
 impl MusicLibrary
 {
 	pub fn new(cacheFile: &Path, basePath: &Path) -> Self
@@ -185,36 +191,6 @@ impl MusicLibrary
 	// 	// Ask serde to serialise out the library cache
 	// 	Ok(serde_json::to_writer(cache, self)?)
 	// }
-
-	// fn backgroundDiscover(localLibrary: &Arc<RwLock<Self>>, library: Arc<RwLock<Self>>, currentDirectory: PathBuf) -> Result<()>
-	// {
-	// 	let task = async move
-	// 	{
-	// 		Self::discover(library.as_ref(), currentDirectory.as_path())
-	// 	};
-
-	// 	let mut library = Self::writeLock(localLibrary)?;
-	// 	library.discoveryThread = Some(spawn(task));
-	// 	Ok(())
-	// }
-
-	fn writeLock(library: &RwLock<Self>) -> Result<RwLockWriteGuard<'_, Self>>
-	{
-		library.write()
-			.map_err
-			(
-				|error| eyre::eyre!("While discovering library: {}", error)
-			)
-	}
-
-	fn readLock(library: &RwLock<Self>) -> Result<RwLockReadGuard<'_, Self>>
-	{
-		library.read()
-			.map_err
-			(
-				|error| eyre::eyre!("While discovering library: {}", error)
-			)
-	}
 
 	// fn discover(library: &RwLock<Self>, currentDirectory: &Path) -> Result<()>
 	// {
@@ -377,6 +353,27 @@ impl MusicLibrary
 	{
 		// This is safe because it's impossible to get an AlbumID that's not valid
 		unsafe { self.albums.get_mut(&albumID).unwrap_unchecked() }
+	}
+}
+
+impl Lockable<MusicLibrary> for RwLock<MusicLibrary>
+{
+	fn readLock(&self) -> Result<RwLockReadGuard<'_, MusicLibrary>>
+	{
+		self.read()
+			.map_err
+			(
+				|error| eyre::eyre!("Failed to read lock library: {}", error)
+			)
+	}
+
+	fn writeLock(&self) -> Result<RwLockWriteGuard<'_, MusicLibrary>>
+	{
+		self.write()
+			.map_err
+			(
+				|error| eyre::eyre!("Failed to write lock library: {}", error)
+			)
 	}
 }
 
