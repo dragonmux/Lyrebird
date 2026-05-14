@@ -18,6 +18,7 @@ use crate::widgets::treeView::{TreeItem, TreeView};
 pub struct LibraryTree
 {
 	library: Arc<RwLock<MusicLibrary>>,
+	selectedDirectory: DirectoryID,
 }
 
 struct DirectoryTree
@@ -34,6 +35,20 @@ impl LibraryTree
 		Self
 		{
 			library: musicLibrary,
+			selectedDirectory: DirectoryID::new(0)
+		}
+	}
+
+	pub fn update(&mut self, message: messages::LibraryTree)
+	{
+		use messages::LibraryTree;
+
+		match message
+		{
+			LibraryTree::SelectDirectory(directoryID) =>
+			{
+				self.selectedDirectory = directoryID
+			},
 		}
 	}
 

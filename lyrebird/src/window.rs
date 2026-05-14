@@ -93,6 +93,7 @@ impl MainWindowState
 			Message::SwitchTo(tab) => self.tabBar.switchTo(tab),
 			Message::LibraryDiscover =>
 				return Task::future(MusicLibrary::discover(mainWindow.musicLibrary.clone())),
+			Message::LibraryTree(message) => self.libraryTree.update(message),
 			_ => {},
 		}
 		Task::none()
