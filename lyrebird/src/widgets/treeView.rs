@@ -117,14 +117,34 @@ where
 		limits: &layout::Limits,
 	) -> layout::Node
 	{
+		// Compute new limits that take into account the configured width and height
+		let limits = limits.clone().width(self.width).height(self.height).loose();
+
+		// Figure out the layout for our entry in the tree
 		let nodeLayout = self.node
 			.as_widget_mut()
-			.layout(&mut tree.children[0], renderer, limits);
+			.layout(&mut tree.children[0], renderer, &limits);
 		let nodeSize = nodeLayout.size();
 
+		// Now constrain in the layout to position the subtree, if present, and calculate
+		// the layout for that
 		let subtreeLayout = self.subtree
 			.as_widget_mut()
-			.layout(&mut tree.children[1], renderer, limits);
+			.layout
+			(
+				&mut tree.children[1],
+				renderer,
+				&limits
+					.shrink(Size
+					{
+						width: 16.0,
+						height: nodeSize.height,
+					})
+			)
+			.translate([
+				16.0,
+				nodeSize.height,
+			]);
 		let subtreeSize = subtreeLayout.size();
 
 		layout::Node::with_children
