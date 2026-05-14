@@ -8,16 +8,16 @@ where
 	Model: TreeItem,
 	Theme: Catalog,
 {
-	model: &'a Model,
+	model: Model,
 	width: Length,
 	height: Length,
 	class: Theme::Class<'a>,
 }
 
-pub trait TreeItem
+pub trait TreeItem: Sized
 {
-	fn displayName(&self) -> String;
-	fn children(&self) -> &[&Self];
+	fn displayName(&self) -> &str;
+	fn children(&self) -> &[Self];
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -39,7 +39,7 @@ where
 	Model: TreeItem,
 	Theme: Catalog + 'a,
 {
-	pub fn new(model: &'a Model) -> Self
+	pub fn new(model: Model) -> Self
 	{
 		Self
 		{
@@ -133,7 +133,7 @@ where
 impl<'a, Model, Message, Theme, Renderer> From<TreeView<'a, Model, Theme>>
 	for iced::Element<'a, Message, Theme, Renderer>
 where
-	Model: TreeItem,
+	Model: TreeItem + 'a,
 	Message: 'a,
 	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + 'a,

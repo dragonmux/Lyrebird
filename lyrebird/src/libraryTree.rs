@@ -1,20 +1,29 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+use std::collections::BTreeMap;
 use std::sync::{Arc, RwLock};
 
 use iced::{Length, Padding};
 use iced_widget::scrollable::{Direction, Scrollbar};
 use iced_widget::{Container, Row, scrollable};
 
-use crate::library::MusicLibrary;
+use crate::library::{Directory, DirectoryID, MusicLibrary};
 use crate::messages::Message;
 use crate::theme::Theme;
 use crate::widgets::Element;
 use crate::widgets::groupBox::GroupBox;
+use crate::widgets::treeView::{TreeItem, TreeView};
 
 pub struct LibraryTree
 {
 	library: Arc<RwLock<MusicLibrary>>,
+}
+
+struct DirectoryTree
+{
+	id: DirectoryID,
+	name: String,
+	children: Vec<DirectoryTree>,
 }
 
 fn defaultTreeIcon() -> String
@@ -39,7 +48,8 @@ impl LibraryTree
 
 	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
-		let directoryTree: Option<Container<'a, Message, Theme>> = None;
+		let library = &self.library.read()
+			.expect("Failed to lock library for read");
 		let trackList: Option<Container<'a, Message, Theme>> = None;
 
 		let layout = Row::with_children
@@ -47,7 +57,10 @@ impl LibraryTree
 			GroupBox::new
 			(
 				"Directory Tree",
-				scrollable(directoryTree)
+				scrollable
+				(
+					TreeView::new(DirectoryTree::from(library.directories()))
+				)
 					.width(Length::Fill)
 					.height(Length::Fill)
 					.spacing(5.0)
@@ -100,5 +113,60 @@ impl LibraryTree
 				left: 5.0,
 			})
 			.into()
+	}
+}
+
+impl DirectoryTree
+{
+	/// Convert the entry given by directoryID from the map into a DirectoryTree
+	pub fn from_map(map: &BTreeMap<DirectoryID, Directory>, directoryID: DirectoryID) -> Self
+	{
+		// Find the directory to convert, and map all its subdirectories into DirectoryTree objects
+		let directory = &map[&directoryID];
+		let children = directory.subdirs()
+			.into_iter()
+			.map(|&directoryID| Self::from_map(map, directoryID))
+			.collect();
+		// Calculate the name of this directory
+		let path = directory.path();
+		let name = if directory.id() == DirectoryID::new(0)
+		{
+			path.as_os_str()
+		}
+		else
+		{
+			path.file_name().unwrap_or_else(|| path.as_os_str())
+		}
+			.to_string_lossy()
+			.to_string();
+		// Turn the whole thing into a final DirectoryTree object
+		Self
+		{
+			id: directoryID,
+			name,
+			children,
+		}
+	}
+}
+
+impl From<&BTreeMap<DirectoryID, Directory>> for DirectoryTree
+{
+	/// Convert a directory map into a DirectoryTree structure
+	fn from(map: &BTreeMap<DirectoryID, Directory>) -> Self
+	{
+		Self::from_map(map, DirectoryID::new(0))
+	}
+}
+
+impl TreeItem for DirectoryTree
+{
+	fn displayName(&self) -> &str
+	{
+		&self.name
+	}
+
+	fn children(&self) -> &[Self]
+	{
+		&self.children
 	}
 }

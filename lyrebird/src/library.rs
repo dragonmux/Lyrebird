@@ -12,7 +12,6 @@ use tracing::{error, info};
 use crate::cache;
 use crate::messages::Message;
 use crate::track::{Album, AlbumID, Artist, ArtistID, Track, TrackID};
-use crate::widgets::treeView::TreeItem;
 
 /// Represents a music library
 pub struct MusicLibrary
@@ -366,6 +365,11 @@ impl MusicLibrary
 		unsafe { self.dirs.get_mut(&directoryID).unwrap_unchecked() }
 	}
 
+	pub fn directories(&self) -> &BTreeMap<DirectoryID, Directory>
+	{
+		&self.dirs
+	}
+
 	/// Find the Artist object associated with a particular ArtistID and return it by reference
 	pub fn artistFor(&self, artistID: ArtistID) -> &Artist
 	{
@@ -455,28 +459,6 @@ impl Directory
 	pub fn subdirs(&self) -> &[DirectoryID]
 	{
 		&self.subdirectories
-	}
-}
-
-impl TreeItem for Directory
-{
-	fn displayName(&self) -> String
-	{
-		if self.id == 0
-		{
-			self.path.as_os_str()
-		}
-		else
-		{
-			self.path.file_name().unwrap_or_else(|| self.path.as_os_str())
-		}
-			.to_string_lossy()
-			.to_string()
-	}
-
-	fn children(&self) -> &[&Self]
-	{
-		&[]
 	}
 }
 
