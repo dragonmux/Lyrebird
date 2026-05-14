@@ -211,7 +211,17 @@ impl MusicLibrary
 			// If the entry is a directory
 			if path.is_dir()
 			{
+				// Turn this directory into an entry in the dirs map and run discovery for it
 				let directoryID = Self::addDirectory(library, Some(currentDirectory), &path)?;
+				Self::discoverDirectory(library, directoryID)?;
+				// Having done discovery on this directory, now check to see if it contains any music
+				// if it doesn't, then prune it back out the tree
+				let mut library = library.writeLock()?;
+				let directory = library.directoryFor(directoryID);
+				if directory.contents().len() == 0 && directory.subdirs().len() == 0
+				{
+					library.dirs.remove(&directoryID);
+				}
 			}
 			// Else if it's a file, see if it's audio
 			else if let Some(file) = AudioFile::readFile(&path)
@@ -268,44 +278,6 @@ impl MusicLibrary
 	// 	let cache = File::create(&self.cacheFile)?;
 	// 	// Ask serde to serialise out the library cache
 	// 	Ok(serde_json::to_writer(cache, self)?)
-	// }
-
-	// fn discover(library: &RwLock<Self>, currentDirectory: &Path) -> Result<()>
-	// {
-	// 	// Explore the current directory's contents
-	// 	let contents = currentDirectory.read_dir()?;
-	// 	// For each entry in it
-	// 	for entry in contents
-	// 	{
-	// 		// Get the path to that entry
-	// 		let path = entry?.path();
-	// 		// If it's a directory, add it to the set discovered and recurse
-	// 		if path.is_dir()
-	// 		{
-	// 			let relativePath = path.strip_prefix(&Self::readLock(library)?.basePath)?.to_path_buf();
-	// 			Self::writeLock(library)?.dirs.insert(relativePath.clone());
-	// 			Self::discover(library, &path)?;
-	// 			// Well, only add it to the directories set if there were any audio files for us or one
-	// 			// of the subdirectories within (which would mean that subdirectory is in the dirs set)
-	// 			if !Self::readLock(library)?.files.contains_key(&path) &&
-	// 				!Self::readLock(library)?.dirs.iter().any
-	// 				(
-	// 					|dir| dir.starts_with(&relativePath) && dir != &relativePath
-	// 				)
-	// 			{
-	// 				// In the case that we actually don't have anything for this directory, remove it again
-	// 				Self::writeLock(library)?.dirs.remove(&relativePath);
-	// 			}
-	// 		}
-	// 		// If we're being asked to stop, stop
-	// 		if Self::readLock(library)?.discoveryCancellation.is_cancelled()
-	// 		{
-	// 			break
-	// 		}
-	// 	}
-
-	// 	// We done? good!
-	// 	Ok(())
 	// }
 
 	// pub fn filesCount(&self, dirIndex: Option<usize>) -> usize
@@ -478,6 +450,11 @@ impl Directory
 	pub fn contents(&self) -> &[TrackID]
 	{
 		&self.tracks
+	}
+
+	pub fn subdirs(&self) -> &[DirectoryID]
+	{
+		&self.subdirectories
 	}
 }
 
