@@ -7,7 +7,6 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use color_eyre::eyre::{self, Result, eyre};
 use libAudio::audioFile::AudioFile;
-use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 
 use crate::cache;
@@ -32,8 +31,7 @@ pub struct MusicLibrary
 	/// Map of album IDs to albums in the library
 	albums: BTreeMap<AlbumID, Album>,
 
-	discoveryCancellation: CancellationToken,
-
+	nextDirectoryID: AtomicU64,
 	nextTrackID: AtomicU64,
 }
 
@@ -73,8 +71,7 @@ impl MusicLibrary
 			artists: BTreeMap::new(),
 			albums: BTreeMap::new(),
 
-			discoveryCancellation: CancellationToken::new(),
-
+			nextDirectoryID: AtomicU64::default(),
 			nextTrackID: AtomicU64::default(),
 		}
 	}
@@ -140,7 +137,8 @@ impl MusicLibrary
 				library.dirs = BTreeMap::new();
 				library.artists = BTreeMap::new();
 				library.albums = BTreeMap::new();
-				// Reset the next track ID back to 0
+				// Reset the next directory and track IDs back to 0
+				library.nextDirectoryID.store(0, Ordering::Release);
 				library.nextTrackID.store(0, Ordering::Release);
 				info!("Running discovery in {}", library.basePath.display());
 				library.basePath.clone()
@@ -195,7 +193,8 @@ impl MusicLibrary
 		}
 
 		// Turn this base directory into a root directory entry and add it to the library as the base directory
-		let directory = Directory::from_path(0, directory);
+		let directoryID = library.writeLock()?.nextDirectoryID.fetch_add(1, Ordering::AcqRel);
+		let directory = Directory::from_path(directoryID, directory);
 		let directoryID = directory.id();
 		library.writeLock()?.dirs.insert(directoryID, directory);
 
@@ -223,8 +222,7 @@ impl MusicLibrary
 				let mut library = library.writeLock()?;
 
 				// Convert the file into a track and insert it into the available track list
-				let trackID = library.nextTrackID
-					.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+				let trackID = library.nextTrackID.fetch_add(1, Ordering::AcqRel);
 				let track = Track::new(file, trackID, &mut library)?;
 				// Add the track to its containing directory while we still can
 				let directory = library.mutDirectoryFor(currentDirectory);
