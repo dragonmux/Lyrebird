@@ -280,41 +280,6 @@ impl MusicLibrary
 	// 	Ok(serde_json::to_writer(cache, self)?)
 	// }
 
-	// pub fn filesCount(&self, dirIndex: Option<usize>) -> usize
-	// {
-	// 	dirIndex
-	// 		.and_then(|index| iter::once(&self.basePath).chain(self.dirs.iter()).nth(index))
-	// 		.and_then(|dir| self.filesIn(dir))
-	// 		.map(BTreeSet::len)
-	// 		.unwrap_or_default()
-	// }
-
-	// pub fn directoryAt(&self, index: usize) -> Option<&PathBuf>
-	// {
-	// 	iter::once(&self.basePath)
-	// 		.chain(self.dirs.iter())
-	// 		.nth(index)
-	// }
-
-	// pub fn fileIn(&self, dir: &PathBuf, index: usize) -> Option<&PathBuf>
-	// {
-	// 	let files = self.filesIn(dir)?;
-	// 	files.iter().nth(index)
-	// }
-
-	// fn filesIn(&self, dir: &PathBuf) -> Option<&BTreeSet<PathBuf>>
-	// {
-	// 	if dir.is_relative()
-	// 	{
-	// 		let path = self.basePath.join(dir);
-	// 		self.files.get(&path)
-	// 	}
-	// 	else
-	// 	{
-	// 		self.files.get(dir)
-	// 	}
-	// }
-
 	/// Look up an artist by name to get an ArtistID
 	pub fn lookupArtist(&mut self, artistName: &str) -> ArtistID
 	{
