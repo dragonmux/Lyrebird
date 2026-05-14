@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::collections::BTreeMap;
-use std::fs::create_dir_all;
+// use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -220,6 +220,7 @@ impl MusicLibrary
 				if directory.contents().len() == 0 && directory.subdirs().len() == 0
 				{
 					library.dirs.remove(&directoryID);
+					library.mutDirectoryFor(currentDirectory).removeSubdir(directoryID);
 				}
 			}
 			// Else if it's a file, see if it's audio
@@ -444,6 +445,14 @@ impl Directory
 	pub fn addTrack(&mut self, trackID: TrackID)
 	{
 		self.tracks.push(trackID);
+	}
+
+	pub fn removeSubdir(&mut self, directoryID: DirectoryID)
+	{
+		if let Some(index) = self.subdirectories.iter().position(|&entryID| entryID == directoryID)
+		{
+			self.subdirectories.remove(index);
+		}
 	}
 
 	pub fn path(&self) -> &Path
