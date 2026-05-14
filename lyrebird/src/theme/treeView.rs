@@ -25,7 +25,9 @@ fn default(theme: &Theme) -> Style
 
 	Style
 	{
-		textColour: styles.text.general.colour,
+		normalColour: styles.treeView.normal,
+		hoverColour: styles.treeView.hover,
+		selectedColour: styles.treeView.selected,
 		treeColour: styles.general.border,
 		backgroundColour: styles.general.background,
 	}
