@@ -38,6 +38,9 @@ struct TreeViewState
 
 pub trait TreeItem<Message>: Sized
 {
+	type ItemID: Clone + Copy + PartialEq + Eq;
+
+	fn nodeID(&self) -> Self::ItemID;
 	fn displayText(&self) -> String;
 	fn children(&self) -> &[Self];
 	fn selectMessage(&self) -> Message;
@@ -68,14 +71,16 @@ where
 	Theme: Catalog + text::Catalog + 'a,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
 {
-	pub fn new<Model>(model: &Model) -> Self
+	pub fn new<Model>(model: &Model, selectedNode: Option<Model::ItemID>) -> Self
 	where
 		Model: TreeItem<Message>
 	{
 		// Turn all the child items into tree views of their own
 		let subtree = model.children()
 			.into_iter()
-			.map(|item| Self::new(item).into());
+			.map(|item| Self::new(item, selectedNode).into());
+
+		let isSelected = selectedNode == Some(model.nodeID());
 
 		Self
 		{
@@ -85,7 +90,7 @@ where
 			height: Length::Shrink,
 			selectMessage: model.selectMessage(),
 			class: <Theme as Catalog>::default(),
-			state: State::Unselected,
+			state: if isSelected { State::Selected } else { State::Unselected },
 		}
 	}
 

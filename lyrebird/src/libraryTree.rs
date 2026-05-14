@@ -66,7 +66,7 @@ impl LibraryTree
 				"Directory Tree",
 				scrollable
 				(
-					TreeView::new(&directoryTree)
+					TreeView::new(&directoryTree, Some(self.selectedDirectory))
 				)
 					.width(Length::Fill)
 					.height(Length::Fill)
@@ -182,6 +182,13 @@ impl From<&MusicLibrary> for DirectoryTree
 
 impl TreeItem<Message> for DirectoryTree
 {
+	type ItemID = DirectoryID;
+
+	fn nodeID(&self) -> DirectoryID
+	{
+		self.id
+	}
+
 	fn displayText(&self) -> String
 	{
 		self.name.clone()
