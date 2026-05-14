@@ -2,13 +2,15 @@
 
 use iced::{Alignment, Length, Padding, Rectangle, Size, mouse};
 use iced_core::{Layout, Widget, layout, renderer, widget::Tree};
+use iced_widget::{column, text};
 
-pub struct TreeView<'a, Model, Theme>
+pub struct TreeView<'a, Message, Theme, Renderer = iced::Renderer>
 where
-	Model: TreeItem,
 	Theme: Catalog,
+	Renderer: iced_core::Renderer,
 {
-	model: Model,
+	node: iced_core::Element<'a, Message, Theme, Renderer>,
+	subtree: iced_core::Element<'a, Message, Theme, Renderer>,
 	width: Length,
 	height: Length,
 	class: Theme::Class<'a>,
@@ -16,7 +18,7 @@ where
 
 pub trait TreeItem: Sized
 {
-	fn displayName(&self) -> &str;
+	fn displayText(&self) -> String;
 	fn children(&self) -> &[Self];
 }
 
@@ -34,19 +36,28 @@ pub trait Catalog
 
 pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
 
-impl<'a, Model, Theme> TreeView<'a, Model, Theme>
+impl<'a, Message, Theme, Renderer> TreeView<'a, Message, Theme, Renderer>
 where
-	Model: TreeItem,
-	Theme: Catalog + 'a,
+	Message: 'a,
+	Theme: Catalog + text::Catalog + 'a,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
 {
-	pub fn new(model: Model) -> Self
+	pub fn new<Model>(model: &Model) -> Self
+	where
+		Model: TreeItem
 	{
+		// Turn all the child items into tree views of their own
+		let subtree = model.children()
+			.into_iter()
+			.map(|item| Self::new(item).into());
+
 		Self
 		{
-			model,
+			node: text(model.displayText()).into(),
+			subtree: column(subtree).into(),
 			width: Length::Shrink,
 			height: Length::Shrink,
-			class: Theme::default(),
+			class: <Theme as Catalog>::default(),
 		}
 	}
 
@@ -67,20 +78,23 @@ where
 	}
 }
 
-impl<'a, Model, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for TreeView<'a, Model, Theme>
+impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for TreeView<'a, Message, Theme, Renderer>
 where
-	Model: TreeItem,
 	Theme: Catalog,
 	Renderer: iced_core::Renderer,
 {
 	fn children(&self) -> Vec<Tree>
 	{
-		vec![]
+		vec!
+		[
+			Tree::new(&self.node),
+			Tree::new(&self.subtree),
+		]
 	}
 
-	fn diff(&self, _tree: &mut Tree)
+	fn diff(&self, tree: &mut Tree)
 	{
-		//
+		tree.diff_children(&[&self.node, &self.subtree]);
 	}
 
 	fn size(&self) -> Size<Length>
@@ -100,18 +114,29 @@ where
 		limits: &layout::Limits,
 	) -> layout::Node
 	{
-		layout::flex::resolve::<Message, Theme, Renderer>
+		let nodeLayout = self.node
+			.as_widget_mut()
+			.layout(&mut tree.children[0], renderer, limits);
+		let nodeSize = nodeLayout.size();
+
+		let subtreeLayout = self.subtree
+			.as_widget_mut()
+			.layout(&mut tree.children[1], renderer, limits);
+		let subtreeSize = subtreeLayout.size();
+
+		layout::Node::with_children
 		(
-			layout::flex::Axis::Vertical,
-			renderer,
-			limits,
-			self.width,
-			self.height,
-			Padding::ZERO,
-			0.0,
-			Alignment::Center,
-			&mut [],
-			&mut tree.children
+			limits.resolve
+			(
+				self.width,
+				self.height,
+				Size
+				{
+					width: nodeSize.width.max(subtreeSize.width),
+					height: nodeSize.height + subtreeSize.height,
+				}
+			),
+			vec![nodeLayout, subtreeLayout]
 		)
 	}
 
@@ -130,15 +155,14 @@ where
 	}
 }
 
-impl<'a, Model, Message, Theme, Renderer> From<TreeView<'a, Model, Theme>>
+impl<'a, Message, Theme, Renderer> From<TreeView<'a, Message, Theme, Renderer>>
 	for iced::Element<'a, Message, Theme, Renderer>
 where
-	Model: TreeItem + 'a,
 	Message: 'a,
 	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + 'a,
 {
-	fn from(treeView: TreeView<'a, Model, Theme>) -> Self
+	fn from(treeView: TreeView<'a, Message, Theme, Renderer>) -> Self
 	{
 		Self::new(treeView)
 	}

@@ -50,6 +50,7 @@ impl LibraryTree
 	{
 		let library = &self.library.read()
 			.expect("Failed to lock library for read");
+		let directoryTree = DirectoryTree::from(library.directories());
 		let trackList: Option<Container<'a, Message, Theme>> = None;
 
 		let layout = Row::with_children
@@ -59,7 +60,7 @@ impl LibraryTree
 				"Directory Tree",
 				scrollable
 				(
-					TreeView::new(DirectoryTree::from(library.directories()))
+					TreeView::new(&directoryTree)
 				)
 					.width(Length::Fill)
 					.height(Length::Fill)
@@ -160,9 +161,9 @@ impl From<&BTreeMap<DirectoryID, Directory>> for DirectoryTree
 
 impl TreeItem for DirectoryTree
 {
-	fn displayName(&self) -> &str
+	fn displayText(&self) -> String
 	{
-		&self.name
+		self.name.clone()
 	}
 
 	fn children(&self) -> &[Self]
