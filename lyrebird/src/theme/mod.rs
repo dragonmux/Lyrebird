@@ -9,6 +9,7 @@ pub mod scrollable;
 pub mod tabBar;
 pub mod text;
 pub mod trackProgress;
+pub mod treeView;
 
 pub enum Theme
 {
