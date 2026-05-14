@@ -27,16 +27,6 @@ struct DirectoryTree
 	children: Vec<DirectoryTree>,
 }
 
-fn defaultTreeIcon() -> String
-{
-	"╰ ".to_string()
-}
-
-fn defaultLeafIcon() -> String
-{
-	"├ ".to_string()
-}
-
 impl LibraryTree
 {
 	pub fn new(musicLibrary: Arc<RwLock<MusicLibrary>>) -> Self
