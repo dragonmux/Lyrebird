@@ -21,11 +21,12 @@ impl Catalog for Theme
 
 fn default(theme: &Theme) -> Style
 {
-	let _styles = theme.styles();
+	let styles = theme.styles();
 
 	Style
 	{
-		//
+		textColour: styles.text.general.colour,
+		treeColour: styles.general.border,
 	}
 }
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::{Length, Rectangle, Size, mouse};
-use iced_core::{Layout, Widget, layout, renderer, widget::Tree};
+use iced::{Background, Color, Length, Rectangle, Size, mouse};
+use iced_core::{Layout, Widget, layout, renderer::{self, Quad}, widget::Tree};
 use iced_widget::{column, text};
 
 pub struct TreeView<'a, Message, Theme, Renderer = iced::Renderer>
@@ -27,6 +27,8 @@ pub trait TreeItem<Message>: Sized
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Style
 {
+	pub textColour: Color,
+	pub treeColour: Color,
 }
 
 pub trait Catalog
@@ -166,15 +168,48 @@ where
 	fn draw
 	(
 		&self,
-		_tree: &Tree,
-		_renderer: &mut Renderer,
-		_theme: &Theme,
+		tree: &Tree,
+		renderer: &mut Renderer,
+		theme: &Theme,
 		_style: &renderer::Style,
-		_layout: Layout<'_>,
-		_cursor: mouse::Cursor,
-		_viewport: &Rectangle,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		viewport: &Rectangle,
 	)
 	{
+		// Extract widget styling information
+		let treeStyle = theme.style(&self.class);
+		let style = renderer::Style { text_color: treeStyle.textColour };
+
+		// Draw our entry
+		self.node
+			.as_widget()
+			.draw(&tree.children[0], renderer, theme, &style, layout.child(0), cursor, viewport);
+
+		// Extract the bounds information for the sublayouts
+		let nodeBounds = layout.child(0).bounds();
+		let subtreeBounds = layout.child(1).bounds();
+
+		// Draw in the guide bar for the entries under us
+		renderer.fill_quad(
+			Quad
+			{
+				bounds: Rectangle
+				{
+					x: nodeBounds.x + 8.0,
+					y: nodeBounds.y + nodeBounds.height,
+					width: 1.0,
+					height: (subtreeBounds.height - (nodeBounds.height / 2.0)).min(0.0)
+				},
+				..Default::default()
+			},
+			Background::Color(treeStyle.treeColour)
+		);
+
+		// Draw the subtree under us
+		self.subtree
+			.as_widget()
+			.draw(&tree.children[1], renderer, theme, &style, layout.child(1), cursor, viewport);
 	}
 }
 
