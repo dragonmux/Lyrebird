@@ -123,7 +123,7 @@ fn map_directories(dirs: Vec<Directory>) -> Result<BTreeMap<DirectoryID, library
 		{
 			result.get_mut(&DirectoryID::new(dir.parentID))
 				.expect("Directory entry lookup failure")
-				.add_subdir(DirectoryID::new(dir.id));
+				.addSubdir(DirectoryID::new(dir.id));
 		}
 	}
 

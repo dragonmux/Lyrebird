@@ -195,9 +195,20 @@ impl MusicLibrary
 			{
 				//
 			}
-			else
+			// Else if it's a file, see if it's audio
+			else if let Some(file) = AudioFile::readFile(&path)
 			{
-				//
+				// Grab a lock on the library for the next few ops
+				let mut library = library.writeLock()?;
+
+				// Convert the file into a track and insert it into the available track list
+				let trackID = library.nextTrackID
+					.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+				let track = Track::new(file, trackID, &mut library)?;
+				// Add the track to its containing directory while we still can
+				let directory = library.mutDirectoryFor(currentDirectory);
+				directory.addTrack(track.id());
+				library.tracks.insert(track.id(), track);
 			}
 		}
 
@@ -246,29 +257,6 @@ impl MusicLibrary
 	// 				// In the case that we actually don't have anything for this directory, remove it again
 	// 				Self::writeLock(library)?.dirs.remove(&relativePath);
 	// 			}
-	// 		}
-	// 		// Else if it's a file, see if it's audio
-	// 		else if let Some(file) = AudioFile::readFile(&path) {
-	// 			// Grab a lock on the library for the next few ops
-	// 			let mut library = Self::writeLock(library)?;
-
-	// 			// See if this file's directory is already in the map
-	// 			let filePath = path.parent()
-	// 				.ok_or_eyre("File does not have a valid path parent")?;
-	// 			if !library.files.contains_key(filePath)
-	// 			{
-	// 				library.files.insert(filePath.to_path_buf(), BTreeSet::new());
-	// 			}
-	// 			// Now we definitely have a vec to use, look the path up and add the file
-	// 			library.files.get_mut(filePath)
-	// 				.ok_or_eyre("Failed to look file's path up in file map")?
-	// 				.insert(path);
-
-	// 			// Convert the file into a track and insert it into the available track list
-	// 			let trackID = library.nextTrackID
-	// 				.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-	// 			let track = Track::new(file, trackID, library.deref_mut())?;
-	// 			library.tracks.insert(track.id(), track);
 	// 		}
 	// 		// If we're being asked to stop, stop
 	// 		if Self::readLock(library)?.discoveryCancellation.is_cancelled()
@@ -433,9 +421,14 @@ impl Directory
 		DirectoryID(self.id)
 	}
 
-	pub fn add_subdir(&mut self, id: DirectoryID)
+	pub fn addSubdir(&mut self, directoryID: DirectoryID)
 	{
-		self.subdirectories.push(id);
+		self.subdirectories.push(directoryID);
+	}
+
+	pub fn addTrack(&mut self, trackID: TrackID)
+	{
+		self.tracks.push(trackID);
 	}
 
 	pub fn path(&self) -> &Path
