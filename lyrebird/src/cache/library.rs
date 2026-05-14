@@ -116,7 +116,15 @@ fn map_directories(dirs: Vec<Directory>) -> Result<BTreeMap<DirectoryID, library
 		};
 
 		// Transmute the directory into a library one
-		result.insert(DirectoryID::new(dir.id), library::Directory::from_path(dir.id, &path));
+		let directory = library::Directory::from_path(dir.id, &path);
+		result.insert(directory.id(), directory);
+		// Add the new directory into the parent one if it's not the root directory
+		if dir.id != 0
+		{
+			result.get_mut(&DirectoryID::new(dir.parentID))
+				.expect("Directory entry lookup failure")
+				.add_subdir(DirectoryID::new(dir.id));
+		}
 	}
 
 	Ok(result)

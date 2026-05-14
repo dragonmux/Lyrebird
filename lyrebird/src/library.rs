@@ -393,6 +393,16 @@ impl Directory
 		}
 	}
 
+	pub fn id(&self) -> DirectoryID
+	{
+		DirectoryID(self.id)
+	}
+
+	pub fn add_subdir(&mut self, id: DirectoryID)
+	{
+		self.subdirectories.push(id);
+	}
+
 	pub fn path(&self) -> &Path
 	{
 		&self.path
