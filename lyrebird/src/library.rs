@@ -155,7 +155,28 @@ impl MusicLibrary
 		// Now actually run the discovery process
 		match MusicLibrary::recursiveDiscover(&library, &directory)
 		{
-			Ok(_) => Message::LibraryDiscovered,
+			Ok(_) =>
+			{
+				match library.readLock()
+				{
+					Ok(library) =>
+					{
+						info!
+						(
+							"Discovered {} directories and {} tracks total",
+							library.dirs.len(),
+							library.tracks.len()
+						);
+						Message::LibraryDiscovered
+					}
+					Err(error) =>
+					{
+						error!("Failed to lock library to show discovery results from");
+						error!("{}", error);
+						Message::ConcurrencyError
+					}
+				}
+			},
 			Err(error) =>
 			{
 				error!("Failed to discover library from {}", directory.display());
