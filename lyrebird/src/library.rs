@@ -193,11 +193,9 @@ impl MusicLibrary
 		}
 
 		// Turn this base directory into a root directory entry and add it to the library as the base directory
-		let directoryID = library.writeLock()?.nextDirectoryID.fetch_add(1, Ordering::AcqRel);
-		let directory = Directory::from_path(directoryID, directory);
-		let directoryID = directory.id();
-		library.writeLock()?.dirs.insert(directoryID, directory);
+		let directoryID = Self::addDirectory(library, None, directory)?;
 
+		// Run discovery now we have a directory object in the dirs map to work on
 		Self::discoverDirectory(library, directoryID)
 	}
 
@@ -213,7 +211,7 @@ impl MusicLibrary
 			// If the entry is a directory
 			if path.is_dir()
 			{
-				//
+				let directoryID = Self::addDirectory(library, Some(currentDirectory), &path)?;
 			}
 			// Else if it's a file, see if it's audio
 			else if let Some(file) = AudioFile::readFile(&path)
@@ -232,6 +230,28 @@ impl MusicLibrary
 		}
 
 		Ok(())
+	}
+
+	// Add a directory to a specific parent directory
+	fn addDirectory(library: &RwLock<Self>, parentID: Option<DirectoryID>, path: &Path) -> Result<DirectoryID>
+	{
+		// Grab a lock on the library to add the directory entry with
+		let mut library = library.writeLock()?;
+		// Extract the ID this new directory will have
+		let directoryID = library.nextDirectoryID.fetch_add(1, Ordering::AcqRel);
+		// Make the directory object and insert it
+		let directory = Directory::from_path(directoryID, path);
+		let directoryID = directory.id();
+		library.dirs.insert(directoryID, directory);
+		// Grab back the parent directory, if there is one
+		if let Some(parentID) = parentID
+		{
+			let parent = library.mutDirectoryFor(parentID);
+			// Add this subdirectory to the parent dir
+			parent.addSubdir(directoryID);
+		}
+		// We're all done now, so return the new ID
+		Ok(directoryID)
 	}
 
 	// pub fn writeCache(&self) -> Result<()>
