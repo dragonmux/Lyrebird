@@ -8,7 +8,7 @@ use iced_widget::{column, text};
 
 pub struct TreeView<'a, Model, Message, Theme, Renderer = iced::Renderer>
 where
-	Model: TreeItem<Message>,
+	Model: TreeItem,
 	Message: Clone,
 	Theme: Catalog,
 	Renderer: iced_core::Renderer,
@@ -53,7 +53,7 @@ struct TreeViewState
 	pressed: bool
 }
 
-pub trait TreeItem<Message>: Sized
+pub trait TreeItem: Sized
 {
 	type ItemID: Clone + Copy + PartialEq + Eq;
 
@@ -83,7 +83,7 @@ pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
 
 impl<'a, Model, Message, Theme, Renderer> TreeView<'a, Model, Message, Theme, Renderer>
 where
-	Model: TreeItem<Message> + 'a,
+	Model: TreeItem + 'a,
 	Message: Clone + 'a,
 	Theme: Catalog + text::Catalog + 'a,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
@@ -168,7 +168,7 @@ where
 
 impl<'a, Model, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for TreeView<'a, Model, Message, Theme, Renderer>
 where
-	Model: TreeItem<Message>,
+	Model: TreeItem,
 	Message: Clone,
 	Theme: Catalog,
 	Renderer: iced_core::Renderer,
@@ -505,7 +505,7 @@ where
 impl<'a, Model, Message, Theme, Renderer> From<TreeView<'a, Model, Message, Theme, Renderer>>
 	for iced::Element<'a, Message, Theme, Renderer>
 where
-	Model: TreeItem<Message> + 'a,
+	Model: TreeItem + 'a,
 	Message: Clone + 'a,
 	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + 'a,
