@@ -22,6 +22,7 @@ pub enum Message
 	LibraryDiscover,
 	LibraryDiscovering,
 	LibraryDiscovered,
+	LibraryCached,
 	LibraryError,
 	ConcurrencyError,
 	LibraryTree(LibraryTree),

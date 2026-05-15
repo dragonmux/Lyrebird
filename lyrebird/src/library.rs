@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
 use std::collections::BTreeMap;
-// use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -99,7 +98,7 @@ impl MusicLibrary
 		}
 	}
 
-	// Try to load the library from a library cache file
+	/// Try to load the library from a library cache file
 	fn fromCache(&mut self) -> Result<()>
 	{
 		// If the cache file doesn't exist, bail
@@ -264,21 +263,40 @@ impl MusicLibrary
 		Ok(directoryID)
 	}
 
-	// pub fn writeCache(&self) -> Result<()>
-	// {
-	// 	// Ask our discovery task to stop if it didn't already
-	// 	self.discoveryCancellation.cancel();
-	// 	// Make sure all the leading path elements exist
-	// 	create_dir_all
-	// 	(
-	// 		self.cacheFile.parent()
-	// 			.ok_or_eyre("Failed to extract the path to the music library cache file")?
-	// 	)?;
-	// 	// Open the cache file for writing
-	// 	let cache = File::create(&self.cacheFile)?;
-	// 	// Ask serde to serialise out the library cache
-	// 	Ok(serde_json::to_writer(cache, self)?)
-	// }
+	pub async fn writeCache(library: Arc<RwLock<Self>>) -> Message
+	{
+		match library.read()
+		{
+			Ok(library) => match library.toCache()
+			{
+				Ok(_) =>
+				{
+					info!("Wrote library cache to {}", library.cacheFile.display());
+					Message::LibraryCached
+				},
+				Err(error) =>
+				{
+					error!("Failed to store library to cache");
+					error!("{}", error);
+					Message::LibraryError
+				}
+			},
+			Err(error) =>
+			{
+				error!("Failed to lock library to write cache from");
+				error!("{}", error);
+				Message::ConcurrencyError
+			},
+		}
+	}
+
+	/// Try to load the library from a library cache file
+	fn toCache(&self) -> Result<()>
+	{
+		// Convert the library into its cache representation, and save it out
+		let library = cache::MusicLibrary::new(&self.dirs, &self.tracks, &self.artists, &self.albums);
+		cache::storeLibrary(library, &self.cacheFile)
+	}
 
 	/// Return the path to this [`MusicLibrary`]
 	pub fn libraryPath(&self) -> &Path
