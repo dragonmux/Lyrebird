@@ -4,6 +4,7 @@ use iced::{Color, theme};
 
 pub mod container;
 pub mod groupBox;
+pub mod listView;
 pub mod progressBar;
 pub mod scrollable;
 pub mod tabBar;

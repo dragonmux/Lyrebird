@@ -3,6 +3,7 @@
 use crate::theme::Theme;
 
 pub mod groupBox;
+pub mod listView;
 pub mod tabBar;
 pub mod trackProgress;
 pub mod treeView;
