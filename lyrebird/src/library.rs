@@ -324,6 +324,18 @@ impl MusicLibrary
 		albumID
 	}
 
+	/// Returns true if the library contains no directories or no tracks
+	pub fn isEmpty(&self) -> bool
+	{
+		self.dirs.is_empty() || self.tracks.is_empty()
+	}
+
+	/// Return a map of all the directories to their IDs that this lirary contains
+	pub fn directories(&self) -> &BTreeMap<DirectoryID, Directory>
+	{
+		&self.dirs
+	}
+
 	/// Find the Directory object associated with a particular DirectoryID and return it by reference
 	pub fn directoryFor(&self, directoryID: DirectoryID) -> &Directory
 	{
@@ -337,9 +349,9 @@ impl MusicLibrary
 		unsafe { self.dirs.get_mut(&directoryID).unwrap_unchecked() }
 	}
 
-	pub fn directories(&self) -> &BTreeMap<DirectoryID, Directory>
+	pub fn trackFor(&self, trackID: TrackID) -> &Track
 	{
-		&self.dirs
+		&self.tracks[&trackID]
 	}
 
 	/// Find the Artist object associated with a particular ArtistID and return it by reference
