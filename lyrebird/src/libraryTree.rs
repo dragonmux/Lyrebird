@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock};
 use iced::{Length, Padding};
 use iced_widget::scrollable::{Direction, Scrollbar};
 use iced_widget::{Row, scrollable};
+use itertools::Itertools;
 
 use crate::library::{Directory, DirectoryID, MusicLibrary};
 use crate::messages::{self, Message};
@@ -143,6 +144,7 @@ impl DirectoryTree
 		let children = directory.subdirs()
 			.into_iter()
 			.map(|&directoryID| Self::from_map(map, directoryID))
+			.sorted_by(|a, b| a.name.cmp(&b.name))
 			.collect();
 		// Calculate the name of this directory
 		let path = directory.path();
@@ -236,6 +238,7 @@ impl TrackEntry
 				});
 			}
 		}
+		tracks.sort_by(|a, b| a.name.cmp(&b.name));
 		tracks
 	}
 }
