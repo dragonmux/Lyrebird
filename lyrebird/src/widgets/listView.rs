@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 use iced::{Length, Padding, Rectangle, Size, mouse};
-use iced_core::{Layout, Widget, layout, renderer, widget::Tree};
+use iced_core::{Layout, Widget, layout, renderer, widget::{Operation, Tree}};
 use iced_widget::text;
 
 pub struct ListView<'a, Items, Message, Theme, Renderer = iced::Renderer>
@@ -156,6 +156,30 @@ where
 			&mut self.contents,
 			&mut tree.children
 		)
+	}
+
+	fn operate
+	(
+		&mut self,
+		tree: &mut Tree,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
+	{
+		operation.container(None, layout.bounds());
+		for ((content, tree), layout) in self.contents
+			.iter_mut()
+			.zip(&mut tree.children)
+			.zip(layout.children())
+		{
+			operation.traverse(&mut |operation|
+			{
+				content
+					.as_widget_mut()
+					.operate(tree, layout, renderer, operation);
+			});
+		}
 	}
 
 	fn draw
