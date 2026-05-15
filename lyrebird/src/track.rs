@@ -126,6 +126,11 @@ impl Track
 	{
 		TrackID(self.id)
 	}
+
+	pub fn title(&self) -> &str
+	{
+		&self.title
+	}
 }
 
 impl Artist

@@ -6,13 +6,14 @@ use std::sync::{Arc, RwLock};
 
 use iced::{Length, Padding};
 use iced_widget::scrollable::{Direction, Scrollbar};
-use iced_widget::{Container, Row, scrollable};
+use iced_widget::{Row, scrollable};
 
 use crate::library::{Directory, DirectoryID, MusicLibrary};
 use crate::messages::{self, Message};
-use crate::theme::Theme;
+use crate::track::TrackID;
 use crate::widgets::Element;
 use crate::widgets::groupBox::GroupBox;
+use crate::widgets::listView::{ListItem, ListView};
 use crate::widgets::treeView::{TreeItem, TreeView};
 
 pub struct LibraryTree
@@ -26,6 +27,12 @@ struct DirectoryTree
 	id: DirectoryID,
 	name: String,
 	children: Vec<DirectoryTree>,
+}
+
+struct TrackEntry
+{
+	id: TrackID,
+	name: String,
 }
 
 impl LibraryTree
@@ -57,7 +64,7 @@ impl LibraryTree
 		let library = &self.library.read()
 			.expect("Failed to lock library for read");
 		let directoryTree = DirectoryTree::from(library.deref());
-		let trackList: Option<Container<'a, Message, Theme>> = None;
+		let trackList = TrackEntry::forDirectory(self.selectedDirectory, library.deref());
 
 		let layout = Row::with_children
 		([
@@ -88,7 +95,10 @@ impl LibraryTree
 			GroupBox::new
 			(
 				"Tracks",
-				scrollable(trackList)
+				scrollable
+				(
+					ListView::new(&trackList)
+				)
 					.width(Length::Fill)
 					.height(Length::Fill)
 					.spacing(5.0)
@@ -202,5 +212,38 @@ impl TreeItem<Message> for DirectoryTree
 	fn selectMessage(&self) -> Message
 	{
 		Message::LibraryTree(messages::LibraryTree::SelectDirectory(self.id))
+	}
+}
+
+impl TrackEntry
+{
+	pub fn forDirectory(directoryID: DirectoryID, library: &MusicLibrary) -> Vec<Self>
+	{
+		// Set up tracking for the tracks in the directory selected, and ask the library for the dir
+		let mut tracks = Vec::new();
+		if !library.isEmpty()
+		{
+			let directory = library.directoryFor(directoryID);
+
+			// Loop through making each track into a track list item
+			for &trackID in directory.contents()
+			{
+				let track = library.trackFor(trackID);
+				tracks.push(Self
+				{
+					id: track.id(),
+					name: track.title().into()
+				});
+			}
+		}
+		tracks
+	}
+}
+
+impl ListItem for TrackEntry
+{
+	fn displayText(&self) -> String
+	{
+		self.name.clone()
 	}
 }
