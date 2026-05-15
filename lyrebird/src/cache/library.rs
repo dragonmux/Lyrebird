@@ -292,7 +292,7 @@ impl TryFrom<MusicLibrary> for LibraryMaps
 	fn try_from(library: MusicLibrary) -> Result<Self>
 	{
 		// Run through all the directories first, so we can have their paths ready to go
-		let dirs = map_directories(library.directories)?;
+		let mut dirs = map_directories(library.directories)?;
 		// Then through all the artists and albums so we have their IDs to look up
 		let mut artists = map_artists(library.artists)?;
 		let mut albums = map_albums(library.albums)?;
@@ -318,7 +318,7 @@ impl TryFrom<MusicLibrary> for LibraryMaps
 				return Err(eyre!("Library cache contains track with invalid album ID"));
 			}
 			// Look up the containing directory for the track
-			let dir = dirs.get(&DirectoryID::new(track.directoryID))
+			let dir = dirs.get_mut(&DirectoryID::new(track.directoryID))
 				.ok_or_eyre("Library cache contains track with invalid directory ID")?;
 			let fileName = dir.path().join(&track.fileName);
 			if !fileName.exists()
@@ -338,7 +338,8 @@ impl TryFrom<MusicLibrary> for LibraryMaps
 				artistID,
 				albumID
 			);
-			// Add the track to the requisite artist, and album and insert it into the track map
+			// Add the track to the requisite directory, artist, and album and insert it into the track map
+			dir.addTrack(track.id());
 			artist.map(|artist| artist.addTrack(track.id()));
 			album.map(|album| album.addTrack(track.id()));
 			tracks.insert(track.id(), track);
