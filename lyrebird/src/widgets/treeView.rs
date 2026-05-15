@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+use std::{cell::RefCell, rc::Rc};
+
 use iced::{Background, Border, Color, Event, Length, Rectangle, Size, mouse, touch};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer::{self, Quad}, widget::{Operation, Tree, tree}, window};
 use iced_widget::{column, text};
@@ -12,11 +14,21 @@ where
 {
 	node: iced_core::Element<'a, Message, Theme, Renderer>,
 	subtree: iced_core::Element<'a, Message, Theme, Renderer>,
+	setup: Rc<RefCell<TreeViewSetup<'a, Theme>>>,
+	selectMessage: Message,
+	state: State,
+}
+
+/// Structure to hold all the setup information for the [`TreeView`], to be held via Rc for all sub-trees
+/// so the tree view gets a consistent setup all the way down, and things like setting the click handler
+/// works correctly with less magic in [`TreeItem`]
+struct TreeViewSetup<'a, Theme>
+where
+	Theme: Catalog,
+{
 	width: Length,
 	height: Length,
-	selectMessage: Message,
 	class: Theme::Class<'a>,
-	state: State,
 }
 
 /// The possible states of a [`TabButton`].
@@ -75,10 +87,34 @@ where
 	where
 		Model: TreeItem<Message>
 	{
+		let setup = Rc::new
+		(
+			RefCell::new
+			(
+				TreeViewSetup
+				{
+					width: Length::Shrink,
+					height: Length::Shrink,
+					class: <Theme as Catalog>::default(),
+				}
+			)
+		);
+		Self::with_setup(model, selectedNode, setup)
+	}
+
+	fn with_setup<Model>
+	(
+		model: &Model,
+		selectedNode: Option<Model::ItemID>,
+		setup: Rc<RefCell<TreeViewSetup<'a, Theme>>>
+	) -> Self
+	where
+		Model: TreeItem<Message>
+	{
 		// Turn all the child items into tree views of their own
 		let subtree = model.children()
 			.into_iter()
-			.map(|item| Self::new(item, selectedNode).into());
+			.map(|item| Self::with_setup(item, selectedNode, setup.clone()).into());
 
 		let isSelected = selectedNode == Some(model.nodeID());
 
@@ -86,27 +122,25 @@ where
 		{
 			node: text(model.displayText()).into(),
 			subtree: column(subtree).into(),
-			width: Length::Shrink,
-			height: Length::Shrink,
+			setup,
 			selectMessage: model.selectMessage(),
-			class: <Theme as Catalog>::default(),
 			state: if isSelected { State::Selected } else { State::Unselected },
 		}
 	}
 
 	/// Sets the width of the [`TreeView`]
 	#[must_use]
-	pub fn width(mut self, width: impl Into<Length>) -> Self
+	pub fn width(self, width: impl Into<Length>) -> Self
 	{
-		self.width = width.into();
+		self.setup.borrow_mut().width = width.into();
 		self
 	}
 
 	/// Sets the height of the [`TreeView`]
 	#[must_use]
-	pub fn height(mut self, height: impl Into<Length>) -> Self
+	pub fn height(self, height: impl Into<Length>) -> Self
 	{
-		self.height = height.into();
+		self.setup.borrow_mut().height = height.into();
 		self
 	}
 }
@@ -145,8 +179,8 @@ where
 	{
 		Size
 		{
-			width: self.width,
-			height: self.height,
+			width: self.setup.borrow().width,
+			height: self.setup.borrow().height,
 		}
 	}
 
@@ -159,7 +193,11 @@ where
 	) -> layout::Node
 	{
 		// Compute new limits that take into account the configured width and height
-		let limits = limits.clone().width(self.width).height(self.height).loose();
+		let limits = limits
+			.clone()
+			.width(self.setup.borrow().width)
+			.height(self.setup.borrow().height)
+			.loose();
 
 		// Figure out the layout for our entry in the tree
 		let nodeLayout = self.node
@@ -192,8 +230,8 @@ where
 		(
 			limits.resolve
 			(
-				self.width,
-				self.height,
+				self.setup.borrow().width,
+				self.setup.borrow().height,
 				Size
 				{
 					width: nodeSize.width.max(subtreeSize.width),
@@ -353,7 +391,7 @@ where
 	)
 	{
 		// Extract widget styling information
-		let treeStyle = theme.style(&self.class);
+		let treeStyle = theme.style(&self.setup.borrow().class);
 		let style = renderer::Style { text_color: treeStyle.normalColour };
 
 		// Extract the bounds information for the sublayouts
