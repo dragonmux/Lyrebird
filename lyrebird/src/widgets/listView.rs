@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::{Length, Padding, Rectangle, Size, mouse};
-use iced_core::{Layout, Widget, layout, renderer, widget::{Operation, Tree}};
+use iced::{Event, Length, Padding, Rectangle, Size, mouse, touch};
+use iced_core::{Clipboard, Layout, Shell, Widget, layout, mouse::{Click, click}, renderer, widget::{Operation, Tree, tree}};
 use iced_widget::text;
 
 pub struct ListView<'a, Items, Message, Theme, Renderer = iced::Renderer>
@@ -22,6 +22,12 @@ where
 type OnClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
 type OnDoubeClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
 type OnRightClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
+
+#[derive(Debug, Clone, Copy, Default)]
+struct ListViewState
+{
+	previousClick: Option<Click>,
+}
 
 pub trait ListItem: Sized
 {
@@ -116,6 +122,16 @@ where
 	Theme: Catalog,
 	Renderer: iced_core::Renderer,
 {
+	fn tag(&self) -> tree::Tag
+	{
+		tree::Tag::of::<ListViewState>()
+	}
+
+	fn state(&self) -> tree::State
+	{
+		tree::State::new(ListViewState::default())
+	}
+
 	fn children(&self) -> Vec<Tree>
 	{
 		self.contents.iter().map(Tree::new).collect()
@@ -179,6 +195,80 @@ where
 					.as_widget_mut()
 					.operate(tree, layout, renderer, operation);
 			});
+		}
+	}
+
+	fn update
+	(
+		&mut self,
+		tree: &mut Tree,
+		event: &Event,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		renderer: &Renderer,
+		clipboard: &mut dyn Clipboard,
+		shell: &mut Shell<'_, Message>,
+		viewport: &Rectangle,
+	)
+	{
+		// Start by running updates on all the contents of the list view
+		for ((content, tree), layout) in self.contents
+			.iter_mut()
+			.zip(&mut tree.children)
+			.zip(layout.children())
+		{
+			content
+				.as_widget_mut()
+				.update(tree, event, layout, cursor, renderer, clipboard, shell, viewport);
+		}
+
+		// Check to see if we should already stop
+		if shell.is_event_captured()
+		{
+			return;
+		}
+
+		match event
+		{
+			Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) |
+			Event::Touch(touch::Event::FingerPressed { .. }) =>
+			{
+				if let Some(cursorPosition) = cursor.position()
+				{
+					let state = tree.state.downcast_mut::<ListViewState>();
+					let click = Click::new(cursorPosition, mouse::Button::Left, state.previousClick);
+					state.previousClick = Some(click);
+					shell.capture_event();
+				}
+			},
+			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) |
+			Event::Touch(touch::Event::FingerLifted { .. }) =>
+			{
+				let state = tree.state.downcast_ref::<ListViewState>();
+				if let Some(click) = &state.previousClick
+				{
+					if let Some(onDoubeClick) = &self.onDoubeClick && click.kind() == click::Kind::Double
+					{
+						// shell.publish(onDoubeClick());
+						shell.capture_event();
+					}
+					else if let Some(onSingleClick) = &self.onClick && click.kind() == click::Kind::Single
+					{
+						// shell.publish(onSingleClick());
+						shell.capture_event();
+					}
+				}
+			},
+			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) =>
+			{
+				// If the user has a right-click handler registered, handle the event with it
+				if let Some(onRightClick) = &self.onRightClick
+				{
+					// shell.publish(onRightClick(self.));
+					shell.capture_event();
+				}
+			},
+			_ => {},
 		}
 	}
 
