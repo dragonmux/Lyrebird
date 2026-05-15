@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::path::{Path, PathBuf};
 
-use serde::{Deserialize, Serialize};
+use crate::track::TrackID;
 
-#[derive(Clone, Serialize, Deserialize)]
 pub struct Playlist
 {
 	name: String,
-	entries: Vec<PathBuf>,
-
-	#[serde(skip)]
+	entries: Vec<TrackID>,
 	currentEntry: usize,
 }
 
@@ -27,24 +23,24 @@ impl Playlist
 
 	pub fn name(&self) -> &str
 	{
-		self.name.as_str()
+		&self.name
 	}
 
-	pub fn add(&mut self, fileName: &Path)
+	pub fn add(&mut self, trackID: TrackID)
 	{
-		self.entries.push(fileName.to_path_buf());
+		self.entries.push(trackID);
 	}
 
-	pub fn replaceWith(&mut self, fileName: &Path)
+	pub fn replaceWith(&mut self, trackID: TrackID)
 	{
 		self.entries.clear();
 		self.currentEntry = 0;
-		self.add(fileName);
+		self.add(trackID);
 	}
 
-	pub fn entry(&self, index: usize) -> &Path
+	pub fn entry(&self, index: usize) -> TrackID
 	{
-		self.entries[index].as_path()
+		self.entries[index]
 	}
 
 	pub fn nextEntry(&mut self, index: usize)
@@ -57,7 +53,7 @@ impl Playlist
 		self.currentEntry
 	}
 
-	pub fn next(&mut self) -> Option<PathBuf>
+	pub fn next(&mut self) -> Option<TrackID>
 	{
 		// If there are no entries in this playlist, we're done.. nothing comes next
 		if self.entries.is_empty()
@@ -77,6 +73,6 @@ impl Playlist
 			return None;
 		}
 		// Finally, we get to the happy path - give them what they want, a new entry from the playlist!
-		Some(self.entries[self.currentEntry].clone())
+		Some(self.entries[self.currentEntry])
 	}
 }

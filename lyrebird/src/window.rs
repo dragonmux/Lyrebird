@@ -18,6 +18,7 @@ use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, Song};
 use crate::playlists::Playlists;
 use crate::theme::{self, Theme};
+use crate::track::TrackID;
 use crate::widgets::trackProgress::TrackProgress;
 use crate::widgets::{Element, Renderer};
 use crate::widgets::tabBar::{TabBar, TabBarEnum};
@@ -138,31 +139,32 @@ impl MainWindowState
 			.into()
 	}
 
-	fn playSong(&mut self, fileName: &Path) -> Result<()>
+	fn playSong(&mut self, _trackID: TrackID) -> Result<()>
 	{
 		// Make a new channel for the new playback thread to communicate back to us with
-		let (sender, receiver) = channel(1);
-		let mut song = Song::from(fileName, sender)?;
-		let currentlyPlaying = self.currentlyPlaying.take();
-		// If we already have a song playing, stop it
-		if let Some((mut currentSong, _)) = currentlyPlaying
-		{
-			currentSong.stop()?;
-		}
-		// Now replace the current playing state with the new one having asked this new one to start
-		song.play();
-		self.currentlyPlaying = Some((song, receiver));
+		// let (sender, receiver) = channel(1);
+		// let mut song = Song::from(fileName, sender)?;
+		// let currentlyPlaying = self.currentlyPlaying.take();
+		// // If we already have a song playing, stop it
+		// if let Some((mut currentSong, _)) = currentlyPlaying
+		// {
+		// 	currentSong.stop()?;
+		// }
+		// // Now replace the current playing state with the new one having asked this new one to start
+		// song.play();
+		// self.currentlyPlaying = Some((song, receiver));
 		Ok(())
 	}
 
-	fn playlistSong(&mut self, fileName: &Path) -> Result<()>
+	#[allow(unused)]
+	fn playlistSong(&mut self, trackID: TrackID) -> Result<()>
 	{
 		let nowPlaying = self.playlists.nowPlaying();
-		nowPlaying.add(fileName);
+		nowPlaying.add(trackID);
 		match &self.currentlyPlaying
 		{
 			Some(_) => Ok(()),
-			None => self.playSong(fileName),
+			None => self.playSong(trackID),
 		}
 	}
 
@@ -185,7 +187,7 @@ impl MainWindowState
 				PlaybackState::NotStarted =>
 					{ song.play(); }
 				PlaybackState::Complete => {}
-				PlaybackState::Unknown(error) =>
+				PlaybackState::Unknown(_error) =>
 					{  }
 			}
 		}
@@ -212,7 +214,7 @@ impl MainWindowState
 				let nextEntry = nowPlaying.next();
 				match nextEntry
 				{
-					Some(fileName) => self.playSong(fileName.as_path())?,
+					Some(trackID) => self.playSong(trackID)?,
 					None => self.currentlyPlaying = None,
 				}
 			},

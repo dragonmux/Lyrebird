@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use serde::{Deserialize, Serialize};
 
 use crate::window::Operation;
 use crate::playlist::Playlist;
 
-#[derive(Serialize, Deserialize)]
 pub struct Playlists
 {
 	nowPlaying: Playlist,
