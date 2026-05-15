@@ -60,7 +60,6 @@ pub trait TreeItem<Message>: Sized
 	fn nodeID(&self) -> Self::ItemID;
 	fn displayText(&self) -> String;
 	fn children(&self) -> &[Self];
-	fn selectMessage(&self) -> Message;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

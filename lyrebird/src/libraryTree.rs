@@ -75,6 +75,7 @@ impl LibraryTree
 				scrollable
 				(
 					TreeView::new(&directoryTree, Some(self.selectedDirectory))
+						.onSelect(|nodeID| Message::LibraryTree(messages::LibraryTree::SelectDirectory(nodeID)))
 				)
 					.width(Length::Fill)
 					.height(Length::Fill)
@@ -209,11 +210,6 @@ impl TreeItem<Message> for DirectoryTree
 	fn children(&self) -> &[Self]
 	{
 		&self.children
-	}
-
-	fn selectMessage(&self) -> Message
-	{
-		Message::LibraryTree(messages::LibraryTree::SelectDirectory(self.id))
 	}
 }
 
