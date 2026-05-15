@@ -462,3 +462,11 @@ impl DirectoryID
 		Self(id)
 	}
 }
+
+impl From<DirectoryID> for u64
+{
+	fn from(id: DirectoryID) -> Self
+	{
+		id.0
+	}
+}

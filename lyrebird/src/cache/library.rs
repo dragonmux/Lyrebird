@@ -79,9 +79,126 @@ pub struct LibraryMaps
 
 impl MusicLibrary
 {
+	pub fn new
+	(
+		dirs: &BTreeMap<DirectoryID, library::Directory>,
+		tracks: &BTreeMap<TrackID, track::Track>,
+		artists: &BTreeMap<ArtistID, track::Artist>,
+		albums: &BTreeMap<AlbumID, track::Album>,
+	) -> Self
+	{
+		let mut trackList = Vec::new();
+		for track in tracks.values()
+		{
+			// Look up the track in the library's directories map and find which one it belongs in
+			let directoryID = dirs
+				.iter()
+				.find(|(_, directory)| directory.contents().contains(&track.id()))
+				.map(|(&directoryID, _)| directoryID)
+				.expect("Track somehow has no holding directory even though it must");
+			// Map the track back to the cache version of Track and add it to the list
+			trackList.push(Track
+			{
+				id: track.id().into(),
+				directoryID: directoryID.into(),
+				fileName: track.fileName().into(),
+				totalLength: track.totalLength(),
+				title: track.title().into(),
+				artist: track.artistID().map(Into::into),
+				album: track.albumID().map(Into::into),
+			});
+		}
+
+		Self
+		{
+			directories: Directory::from_map(dirs),
+			tracks: trackList,
+			artists: Artist::from_map(artists),
+			albums: Album::from_map(albums),
+		}
+	}
+
 	pub fn to_maps(self) -> Result<LibraryMaps>
 	{
 		self.try_into()
+	}
+}
+
+impl Directory
+{
+	pub fn from_map(map: &BTreeMap<DirectoryID, library::Directory>) -> Vec<Self>
+	{
+		let mut directories = Vec::new();
+		// Loop through all the directories in the map
+		for directory in map.values()
+		{
+			// See what the parent of the directory is, if there is one
+			// (if there isn't it's the root directory, so synth a fake ID for it)
+			let parentID = map
+				.iter()
+				.find(|(_, dir)| dir.subdirs().contains(&directory.id()))
+				.map(|(&directoryID, _)| directoryID)
+				.unwrap_or_else(|| DirectoryID::new(0));
+			// Figure out what the name of this directory is
+			let name = if directory.id() == DirectoryID::new(0)
+			{
+				directory.path().as_os_str()
+			}
+			else
+			{
+				directory
+					.path()
+					.file_name()
+					.expect("Directory somehow has no parent even though it's below another")
+			}
+				.to_string_lossy();
+			// Turn the result into a cache Directory object and add it to the list
+			directories.push(Directory
+			{
+				id: directory.id().into(),
+				parentID: parentID.into(),
+				name: name.to_string(),
+			});
+		}
+		directories
+	}
+}
+
+impl Artist
+{
+	pub fn from_map(map: &BTreeMap<ArtistID, track::Artist>) -> Vec<Self>
+	{
+		let mut artists = Vec::new();
+		// Loop through all the artists in the map
+		for (artistID, artist) in map
+		{
+			// Map the artist back to an ID and a name and add the resulting Artist object to the list
+			artists.push(Artist
+			{
+				id: artistID.into(),
+				name: artist.name().into(),
+			});
+		}
+		artists
+	}
+}
+
+impl Album
+{
+	pub fn from_map(map: &BTreeMap<AlbumID, track::Album>) -> Vec<Self>
+	{
+		let mut albums = Vec::new();
+		// Loop through all the albums in the map
+		for (albumID, album) in map
+		{
+			// Map the album back to an ID and a name and add the resulting Album object to the list
+			albums.push(Album
+			{
+				id: albumID.into(),
+				name: album.name().into(),
+			});
+		}
+		albums
 	}
 }
 

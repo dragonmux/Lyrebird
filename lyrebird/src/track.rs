@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use std::path::PathBuf;
+use std::{borrow::Cow, path::PathBuf};
 
 use color_eyre::eyre::Result;
 use libAudio::audioFile::AudioFile;
@@ -127,9 +127,37 @@ impl Track
 		TrackID(self.id)
 	}
 
+	pub fn fileName(&self) -> Cow<'_, str>
+	{
+		self.fileName.file_name().unwrap_or_else(|| self.fileName.as_os_str()).to_string_lossy()
+	}
+
+	pub fn totalLength(&self) -> u64
+	{
+		self.totalLength
+	}
+
 	pub fn title(&self) -> &str
 	{
 		&self.title
+	}
+
+	pub fn artistID(&self) -> Option<ArtistID>
+	{
+		self.artist
+	}
+
+	pub fn albumID(&self) -> Option<AlbumID>
+	{
+		self.album
+	}
+}
+
+impl From<TrackID> for u64
+{
+	fn from(id: TrackID) -> Self
+	{
+		id.0
 	}
 }
 
@@ -170,6 +198,22 @@ impl ArtistID
 	}
 }
 
+impl From<ArtistID> for u64
+{
+	fn from(id: ArtistID) -> Self
+	{
+		id.0
+	}
+}
+
+impl From<&ArtistID> for u64
+{
+	fn from(id: &ArtistID) -> Self
+	{
+		id.0
+	}
+}
+
 impl Album
 {
 	pub fn new(albumName: &str) -> Self
@@ -204,5 +248,21 @@ impl AlbumID
 	pub fn next(&self) -> Self
 	{
 		Self(self.0 + 1)
+	}
+}
+
+impl From<AlbumID> for u64
+{
+	fn from(id: AlbumID) -> Self
+	{
+		id.0
+	}
+}
+
+impl From<&AlbumID> for u64
+{
+	fn from(id: &AlbumID) -> Self
+	{
+		id.0
 	}
 }
