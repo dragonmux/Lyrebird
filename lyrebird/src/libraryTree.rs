@@ -242,6 +242,13 @@ impl TrackEntry
 
 impl ListItem for TrackEntry
 {
+	type ItemID = TrackID;
+
+	fn nodeID(&self) -> TrackID
+	{
+		self.id
+	}
+
 	fn displayText(&self) -> String
 	{
 		self.name.clone()

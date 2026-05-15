@@ -4,8 +4,9 @@ use iced::{Length, Padding, Rectangle, Size, mouse};
 use iced_core::{Layout, Widget, layout, renderer, widget::Tree};
 use iced_widget::text;
 
-pub struct ListView<'a, Message, Theme, Renderer = iced::Renderer>
+pub struct ListView<'a, Items, Message, Theme, Renderer = iced::Renderer>
 where
+	Items: ListItem,
 	Theme: Catalog,
 	Renderer: iced_core::Renderer,
 {
@@ -13,10 +14,20 @@ where
 	width: Length,
 	height: Length,
 	class: Theme::Class<'a>,
+	onClick: Option<OnClickFn<'a, Items::ItemID, Message>>,
+	onDoubeClick: Option<OnDoubeClickFn<'a, Items::ItemID, Message>>,
+	onRightClick: Option<OnRightClickFn<'a, Items::ItemID, Message>>,
 }
+
+type OnClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
+type OnDoubeClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
+type OnRightClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
 
 pub trait ListItem: Sized
 {
+	type ItemID: Clone + Copy;
+
+	fn nodeID(&self) -> Self::ItemID;
 	fn displayText(&self) -> String;
 }
 
@@ -34,15 +45,14 @@ pub trait Catalog
 
 pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
 
-impl<'a, Message, Theme, Renderer> ListView<'a, Message, Theme, Renderer>
+impl<'a, Items, Message, Theme, Renderer> ListView<'a, Items, Message, Theme, Renderer>
 where
+	Items: ListItem + 'a,
 	Message: 'a,
 	Theme: Catalog + text::Catalog + 'a,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
 {
-	pub fn new<Items>(items: &[Items]) -> Self
-	where
-		Items: ListItem
+	pub fn new(items: &[Items]) -> Self
 	{
 		Self
 		{
@@ -50,6 +60,9 @@ where
 			width: Length::Shrink,
 			height: Length::Shrink,
 			class: <Theme as Catalog>::default(),
+			onClick: None,
+			onDoubeClick: None,
+			onRightClick: None,
 		}
 	}
 
@@ -68,10 +81,38 @@ where
 		self.height = height.into();
 		self
 	}
+
+	/// Sets the function to call to generate a [`Message`] for the [`ListView`] node when
+	/// the node gets clicked if you wish to handle single click somehow
+	#[must_use]
+	pub fn onClick(mut self, click: impl Fn(Items::ItemID) -> Message + 'a) -> Self
+	{
+		self.onClick = Some(Box::new(click));
+		self
+	}
+
+	/// Sets the function to call to generate a [`Message`] for the [`ListView`] node when
+	/// the node gets clicked if you wish to handle double click somehow
+	#[must_use]
+	pub fn onDoubeClick(mut self, doubeClick: impl Fn(Items::ItemID) -> Message + 'a) -> Self
+	{
+		self.onDoubeClick = Some(Box::new(doubeClick));
+		self
+	}
+
+	/// Sets the function to call to generate a [`Message`] for the [`ListView`] node when
+	/// the node gets clicked if you wish to handle right click somehow
+	#[must_use]
+	pub fn onRightClick(mut self, rightClick: impl Fn(Items::ItemID) -> Message + 'a) -> Self
+	{
+		self.onRightClick = Some(Box::new(rightClick));
+		self
+	}
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for ListView<'a, Message, Theme, Renderer>
+impl<'a, Items, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for ListView<'a, Items, Message, Theme, Renderer>
 where
+	Items: ListItem,
 	Theme: Catalog,
 	Renderer: iced_core::Renderer,
 {
@@ -143,14 +184,15 @@ where
 	}
 }
 
-impl<'a, Message, Theme, Renderer> From<ListView<'a, Message, Theme, Renderer>>
+impl<'a, Items, Message, Theme, Renderer> From<ListView<'a, Items, Message, Theme, Renderer>>
 	for iced::Element<'a, Message, Theme, Renderer>
 where
+	Items: ListItem + 'a,
 	Message: 'a,
 	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + 'a,
 {
-	fn from(listView: ListView<'a, Message, Theme, Renderer>) -> Self
+	fn from(listView: ListView<'a, Items, Message, Theme, Renderer>) -> Self
 	{
 		Self::new(listView)
 	}
