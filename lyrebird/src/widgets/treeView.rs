@@ -143,6 +143,16 @@ where
 		self.setup.borrow_mut().height = height.into();
 		self
 	}
+
+	/// Changes the style of the [`TreeView`]
+	#[must_use]
+	pub fn style(self, style: impl Fn(&Theme) -> Style + 'a) -> Self
+	where
+		<Theme as Catalog>::Class<'a>: From<StyleFn<'a, Theme>>,
+	{
+		self.setup.borrow_mut().class = (Box::new(style) as StyleFn<'a, Theme>).into();
+		self
+	}
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for TreeView<'a, Message, Theme, Renderer>
