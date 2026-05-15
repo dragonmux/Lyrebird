@@ -6,30 +6,35 @@ use iced::{Background, Border, Color, Event, Length, Rectangle, Size, mouse, tou
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer::{self, Quad}, widget::{Operation, Tree, tree}, window};
 use iced_widget::{column, text};
 
-pub struct TreeView<'a, Message, Theme, Renderer = iced::Renderer>
+pub struct TreeView<'a, Model, Message, Theme, Renderer = iced::Renderer>
 where
+	Model: TreeItem<Message>,
 	Message: Clone,
 	Theme: Catalog,
 	Renderer: iced_core::Renderer,
 {
+	nodeID: Model::ItemID,
 	node: iced_core::Element<'a, Message, Theme, Renderer>,
 	subtree: iced_core::Element<'a, Message, Theme, Renderer>,
-	setup: Rc<RefCell<TreeViewSetup<'a, Theme>>>,
-	selectMessage: Message,
+	setup: Rc<RefCell<TreeViewSetup<'a, Model::ItemID, Message, Theme>>>,
 	state: State,
 }
 
 /// Structure to hold all the setup information for the [`TreeView`], to be held via Rc for all sub-trees
 /// so the tree view gets a consistent setup all the way down, and things like setting the click handler
 /// works correctly with less magic in [`TreeItem`]
-struct TreeViewSetup<'a, Theme>
+struct TreeViewSetup<'a, ItemID, Message, Theme>
 where
+	Message: Clone,
 	Theme: Catalog,
 {
 	width: Length,
 	height: Length,
 	class: Theme::Class<'a>,
+	onSelect: Option<OnSelectFn<'a, ItemID, Message>>,
 }
+
+type OnSelectFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
 
 /// The possible states of a [`TabButton`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -77,15 +82,14 @@ pub trait Catalog
 
 pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
 
-impl<'a, Message, Theme, Renderer> TreeView<'a, Message, Theme, Renderer>
+impl<'a, Model, Message, Theme, Renderer> TreeView<'a, Model, Message, Theme, Renderer>
 where
+	Model: TreeItem<Message> + 'a,
 	Message: Clone + 'a,
 	Theme: Catalog + text::Catalog + 'a,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
 {
-	pub fn new<Model>(model: &Model, selectedNode: Option<Model::ItemID>) -> Self
-	where
-		Model: TreeItem<Message>
+	pub fn new(model: &Model, selectedNode: Option<Model::ItemID>) -> Self
 	{
 		let setup = Rc::new
 		(
@@ -96,20 +100,19 @@ where
 					width: Length::Shrink,
 					height: Length::Shrink,
 					class: <Theme as Catalog>::default(),
+					onSelect: None,
 				}
 			)
 		);
 		Self::with_setup(model, selectedNode, setup)
 	}
 
-	fn with_setup<Model>
+	fn with_setup
 	(
 		model: &Model,
 		selectedNode: Option<Model::ItemID>,
-		setup: Rc<RefCell<TreeViewSetup<'a, Theme>>>
+		setup: Rc<RefCell<TreeViewSetup<'a, Model::ItemID, Message, Theme>>>
 	) -> Self
-	where
-		Model: TreeItem<Message>
 	{
 		// Turn all the child items into tree views of their own
 		let subtree = model.children()
@@ -120,10 +123,10 @@ where
 
 		Self
 		{
+			nodeID: model.nodeID(),
 			node: text(model.displayText()).into(),
 			subtree: column(subtree).into(),
 			setup,
-			selectMessage: model.selectMessage(),
 			state: if isSelected { State::Selected } else { State::Unselected },
 		}
 	}
@@ -153,10 +156,20 @@ where
 		self.setup.borrow_mut().class = (Box::new(style) as StyleFn<'a, Theme>).into();
 		self
 	}
+
+	/// Sets the function to call to generate a [`Message`] for the [`TreeView`] node when
+	/// the node gets selected if you wish to handle selection somehow
+	#[must_use]
+	pub fn onSelect(self, select: impl Fn(Model::ItemID) -> Message + 'a) -> Self
+	{
+		self.setup.borrow_mut().onSelect = Some(Box::new(select));
+		self
+	}
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for TreeView<'a, Message, Theme, Renderer>
+impl<'a, Model, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for TreeView<'a, Model, Message, Theme, Renderer>
 where
+	Model: TreeItem<Message>,
 	Message: Clone,
 	Theme: Catalog,
 	Renderer: iced_core::Renderer,
@@ -347,7 +360,11 @@ where
 					state.pressed = false;
 					if cursor.is_over(bounds)
 					{
-						shell.publish(self.selectMessage.clone());
+						let onSelect = &self.setup.borrow().onSelect;
+						if let Some(onSelect) = onSelect
+						{
+							shell.publish(onSelect(self.nodeID));
+						}
 					}
 					shell.capture_event();
 				}
@@ -486,14 +503,15 @@ where
 	}
 }
 
-impl<'a, Message, Theme, Renderer> From<TreeView<'a, Message, Theme, Renderer>>
+impl<'a, Model, Message, Theme, Renderer> From<TreeView<'a, Model, Message, Theme, Renderer>>
 	for iced::Element<'a, Message, Theme, Renderer>
 where
+	Model: TreeItem<Message> + 'a,
 	Message: Clone + 'a,
 	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + 'a,
 {
-	fn from(treeView: TreeView<'a, Message, Theme, Renderer>) -> Self
+	fn from(treeView: TreeView<'a, Model, Message, Theme, Renderer>) -> Self
 	{
 		Self::new(treeView)
 	}
