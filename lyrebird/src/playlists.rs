@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use crate::window::Operation;
 use crate::playlist::Playlist;
 
 pub struct Playlists

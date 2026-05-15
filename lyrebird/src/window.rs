@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
 use color_eyre::Result;
@@ -42,30 +41,6 @@ pub struct MainWindowState
 pub struct MainWindow
 {
 	musicLibrary: Arc<RwLock<MusicLibrary>>,
-}
-
-pub enum Operation
-{
-	/// Processing event determined there's nothing needs to be done
-	None,
-	/// Play a file, replacing the Now Playing playlist
-	Play(PathBuf),
-	/// Play a file already in the Now Playing playlist as if the current reached `PlaybackState::Complete`
-	PlayNext(PathBuf),
-	/// Add a file to the Now Playing playlist
-	Playlist(PathBuf),
-}
-
-impl Operation
-{
-	pub fn playlist(song: Option<PathBuf>) -> Self
-	{
-		match song
-		{
-			Some(song) => Operation::Playlist(song),
-			None => Operation::None,
-		}
-	}
 }
 
 impl MainWindowState
