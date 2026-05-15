@@ -80,7 +80,11 @@ impl MusicLibrary
 		{
 			Ok(mut library) => match library.fromCache()
 			{
-				Ok(_) => Message::LibraryLoaded,
+				Ok(_) =>
+				{
+					info!("Cache successfully loaded");
+					Message::LibraryLoaded
+				},
 				Err(error) =>
 				{
 					error!("Failed to load library from cache");
@@ -106,6 +110,7 @@ impl MusicLibrary
 		{
 			return Err(eyre!("Cache file {} does not exist", self.cacheFile.display()));
 		}
+		info!("Loading library from cache at {}", self.cacheFile.display());
 		// Try load the cache and convert it into a set of library maps
 		let library = cache::loadLibrary(&self.cacheFile)?;
 		let maps = library.to_maps()?;
