@@ -11,6 +11,7 @@ use iced_futures::backend::default::Executor;
 use iced_widget::{Column, text};
 use tracing::error;
 
+use crate::albumList::AlbumList;
 use crate::artistList::ArtistList;
 use crate::library::MusicLibrary;
 use crate::messages::{Message, Tab};
@@ -31,6 +32,7 @@ pub struct MainWindowState
 
 	libraryTree: LibraryTree,
 	artistList: ArtistList,
+	albumList: AlbumList,
 	optionsPanel: OptionsPanel,
 	playlists: Playlists,
 
@@ -54,6 +56,7 @@ impl MainWindowState
 
 			libraryTree: LibraryTree::new(mainWindow.musicLibrary.clone()),
 			artistList: ArtistList::new(mainWindow.musicLibrary.clone()),
+			albumList: AlbumList::new(mainWindow.musicLibrary.clone()),
 			optionsPanel: OptionsPanel::new(),
 			playlists: Playlists::new(),
 
@@ -72,6 +75,7 @@ impl MainWindowState
 				return Task::future(MusicLibrary::writeCache(mainWindow.musicLibrary.clone())),
 			Message::LibraryTree(message) => self.libraryTree.update(message),
 			Message::ArtistList(message) => self.artistList.update(message),
+			Message::AlbumList(message) => self.albumList.update(message),
 			Message::PlayNow(trackID) => self.playTrack(trackID).expect("Playing track should have worked"),
 			_ => {},
 		}
@@ -89,6 +93,7 @@ impl MainWindowState
 		{
 			Tab::LibraryTree => self.libraryTree.view(),
 			Tab::Artists => self.artistList.view(),
+			Tab::Albums => self.albumList.view(),
 			tab =>
 				text!("{} content", tab.name())
 					.style(theme::text::general)

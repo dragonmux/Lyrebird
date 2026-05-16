@@ -244,6 +244,11 @@ impl Album
 	{
 		&self.name
 	}
+
+	pub fn tracks(&self) -> &[TrackID]
+	{
+		&self.tracks
+	}
 }
 
 impl AlbumID

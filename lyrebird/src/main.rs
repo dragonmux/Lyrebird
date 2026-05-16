@@ -11,6 +11,7 @@ use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 use window::MainWindow;
 
+mod albumList;
 mod artistList;
 mod cache;
 mod config;

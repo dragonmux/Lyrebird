@@ -396,6 +396,11 @@ impl MusicLibrary
 		unsafe { self.artists.get_mut(&artistID).unwrap_unchecked() }
 	}
 
+	pub fn albums(&self) -> impl Iterator<Item = &AlbumID>
+	{
+		self.albums.keys()
+	}
+
 	/// Find the Album object associated with a particular AlbumID and return it by reference
 	pub fn albumFor(&self, albumID: AlbumID) -> &Album
 	{
