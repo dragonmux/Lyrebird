@@ -204,7 +204,8 @@ where
 
 	fn diff(&self, tree: &mut Tree)
 	{
-		tree.diff_children(&self.contents);
+		tree.children.clear();
+		tree.children.extend(self.contents.iter().map(Tree::new));
 	}
 
 	fn size(&self) -> Size<Length>
@@ -416,7 +417,7 @@ where
 		Self
 		{
 			nodeID,
-			content: text(displayText).into(),
+			content: text(displayText).width(Length::Fill).into(),
 			setup,
 			state: State::Normal,
 		}
