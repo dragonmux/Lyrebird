@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use iced::{Event, Length, Padding, Rectangle, Size, mouse, touch};
+use iced::{Color, Event, Length, Padding, Rectangle, Size, mouse, touch};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, mouse::{Click, click}, renderer, widget::{Operation, Tree, tree}};
 use iced_widget::text;
 
@@ -66,6 +66,8 @@ where
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Style
 {
+	pub normalColour: Color,
+	pub hoverColour: Color,
 }
 
 pub trait Catalog

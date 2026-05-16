@@ -26,6 +26,7 @@ pub struct Styles
 	pub text: Text,
 	pub scrollbar: Scrollbar,
 	pub treeView: TreeView,
+	pub listView: ListView,
 }
 
 pub struct General
@@ -94,6 +95,12 @@ pub struct TreeView
 	pub normal: Color,
 	pub hover: Color,
 	pub selected: Color,
+}
+
+pub struct ListView
+{
+	pub normal: Color,
+	pub hover: Color,
 }
 
 impl Theme
@@ -210,6 +217,11 @@ impl Default for Styles
 				normal: Color::from_rgb8(0xa0, 0xa0, 0xa0),
 				hover: Color::from_rgb8(0xd3, 0xd3, 0xd3),
 				selected: Color::from_rgb8(0x72, 0x9f, 0xcf),
+			},
+			listView: ListView
+			{
+				normal: Color::from_rgb8(0xa0, 0xa0, 0xa0),
+				hover: Color::from_rgb8(0xd3, 0xd3, 0xd3),
 			}
 		}
 	}
