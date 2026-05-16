@@ -8,13 +8,12 @@ use iced::alignment::Horizontal;
 use iced::{Length, Program, Settings, Task, window};
 use iced_futures::backend::default::Executor;
 use iced_widget::{Column, text};
-use tokio::sync::mpsc::{channel, Receiver};
 use tracing::error;
 
 use crate::library::MusicLibrary;
 use crate::messages::{Message, Tab};
 use crate::options::OptionsPanel;
-use crate::playback::{PlaybackState, Song};
+use crate::playback::{PlaybackState, TrackState};
 use crate::playlists::Playlists;
 use crate::theme::{self, Theme};
 use crate::track::TrackID;
@@ -34,7 +33,7 @@ pub struct MainWindowState
 	optionsPanel: OptionsPanel,
 	playlists: Playlists,
 
-	currentlyPlaying: Option<(Song, Receiver<PlaybackState>)>,
+	currentlyPlaying: Option<TrackState>,
 }
 
 /// Represents the main window of Lyrebird itself
@@ -81,10 +80,7 @@ impl MainWindowState
 	{
 		// Build the window header (view selector) and footer (playback status bar)
 		let header = self.tabBar.view();
-		let footer = TrackProgress::new
-		(
-			self.currentlyPlaying.as_ref().map(|(track, _)| track)
-		);
+		let footer = TrackProgress::new(self.currentlyPlaying.as_ref());
 
 		// Figure out what to display in the main area
 		let content = match self.tabBar.activeTab()
@@ -114,20 +110,25 @@ impl MainWindowState
 			.into()
 	}
 
-	fn playSong(&mut self, _trackID: TrackID) -> Result<()>
+	fn playTrack(&mut self, trackID: TrackID) -> Result<()>
 	{
-		// Make a new channel for the new playback thread to communicate back to us with
-		// let (sender, receiver) = channel(1);
-		// let mut song = Song::from(fileName, sender)?;
-		// let currentlyPlaying = self.currentlyPlaying.take();
-		// // If we already have a song playing, stop it
-		// if let Some((mut currentSong, _)) = currentlyPlaying
-		// {
-		// 	currentSong.stop()?;
-		// }
-		// // Now replace the current playing state with the new one having asked this new one to start
-		// song.play();
-		// self.currentlyPlaying = Some((song, receiver));
+		// Try and lock access to the library to get the track data for this track
+		let library= self.libraryTree.library();
+		let library = library
+			.read()
+			.expect("Library should be lockable for read");
+		// Grab the track and turn it into state info, dropping our library lock
+		let mut track = TrackState::new(library.trackFor(trackID), &library)?;
+		drop(library);
+		// See if another is currently playing, and make it stop if it is
+		let currentlyPlaying = self.currentlyPlaying.take();
+		if let Some(mut currentTrack) = currentlyPlaying
+		{
+			currentTrack.stop()?;
+		}
+		// Start the new track playing and push it into the state tracker
+		track.play();
+		self.currentlyPlaying = Some(track);
 		Ok(())
 	}
 
@@ -139,19 +140,19 @@ impl MainWindowState
 		match &self.currentlyPlaying
 		{
 			Some(_) => Ok(()),
-			None => self.playSong(trackID),
+			None => self.playTrack(trackID),
 		}
 	}
 
 	fn togglePlayback(&mut self)
 	{
-		if let Some((song, _)) = &mut self.currentlyPlaying
+		if let Some(track) = &mut self.currentlyPlaying
 		{
-			match song.state()
+			match track.state()
 			{
 				PlaybackState::Playing =>
 				{
-					let result = song.pause();
+					let result = track.pause();
 					if let Err(error) = result
 					{
 						error!("{}", error);
@@ -160,7 +161,7 @@ impl MainWindowState
 				PlaybackState::Paused |
 				PlaybackState::Stopped |
 				PlaybackState::NotStarted =>
-					{ song.play(); }
+					{ track.play(); }
 				PlaybackState::Complete => {}
 				PlaybackState::Unknown(_error) =>
 					{  }
@@ -172,9 +173,14 @@ impl MainWindowState
 	// error to call this function if self.currentlyPlaying is None!
 	async fn playbackNotification(&mut self) -> Option<PlaybackState>
 	{
-		#[expect(clippy::unwrap_used, reason = "impossible in context")]
-		let (_, channel) = self.currentlyPlaying.as_mut().unwrap();
-		channel.recv().await
+		if let Some(track) = &mut self.currentlyPlaying
+		{
+			track.notification().recv().await
+		}
+		else
+		{
+			None
+		}
 	}
 
 	fn handlePlaybackNotification(&mut self, notification: &PlaybackState) -> Result<()>
@@ -189,7 +195,7 @@ impl MainWindowState
 				let nextEntry = nowPlaying.next();
 				match nextEntry
 				{
-					Some(trackID) => self.playSong(trackID)?,
+					Some(trackID) => self.playTrack(trackID)?,
 					None => self.currentlyPlaying = None,
 				}
 			},

@@ -6,7 +6,7 @@ use iced::{Alignment, Background, Border, Color, Length, Padding, Point, Rectang
 use iced_core::{Layout, Widget, layout, renderer, widget::Tree};
 use iced_widget::{container, progress_bar, row, text};
 
-use crate::{messages::Message, playback::Song, theme::{self, Theme}};
+use crate::{messages::Message, playback::TrackState, theme::{self, Theme}};
 
 pub struct TrackProgress<'a, Theme, Renderer = iced::Renderer>
 where
@@ -57,11 +57,11 @@ where
 	Theme: Catalog + 'a,
 	Renderer: iced_core::text::Renderer + 'a
 {
-	pub fn new(track: Option<&'a Song>) -> Self
+	pub fn new(track: Option<&'a TrackState>) -> Self
 	{
 		let children = vec!
 		[
-			container(text(track.map_or_else(|| "Nothing playing", |song| &song.description())))
+			container(text(track.map_or_else(|| "Nothing playing", |track| &track.description())))
 				.style(theme::container::transparent)
 				.width(Length::FillPortion(4))
 				.align_x(Alignment::Start)
@@ -76,10 +76,10 @@ where
 			row
 			(
 				[
-					text(durationAsString(track.map(|song| song.playedDuration())))
+					text(durationAsString(track.map(|track| track.playedDuration())))
 						.into(),
 					text("/").into(),
-					text(durationAsString(track.and_then(|song| song.songDuration())))
+					text(durationAsString(track.and_then(|track| track.trackDuration())))
 						.into(),
 				]
 			)
@@ -99,9 +99,9 @@ where
 				(
 					track.and_then
 					(
-						|song| song.songDuration()).map_or_else(|| 0.0..=1.0, |duration| 0.0..=duration.as_secs_f32()
+						|track| track.trackDuration()).map_or_else(|| 0.0..=1.0, |duration| 0.0..=duration.as_secs_f32()
 					),
-					track.map_or_else(|| 0.0, |song| song.playedDuration().as_secs_f32()),
+					track.map_or_else(|| 0.0, |track| track.playedDuration().as_secs_f32()),
 				)
 					.style(playbackProgressStyle)
 					.girth(Length::Fixed(10.0))

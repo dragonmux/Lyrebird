@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::path::Path;
+
 use std::sync::{Arc, Mutex};
 use std::thread::{spawn, JoinHandle};
 use std::time::Duration;
 
-use color_eyre::eyre::{self, OptionExt, Result};
+use color_eyre::eyre::{self, OptionExt, Result, eyre};
 use libAudio::audioFile::AudioFile;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 
-pub struct Song
+use crate::library::MusicLibrary;
+use crate::track::Track;
+
+pub struct TrackState
 {
 	description: String,
 	duration: Option<Duration>,
 	played: Duration,
+	notification: Receiver<PlaybackState>,
 	playbackThread: Option<JoinHandle<()>>,
-	state: Arc<ThreadState>
+	state: Arc<ThreadState>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -35,85 +39,73 @@ struct ThreadState
 	state: Mutex<PlaybackState>,
 }
 
-impl Song
+impl TrackState
 {
-	/// Try to make a new Song from the path to a given file
-	pub fn from(fileName: &Path, notificationChannel: Sender<PlaybackState>) -> Result<Self>
+	pub fn new(track: &Track, library: &MusicLibrary) -> Result<Self>
 	{
-		// Ask libAudio to open the file for read and playback, and grab how long the file's playback lasts
-		let audioFile = AudioFile::readFile(fileName)
-			.ok_or_eyre(format!("Failed to open file {}", fileName.to_string_lossy()))?;
-		let totalTime = audioFile.fileInfo().totalTime();
+		let audioFile = track.audioFile()
+			.ok_or_eyre(eyre!("Failed to open file {}", track.fileName()))?;
+		let (sender, receiver) = channel(1);
+		let totalTime = track.totalLength();
+		let album = track
+			.albumID()
+			.map(|albumID| library.albumFor(albumID))
+			.map(|album| album.name());
+		let artist = track
+			.artistID()
+			.map(|artistID| library.artistFor(artistID))
+			.map(|artist| artist.name());
 
-		// Build a description of the song being played to display
-		let fileInfo = audioFile.fileInfo();
-		let title = fileInfo.title()?;
-		let album = fileInfo.album()?;
-		let artist = fileInfo.artist()?;
-
-		Ok
-		(
-			Self
-			{
-				description: Self::buildDescriptionFrom(fileName, title, album, artist),
-				duration: if totalTime != 0 { Some(Duration::from_secs(totalTime)) } else { None },
-				played: Duration::default(),
-				playbackThread: None,
-				state: Arc::new(ThreadState::from(audioFile, notificationChannel)),
-			}
-		)
+		Ok(Self
+		{
+			description: Self::buildDescriptionFrom(track.title(), album, artist),
+			duration: if totalTime != 0 { Some(Duration::from_secs(totalTime)) } else { None },
+			played: Duration::default(),
+			notification: receiver,
+			playbackThread: None,
+			state: Arc::new(ThreadState::from(audioFile, sender))
+		})
 	}
 
 	// Try to build a description of this track from parts
-	fn buildDescriptionFrom(fileName: &Path, title: Option<String>, album: Option<String>, artist: Option<String>)
+	fn buildDescriptionFrom(title: &str, album: Option<&str>, artist: Option<&str>)
 		-> String
 	{
-		// If the title, album and artist are all missing, then use the full path to the file as a description
-		if title.is_none() && album.is_none() && artist.is_none()
-		{
-			return fileName.to_string_lossy().to_string();
-		}
-
-		// Otherwise, at least one of these is not None, so try to build up
-		// the description chunks, starting with the title
-		let mut description = match title
-		{
-			Some(title) => title.clone(),
-			None => fileName.file_name().unwrap_or(fileName.as_os_str()).to_string_lossy().to_string(),
-		};
+		// Start out with the track title, turning it into an owned String
+		let mut description = title.to_string();
 		// Now add the album, if we have one
 		if let Some(album) = album
 		{
-			description += format!(" - {album}").as_str();
+			description += &format!(" - {album}");
 		}
 		// And finally the artist, if we have that
 		if let Some(artist) = artist
 		{
-			description += format!(" - {artist}").as_str();
+			description += &format!(" - {artist}");
 		}
 
 		description
 	}
 
-	// Return a reference to a description of what the song is
+	/// Return a reference to a description of what the track is
 	pub fn description(&self) -> &str
 	{
 		&self.description
 	}
 
-	// Extract how long the song runs for
-	pub fn songDuration(&self) -> Option<Duration>
+	/// Extract how long the track runs for
+	pub fn trackDuration(&self) -> Option<Duration>
 	{
 		self.duration
 	}
 
-	// Extract how much we've played of this song
+	/// Extract how much we've played of this track
 	pub fn playedDuration(&self) -> Duration
 	{
 		self.played
 	}
 
-	// Launch playback of the song on a seperate thread
+	/// Launch playback of the track on a seperate thread
 	pub fn play(&mut self)
 	{
 		// If there is not already playback running
@@ -125,7 +117,7 @@ impl Song
 		}
 	}
 
-	// Pause playback of the song
+	/// Pause playback of the track
 	pub fn pause(&mut self) -> Result<()>
 	{
 		// If we're in a playing state, pause playback
@@ -134,7 +126,7 @@ impl Song
 		result
 	}
 
-	// Stop playback of the song
+	/// Stop playback of the track
 	pub fn stop(&mut self) -> Result<()>
 	{
 		// If we're in a playing state, stop playback
@@ -143,7 +135,7 @@ impl Song
 		result
 	}
 
-	// Query the state playback is currently in for this song
+	/// Query the state playback is currently in for this track
 	pub fn state(&self) -> PlaybackState
 	{
 		self.state.state.lock()
@@ -152,6 +144,11 @@ impl Song
 				|error| PlaybackState::Unknown(error.to_string()),
 				|lock| lock.clone()
 			)
+	}
+
+	pub fn notification(&mut self) -> &mut Receiver<PlaybackState>
+	{
+		&mut self.notification
 	}
 }
 
