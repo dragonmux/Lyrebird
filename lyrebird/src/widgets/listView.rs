@@ -31,10 +31,20 @@ struct ListViewState
 
 pub trait ListItem: Sized
 {
-	type ItemID: Clone + Copy;
+	type ItemID: Copy + 'static;
 
 	fn nodeID(&self) -> Self::ItemID;
 	fn displayText(&self) -> String;
+}
+
+struct ListEntry<'a, ItemID, Message, Theme, Renderer = iced::Renderer>
+where
+	ItemID: Copy,
+	Theme: Catalog,
+	Renderer: iced_core::Renderer,
+{
+	nodeID: ItemID,
+	content: iced::Element<'a, Message, Theme, Renderer>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -309,5 +319,93 @@ where
 	fn from(listView: ListView<'a, Items, Message, Theme, Renderer>) -> Self
 	{
 		Self::new(listView)
+	}
+}
+
+impl<'a, ItemID, Message, Theme, Renderer> ListEntry<'a, ItemID, Message, Theme, Renderer>
+where
+	ItemID: Copy,
+	Theme: Catalog + text::Catalog + 'a,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
+{
+	pub fn new(nodeID: ItemID, displayText: String) -> Self
+	{
+		Self
+		{
+			nodeID,
+			content: text(displayText).into(),
+		}
+	}
+}
+
+impl<'a, ItemID, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for ListEntry<'a, ItemID, Message, Theme, Renderer>
+where
+	ItemID: Copy + 'static,
+	Theme: Catalog,
+	Renderer: iced_core::Renderer,
+{
+	fn tag(&self) -> tree::Tag
+	{
+		tree::Tag::of::<ItemID>()
+	}
+
+	fn state(&self) -> tree::State
+	{
+		tree::State::new(self.nodeID)
+	}
+
+	fn children(&self) -> Vec<Tree>
+	{
+		vec![Tree::new(&self.content)]
+	}
+
+	fn diff(&self, tree: &mut Tree)
+	{
+		tree.diff_children(&[&self.content]);
+	}
+
+	fn size(&self) -> Size<Length>
+	{
+		self.content.as_widget().size()
+	}
+
+	fn layout
+	(
+		&mut self,
+		tree: &mut Tree,
+		renderer: &Renderer,
+		limits: &layout::Limits,
+	) -> layout::Node
+	{
+		self.content.as_widget_mut().layout(&mut tree.children[0], renderer, limits)
+	}
+
+	fn draw
+	(
+		&self,
+		tree: &Tree,
+		renderer: &mut Renderer,
+		theme: &Theme,
+		style: &renderer::Style,
+		layout: Layout<'_>,
+		cursor: iced_core::mouse::Cursor,
+		viewport: &Rectangle,
+	)
+	{
+		self.content.as_widget().draw(&tree.children[0], renderer, theme, style, layout, cursor, viewport);
+	}
+}
+
+impl<'a, ItemID, Message, Theme, Renderer> From<ListEntry<'a, ItemID, Message, Theme, Renderer>>
+	for iced::Element<'a, Message, Theme, Renderer>
+where
+	ItemID: Copy + 'static,
+	Message: 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + 'a,
+{
+	fn from(listEntry: ListEntry<'a, ItemID, Message, Theme, Renderer>) -> Self
+	{
+		Self::new(listEntry)
 	}
 }
