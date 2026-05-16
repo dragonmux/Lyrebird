@@ -6,7 +6,7 @@ use color_eyre::Result;
 use color_eyre::eyre::eyre;
 use directories::ProjectDirs;
 use iced::alignment::Horizontal;
-use iced::{Length, Program, Settings, Task, window};
+use iced::{Length, Program, Settings, Subscription, Task, keyboard, window};
 use iced_futures::backend::default::Executor;
 use iced_widget::{Column, text};
 use tokio_util::sync::CancellationToken;
@@ -83,6 +83,19 @@ impl MainWindowState
 			Message::LibraryTree(message) => self.libraryTree.update(message),
 			Message::ArtistList(message) => self.artistList.update(message),
 			Message::AlbumList(message) => self.albumList.update(message),
+			Message::KeyEvent(event) =>
+			{
+				match event
+				{
+					_ => Task::none()
+				}
+			}
+			Message::WindowClosed(_) =>
+			{
+				// Cancel any ongoing discovery if there is any
+				self.cancellation.cancel();
+				Task::none()
+			},
 			Message::PlayNow(trackID) =>
 				self.playTrack(trackID).expect("Playing track should have worked"),
 			_ => Task::none(),
@@ -281,6 +294,17 @@ impl Program for MainWindow
 	fn view<'a>(&self, state: &'a MainWindowState, _windowID: window::Id) -> Element<'a, Message>
 	{
 		state.view(self)
+	}
+
+	fn subscription(&self, _state: &MainWindowState) -> Subscription<Message>
+	{
+		// Return a slew of things we want events for
+		Subscription::batch
+		([
+			// Listen to keyboard events that haven't been captured by anything else
+			keyboard::listen().map(Message::KeyEvent),
+			window::close_events().map(Message::WindowClosed),
+		])
 	}
 
 	fn settings(&self) -> Settings

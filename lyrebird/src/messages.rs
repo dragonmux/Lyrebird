@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+use iced::keyboard;
+use iced::window;
+
 use crate::library::DirectoryID;
 use crate::playback::PlaybackState;
 use crate::track::{AlbumID, ArtistID, TrackID};
@@ -30,6 +33,8 @@ pub enum Message
 	LibraryTree(LibraryTree),
 	ArtistList(ArtistList),
 	AlbumList(AlbumList),
+	KeyEvent(keyboard::Event),
+	WindowClosed(window::Id),
 	PlayNow(TrackID),
 	AddToPlaylist,
 	RemoveFromPlaylist,
