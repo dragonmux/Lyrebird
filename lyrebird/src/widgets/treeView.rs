@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use std::{cell::RefCell, rc::Rc};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use iced::{Background, Border, Color, Event, Length, Rectangle, Size, mouse, touch};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer::{self, Quad}, widget::{Operation, Tree, tree}, window};
@@ -55,7 +56,7 @@ struct TreeViewState
 
 pub trait TreeItem: Sized
 {
-	type ItemID: Clone + Copy + PartialEq + Eq;
+	type ItemID: Copy + Eq;
 
 	fn nodeID(&self) -> Self::ItemID;
 	fn displayText(&self) -> String;
@@ -216,7 +217,6 @@ where
 	{
 		// Compute new limits that take into account the configured width and height
 		let limits = limits
-			.clone()
 			.width(self.setup.borrow().width)
 			.height(self.setup.borrow().height)
 			.loose();
@@ -256,7 +256,7 @@ where
 				self.setup.borrow().height,
 				Size
 				{
-					width: nodeSize.width.max(subtreeSize.width),
+					width: nodeSize.width.max(subtreeSize.width + 16.0),
 					height: nodeSize.height + subtreeSize.height,
 				}
 			),
