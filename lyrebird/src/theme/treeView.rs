@@ -32,13 +32,3 @@ fn default(theme: &Theme) -> Style
 		backgroundColour: styles.general.background,
 	}
 }
-
-// pub fn libraryTree(theme: &Theme) -> Style
-// {
-// 	let _styles = theme.styles();
-
-// 	Style
-// 	{
-// 		//
-// 	}
-// }

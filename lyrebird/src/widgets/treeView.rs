@@ -40,12 +40,12 @@ type OnSelectFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
 /// The possible states of a [`TabButton`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum State {
-    /// The [`TreeView`] node is not currently selected.
-    Unselected,
+	/// The [`TreeView`] node is not currently selected.
+	Unselected,
 	/// The [`TreeView`] node is being hovered over.
 	Hovered,
-    /// The [`TreeView`] node is currently selected.
-    Selected,
+	/// The [`TreeView`] node is currently selected.
+	Selected,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
