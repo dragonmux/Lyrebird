@@ -2,7 +2,7 @@
 
 use crate::library::DirectoryID;
 use crate::playback::PlaybackState;
-use crate::track::TrackID;
+use crate::track::{ArtistID, TrackID};
 use crate::widgets::tabBar::TabBarEnum;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -28,6 +28,7 @@ pub enum Message
 	LibraryError,
 	ConcurrencyError,
 	LibraryTree(LibraryTree),
+	ArtistList(ArtistList),
 	PlayNow(TrackID),
 	AddToPlaylist,
 	RemoveFromPlaylist,
@@ -43,6 +44,12 @@ pub enum Message
 pub enum LibraryTree
 {
 	SelectDirectory(DirectoryID),
+}
+
+#[derive(Clone, Copy)]
+pub enum ArtistList
+{
+	SelectArtist(ArtistID),
 }
 
 impl Default for Tab

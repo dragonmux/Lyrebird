@@ -11,6 +11,7 @@ use iced_futures::backend::default::Executor;
 use iced_widget::{Column, text};
 use tracing::error;
 
+use crate::artistList::ArtistList;
 use crate::library::MusicLibrary;
 use crate::messages::{Message, Tab};
 use crate::options::OptionsPanel;
@@ -29,6 +30,7 @@ pub struct MainWindowState
 	tabBar: TabBar<Tab>,
 
 	libraryTree: LibraryTree,
+	artistList: ArtistList,
 	optionsPanel: OptionsPanel,
 	playlists: Playlists,
 
@@ -51,6 +53,7 @@ impl MainWindowState
 			tabBar: TabBar::new("Lyrebird"),
 
 			libraryTree: LibraryTree::new(mainWindow.musicLibrary.clone()),
+			artistList: ArtistList::new(mainWindow.musicLibrary.clone()),
 			optionsPanel: OptionsPanel::new(),
 			playlists: Playlists::new(),
 
@@ -68,6 +71,7 @@ impl MainWindowState
 			Message::LibraryDiscovered =>
 				return Task::future(MusicLibrary::writeCache(mainWindow.musicLibrary.clone())),
 			Message::LibraryTree(message) => self.libraryTree.update(message),
+			Message::ArtistList(message) => self.artistList.update(message),
 			Message::PlayNow(trackID) => self.playTrack(trackID).expect("Playing track should have worked"),
 			_ => {},
 		}
@@ -84,6 +88,7 @@ impl MainWindowState
 		let content = match self.tabBar.activeTab()
 		{
 			Tab::LibraryTree => self.libraryTree.view(),
+			Tab::Artists => self.artistList.view(),
 			tab =>
 				text!("{} content", tab.name())
 					.style(theme::text::general)
