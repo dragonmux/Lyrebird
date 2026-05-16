@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 use crate::library::DirectoryID;
+use crate::playback::PlaybackState;
+use crate::track::TrackID;
 use crate::widgets::tabBar::TabBarEnum;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -26,14 +28,15 @@ pub enum Message
 	LibraryError,
 	ConcurrencyError,
 	LibraryTree(LibraryTree),
+	PlayNow(TrackID),
 	AddToPlaylist,
 	RemoveFromPlaylist,
 	PlayPlaylist,
 	PlayCurrent,
 	PauseCurrent,
-	StopCurrent,
 	NextTrack,
 	PreviousTrack,
+	PlaybackNotification(PlaybackState),
 }
 
 #[derive(Clone, Copy)]

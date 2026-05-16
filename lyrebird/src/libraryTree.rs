@@ -101,6 +101,7 @@ impl LibraryTree
 				(
 					ListView::new(&trackList)
 						.width(Length::Fill)
+						.onDoubeClick(|nodeID| Message::PlayNow(nodeID))
 				)
 					.width(Length::Fill)
 					.height(Length::Fill)
