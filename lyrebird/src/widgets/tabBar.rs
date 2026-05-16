@@ -3,7 +3,7 @@
 use iced::mouse::{self, Cursor};
 use iced::
 {
-	Alignment, Background, Border, Color, Event, Length, Padding, Point, Rectangle, Shadow, Size, overlay, touch, window
+	Alignment, Background, Border, Color, Event, Length, Padding, Point, Rectangle, Shadow, Size, Task, overlay, touch, window
 };
 use iced::widget::text;
 use iced_core::widget::{Operation, Tree, tree};
@@ -116,9 +116,10 @@ where
 		TabBarWidget::new(self.title, TabEnum::tabs(), self.activeTab).into()
 	}
 
-	pub fn switchTo(&mut self, tab: TabEnum)
+	pub fn switchTo(&mut self, tab: TabEnum) -> Task<Message>
 	{
 		self.activeTab = tab;
+		Task::none()
 	}
 
 	pub fn activeTab(&self) -> TabEnum

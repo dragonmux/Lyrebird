@@ -77,16 +77,16 @@ impl MainWindowState
 		{
 			Message::SwitchTo(tab) => self.tabBar.switchTo(tab),
 			Message::LibraryDiscover =>
-				return Task::future(MusicLibrary::discover(mainWindow.musicLibrary.clone(), self.cancellation.clone())),
+				Task::future(MusicLibrary::discover(mainWindow.musicLibrary.clone(), self.cancellation.clone())),
 			Message::LibraryDiscovered =>
-				return Task::future(MusicLibrary::writeCache(mainWindow.musicLibrary.clone())),
+				Task::future(MusicLibrary::writeCache(mainWindow.musicLibrary.clone())),
 			Message::LibraryTree(message) => self.libraryTree.update(message),
 			Message::ArtistList(message) => self.artistList.update(message),
 			Message::AlbumList(message) => self.albumList.update(message),
-			Message::PlayNow(trackID) => self.playTrack(trackID).expect("Playing track should have worked"),
-			_ => {},
+			Message::PlayNow(trackID) =>
+				self.playTrack(trackID).expect("Playing track should have worked"),
+			_ => Task::none(),
 		}
-		Task::none()
 	}
 
 	pub fn view(&self, _mainWindow: &MainWindow) -> Element<'_, Message>
@@ -125,7 +125,7 @@ impl MainWindowState
 			.into()
 	}
 
-	fn playTrack(&mut self, trackID: TrackID) -> Result<()>
+	fn playTrack(&mut self, trackID: TrackID) -> Result<Task<Message>>
 	{
 		// Try and lock access to the library to get the track data for this track
 		let library= self.libraryTree.library();
@@ -144,17 +144,17 @@ impl MainWindowState
 		// Start the new track playing and push it into the state tracker
 		track.play();
 		self.currentlyPlaying = Some(track);
-		Ok(())
+		Ok(Task::none())
 	}
 
 	#[allow(unused)]
-	fn playlistSong(&mut self, trackID: TrackID) -> Result<()>
+	fn playlistSong(&mut self, trackID: TrackID) -> Result<Task<Message>>
 	{
 		let nowPlaying = self.playlists.nowPlaying();
 		nowPlaying.add(trackID);
 		match &self.currentlyPlaying
 		{
-			Some(_) => Ok(()),
+			Some(_) => Ok(Task::none()),
 			None => self.playTrack(trackID),
 		}
 	}
@@ -210,7 +210,7 @@ impl MainWindowState
 				let nextEntry = nowPlaying.next();
 				match nextEntry
 				{
-					Some(trackID) => self.playTrack(trackID)?,
+					Some(trackID) => { let _ = self.playTrack(trackID)?; },
 					None => self.currentlyPlaying = None,
 				}
 			},

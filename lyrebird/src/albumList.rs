@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, RwLock};
 
-use iced::{Length, Padding};
+use iced::{Length, Padding, Task};
 use iced_widget::scrollable::{Direction, Scrollbar};
 use iced_widget::{Row, scrollable};
 
@@ -42,7 +42,7 @@ impl AlbumList
 		}
 	}
 
-	pub fn update(&mut self, message: messages::AlbumList)
+	pub fn update(&mut self, message: messages::AlbumList) -> Task<Message>
 	{
 		use messages::AlbumList;
 
@@ -52,7 +52,9 @@ impl AlbumList
 			{
 				self.selectedAlbum = Some(albumID)
 			},
-		}
+		};
+
+		Task::none()
 	}
 
 	pub fn view<'a>(&'a self) -> Element<'a, Message>
