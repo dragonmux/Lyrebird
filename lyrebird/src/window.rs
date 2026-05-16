@@ -71,6 +71,7 @@ impl MainWindowState
 			Message::LibraryDiscovered =>
 				return Task::future(MusicLibrary::writeCache(mainWindow.musicLibrary.clone())),
 			Message::LibraryTree(message) => self.libraryTree.update(message),
+			Message::PlayNow(trackID) => self.playTrack(trackID).expect("Playing track should have worked"),
 			_ => {},
 		}
 		Task::none()
