@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use iced::{Color, Event, Length, Padding, Rectangle, Size, mouse, touch};
-use iced_core::{Clipboard, Layout, Shell, Widget, layout, mouse::{Click, click}, renderer, widget::{Operation, Tree, tree}};
+use iced_core::{Clipboard, Layout, Shell, Widget, layout, mouse::{Click, click}, renderer, widget::{Operation, Tree, tree}, window};
 use iced_widget::text;
 
 pub struct ListView<'a, Items, Message, Theme, Renderer = iced::Renderer>
@@ -61,6 +61,16 @@ where
 	nodeID: ItemID,
 	content: iced::Element<'a, Message, Theme, Renderer>,
 	setup: Rc<RefCell<ListViewSetup<'a, Theme>>>,
+	state: State,
+}
+
+/// The possible states of a [`TabButton`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum State {
+	/// The [`ListEntry`] node is not currently being interacted with.
+	Normal,
+	/// The [`ListEntry`] node is being hovered over.
+	Hovered,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -408,6 +418,7 @@ where
 			nodeID,
 			content: text(displayText).into(),
 			setup,
+			state: State::Normal,
 		}
 	}
 }
@@ -454,21 +465,87 @@ where
 		self.content.as_widget_mut().layout(&mut tree.children[0], renderer, limits)
 	}
 
+	fn operate(
+		&mut self,
+		tree: &mut Tree,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
+	{
+		self.content.as_widget_mut().operate(&mut tree.children[0], layout, renderer, operation);
+	}
+
+	fn update
+	(
+		&mut self,
+		tree: &mut Tree,
+		event: &Event,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		renderer: &Renderer,
+		clipboard: &mut dyn Clipboard,
+		shell: &mut Shell<'_, Message>,
+		viewport: &Rectangle,
+	)
+	{
+		// Start by running update on the content of the entry
+		self.content
+			.as_widget_mut()
+			.update(&mut tree.children[0], event, layout, cursor, renderer, clipboard, shell, viewport);
+
+		// Check to see if we should already stop
+		if shell.is_event_captured()
+		{
+			return;
+		}
+
+		// Extract the layout for the entry and process any required state changes
+		let bounds = layout.bounds();
+		let currentStatus = if cursor.is_over(bounds)
+		{
+			State::Hovered
+		}
+		else
+		{
+			State::Normal
+		};
+
+		// Process if we're handling an update for the state, or need to ask for a redraw to make that happen
+		if let Event::Window(window::Event::RedrawRequested(_)) = event
+		{
+			self.state = currentStatus;
+		}
+		else if self.state != currentStatus
+		{
+			shell.request_redraw();
+		}
+	}
+
 	fn draw
 	(
 		&self,
 		tree: &Tree,
 		renderer: &mut Renderer,
 		theme: &Theme,
-		style: &renderer::Style,
+		_style: &renderer::Style,
 		layout: Layout<'_>,
 		cursor: iced_core::mouse::Cursor,
 		viewport: &Rectangle,
 	)
 	{
-		let _listStyle = theme.style(&self.setup.borrow().class);
+		let listStyle = theme.style(&self.setup.borrow().class);
 
-		self.content.as_widget().draw(&tree.children[0], renderer, theme, style, layout, cursor, viewport);
+		let style = renderer::Style
+		{
+			text_color: match self.state
+			{
+				State::Normal => listStyle.normalColour,
+				State::Hovered => listStyle.hoverColour,
+			}
+		};
+
+		self.content.as_widget().draw(&tree.children[0], renderer, theme, &style, layout, cursor, viewport);
 	}
 }
 
