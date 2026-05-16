@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use color_eyre::eyre::{self, Result, eyre};
 use libAudio::audioFile::AudioFile;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 
 use crate::cache;
@@ -128,7 +129,7 @@ impl MusicLibrary
 		Ok(())
 	}
 
-	pub async fn discover(library: Arc<RwLock<Self>>) -> Message
+	pub async fn discover(library: Arc<RwLock<Self>>, cancellation: CancellationToken) -> Message
 	{
 		// Prepare the library for (re-)discovery
 		let directory = match library.write()
@@ -155,7 +156,7 @@ impl MusicLibrary
 			},
 		};
 		// Now actually run the discovery process
-		match MusicLibrary::recursiveDiscover(&library, &directory)
+		match MusicLibrary::recursiveDiscover(&library, &directory, &cancellation)
 		{
 			Ok(_) =>
 			{
@@ -188,7 +189,7 @@ impl MusicLibrary
 		}
 	}
 
-	fn recursiveDiscover(library: &RwLock<Self>, directory: &Path) -> Result<()>
+	fn recursiveDiscover(library: &RwLock<Self>, directory: &Path, cancellation: &CancellationToken) -> Result<()>
 	{
 		// If the base path is not valid, abort
 		if !directory.try_exists()?
@@ -200,10 +201,10 @@ impl MusicLibrary
 		let directoryID = Self::addDirectory(library, None, directory)?;
 
 		// Run discovery now we have a directory object in the dirs map to work on
-		Self::discoverDirectory(library, directoryID)
+		Self::discoverDirectory(library, directoryID, cancellation)
 	}
 
-	fn discoverDirectory(library: &RwLock<Self>, currentDirectory: DirectoryID) -> Result<()>
+	fn discoverDirectory(library: &RwLock<Self>, currentDirectory: DirectoryID, cancellation: &CancellationToken) -> Result<()>
 	{
 		// Explore the current directory's contents
 		let contents = library.readLock()?.directoryFor(currentDirectory).path().read_dir()?;
@@ -217,7 +218,7 @@ impl MusicLibrary
 			{
 				// Turn this directory into an entry in the dirs map and run discovery for it
 				let directoryID = Self::addDirectory(library, Some(currentDirectory), &path)?;
-				Self::discoverDirectory(library, directoryID)?;
+				Self::discoverDirectory(library, directoryID, cancellation)?;
 				// Having done discovery on this directory, now check to see if it contains any music
 				// if it doesn't, then prune it back out the tree
 				let mut library = library.writeLock()?;
@@ -241,6 +242,11 @@ impl MusicLibrary
 				let directory = library.mutDirectoryFor(currentDirectory);
 				directory.addTrack(track.id());
 				library.tracks.insert(track.id(), track);
+			}
+			// Check to see if we're being asked to stop
+			if cancellation.is_cancelled()
+			{
+				break;
 			}
 		}
 

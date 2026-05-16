@@ -9,6 +9,7 @@ use iced::alignment::Horizontal;
 use iced::{Length, Program, Settings, Task, window};
 use iced_futures::backend::default::Executor;
 use iced_widget::{Column, text};
+use tokio_util::sync::CancellationToken;
 use tracing::error;
 
 use crate::albumList::AlbumList;
@@ -37,6 +38,10 @@ pub struct MainWindowState
 	playlists: Playlists,
 
 	currentlyPlaying: Option<TrackState>,
+
+	/// Global cancellation token to shut down anything still running such as discovery
+	/// when the user closes the main interface window
+	cancellation: CancellationToken,
 }
 
 /// Represents the main window of Lyrebird itself
@@ -61,6 +66,8 @@ impl MainWindowState
 			playlists: Playlists::new(),
 
 			currentlyPlaying: None,
+
+			cancellation: CancellationToken::new(),
 		}
 	}
 
@@ -70,7 +77,7 @@ impl MainWindowState
 		{
 			Message::SwitchTo(tab) => self.tabBar.switchTo(tab),
 			Message::LibraryDiscover =>
-				return Task::future(MusicLibrary::discover(mainWindow.musicLibrary.clone())),
+				return Task::future(MusicLibrary::discover(mainWindow.musicLibrary.clone(), self.cancellation.clone())),
 			Message::LibraryDiscovered =>
 				return Task::future(MusicLibrary::writeCache(mainWindow.musicLibrary.clone())),
 			Message::LibraryTree(message) => self.libraryTree.update(message),
