@@ -255,6 +255,9 @@ impl Drop for ThreadState
 {
 	fn drop(&mut self)
 	{
-		self.audioFile.stop();
+		if let Ok(state) = self.state.lock() && *state != PlaybackState::Stopped
+		{
+			self.audioFile.stop();
+		}
 	}
 }
