@@ -135,6 +135,11 @@ impl LibraryTree
 			})
 			.into()
 	}
+
+	pub fn library(&self) -> Arc<RwLock<MusicLibrary>>
+	{
+		self.library.clone()
+	}
 }
 
 impl DirectoryTree

@@ -151,6 +151,11 @@ impl Track
 	{
 		self.album
 	}
+
+	pub fn audioFile(&self) -> Option<AudioFile>
+	{
+		AudioFile::readFile(&self.fileName)
+	}
 }
 
 impl From<TrackID> for u64
