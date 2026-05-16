@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use iced::{Event, Length, Padding, Rectangle, Size, mouse, touch};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, mouse::{Click, click}, renderer, widget::{Operation, Tree, tree}};
 use iced_widget::text;
@@ -13,7 +16,7 @@ where
 	contents: Vec<iced_core::Element<'a, Message, Theme, Renderer>>,
 	width: Length,
 	height: Length,
-	class: Theme::Class<'a>,
+	setup: Rc<RefCell<ListViewSetup<'a, Theme>>>,
 	onClick: Option<OnClickFn<'a, Items::ItemID, Message>>,
 	onDoubeClick: Option<OnDoubeClickFn<'a, Items::ItemID, Message>>,
 	onRightClick: Option<OnRightClickFn<'a, Items::ItemID, Message>>,
@@ -22,6 +25,15 @@ where
 type OnClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
 type OnDoubeClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
 type OnRightClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
+
+/// Structure to hold the styling setup information for the [`ListView`], to be held via Rc,
+/// so that the [`ListEntry`] items can get their styling information
+struct ListViewSetup<'a, Theme>
+where
+	Theme: Catalog,
+{
+	class: Theme::Class<'a>,
+}
 
 #[derive(Debug, Clone, Copy)]
 struct ListViewState<ItemID>
@@ -48,6 +60,7 @@ where
 {
 	nodeID: ItemID,
 	content: iced::Element<'a, Message, Theme, Renderer>,
+	setup: Rc<RefCell<ListViewSetup<'a, Theme>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -73,18 +86,29 @@ where
 {
 	pub fn new(items: &[Items]) -> Self
 	{
+		let setup = Rc::new
+		(
+			RefCell::new
+			(
+				ListViewSetup
+				{
+					class: <Theme as Catalog>::default(),
+				}
+			)
+		);
+
 		Self
 		{
 			contents: items
 				.iter()
 				.map(|item|
 				{
-					ListEntry::new(item.nodeID(), item.displayText()).into()
+					ListEntry::new(item.nodeID(), item.displayText(), setup.clone()).into()
 				})
 				.collect(),
 			width: Length::Shrink,
 			height: Length::Shrink,
-			class: <Theme as Catalog>::default(),
+			setup,
 			onClick: None,
 			onDoubeClick: None,
 			onRightClick: None,
@@ -104,6 +128,16 @@ where
 	pub fn height(mut self, height: impl Into<Length>) -> Self
 	{
 		self.height = height.into();
+		self
+	}
+
+	/// Changes the style of the [`ListView`]
+	#[must_use]
+	pub fn style(self, style: impl Fn(&Theme) -> Style + 'a) -> Self
+	where
+		<Theme as Catalog>::Class<'a>: From<StyleFn<'a, Theme>>,
+	{
+		self.setup.borrow_mut().class = (Box::new(style) as StyleFn<'a, Theme>).into();
 		self
 	}
 
@@ -319,8 +353,6 @@ where
 		viewport: &Rectangle,
 	)
 	{
-		let _listStyle = theme.style(&self.class);
-
 		for ((node, tree), layout) in self.contents
 			.iter()
 			.zip(&tree.children)
@@ -367,12 +399,13 @@ where
 	Theme: Catalog + text::Catalog + 'a,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
 {
-	pub fn new(nodeID: ItemID, displayText: String) -> Self
+	pub fn new(nodeID: ItemID, displayText: String, setup:Rc<RefCell<ListViewSetup<'a, Theme>>>) -> Self
 	{
 		Self
 		{
 			nodeID,
 			content: text(displayText).into(),
+			setup,
 		}
 	}
 }
@@ -431,6 +464,8 @@ where
 		viewport: &Rectangle,
 	)
 	{
+		let _listStyle = theme.style(&self.setup.borrow().class);
+
 		self.content.as_widget().draw(&tree.children[0], renderer, theme, style, layout, cursor, viewport);
 	}
 }
