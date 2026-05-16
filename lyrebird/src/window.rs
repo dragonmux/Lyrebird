@@ -29,6 +29,8 @@ use crate::{config::Config, libraryTree::LibraryTree};
 /// Represents the state of the main window of Lyrebird
 pub struct MainWindowState
 {
+	windowID: Option<window::Id>,
+
 	tabBar: TabBar<Tab>,
 
 	libraryTree: LibraryTree,
@@ -57,6 +59,8 @@ impl MainWindowState
 	{
 		Self
 		{
+			windowID: None,
+
 			tabBar: TabBar::new("Lyrebird"),
 
 			libraryTree: LibraryTree::new(mainWindow.musicLibrary.clone()),
@@ -90,12 +94,8 @@ impl MainWindowState
 					_ => Task::none()
 				}
 			}
-			Message::WindowClosed(_) =>
-			{
-				// Cancel any ongoing discovery if there is any
-				self.cancellation.cancel();
-				Task::none()
-			},
+			Message::WindowOpened(id) => self.handleWindowOpen(id),
+			Message::WindowClosed(id) => self.handleWindowClose(id),
 			Message::PlayNow(trackID) =>
 				self.playTrack(trackID).expect("Playing track should have worked"),
 			_ => Task::none(),
@@ -136,6 +136,26 @@ impl MainWindowState
 			.height(Length::Fill)
 			.align_x(Horizontal::Center)
 			.into()
+	}
+
+	fn handleWindowOpen(&mut self, id: window::Id) -> Task<Message>
+	{
+		if self.windowID.is_none()
+		{
+			self.windowID = Some(id);
+		}
+		Task::none()
+	}
+
+	fn handleWindowClose(&mut self, id: window::Id) -> Task<Message>
+	{
+		// If this is our main window
+		if self.windowID == Some(id)
+		{
+			// Cancel any ongoing discovery if there is any
+			self.cancellation.cancel();
+		}
+		Task::none()
 	}
 
 	fn playTrack(&mut self, trackID: TrackID) -> Result<Task<Message>>
@@ -303,6 +323,7 @@ impl Program for MainWindow
 		([
 			// Listen to keyboard events that haven't been captured by anything else
 			keyboard::listen().map(Message::KeyEvent),
+			window::open_events().map(Message::WindowOpened),
 			window::close_events().map(Message::WindowClosed),
 		])
 	}

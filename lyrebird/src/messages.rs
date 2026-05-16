@@ -34,6 +34,7 @@ pub enum Message
 	ArtistList(ArtistList),
 	AlbumList(AlbumList),
 	KeyEvent(keyboard::Event),
+	WindowOpened(window::Id),
 	WindowClosed(window::Id),
 	PlayNow(TrackID),
 	AddToPlaylist,
