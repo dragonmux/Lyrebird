@@ -378,6 +378,11 @@ impl MusicLibrary
 		&self.tracks[&trackID]
 	}
 
+	pub fn artists(&self) -> impl Iterator<Item = &ArtistID>
+	{
+		self.artists.keys()
+	}
+
 	/// Find the Artist object associated with a particular ArtistID and return it by reference
 	pub fn artistFor(&self, artistID: ArtistID) -> &Artist
 	{

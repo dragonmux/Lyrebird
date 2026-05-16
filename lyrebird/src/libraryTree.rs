@@ -65,7 +65,7 @@ impl LibraryTree
 		let library = &self.library.read()
 			.expect("Failed to lock library for read");
 		let directoryTree = DirectoryTree::from(library.deref());
-		let trackList = TrackEntry::forDirectory(self.selectedDirectory, library.deref());
+		let trackList = TrackEntry::forDirectory(self.selectedDirectory, &library);
 
 		let layout = Row::with_children
 		([

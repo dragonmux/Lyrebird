@@ -186,6 +186,11 @@ impl Artist
 	{
 		&self.name
 	}
+
+	pub fn tracks(&self) -> &[TrackID]
+	{
+		&self.tracks
+	}
 }
 
 impl ArtistID
