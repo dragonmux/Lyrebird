@@ -3,6 +3,7 @@
 use std::sync::{Arc, RwLock};
 
 use color_eyre::Result;
+use color_eyre::eyre::eyre;
 use directories::ProjectDirs;
 use iced::alignment::Horizontal;
 use iced::{Length, Program, Settings, Task, window};
@@ -25,8 +26,6 @@ use crate::{config::Config, libraryTree::LibraryTree};
 /// Represents the state of the main window of Lyrebird
 pub struct MainWindowState
 {
-	exit: bool,
-
 	tabBar: TabBar<Tab>,
 
 	libraryTree: LibraryTree,
@@ -49,8 +48,6 @@ impl MainWindowState
 	{
 		Self
 		{
-			exit: false,
-
 			tabBar: TabBar::new("Lyrebird"),
 
 			libraryTree: LibraryTree::new(mainWindow.musicLibrary.clone()),
@@ -117,7 +114,7 @@ impl MainWindowState
 		let library= self.libraryTree.library();
 		let library = library
 			.read()
-			.expect("Library should be lockable for read");
+			.map_err(|error| eyre!("Library should be lockable for read but was not: {}", error))?;
 		// Grab the track and turn it into state info, dropping our library lock
 		let mut track = TrackState::new(library.trackFor(trackID), &library)?;
 		drop(library);
