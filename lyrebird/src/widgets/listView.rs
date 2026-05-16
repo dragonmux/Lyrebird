@@ -23,9 +23,12 @@ type OnClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
 type OnDoubeClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
 type OnRightClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
 
-#[derive(Debug, Clone, Copy, Default)]
-struct ListViewState
+#[derive(Debug, Clone, Copy)]
+struct ListViewState<ItemID>
+where
+	ItemID: Copy,
 {
+	nodeID: Option<ItemID>,
 	previousClick: Option<Click>,
 }
 
@@ -72,7 +75,13 @@ where
 	{
 		Self
 		{
-			contents: items.iter().map(|item| text(item.displayText()).into()).collect(),
+			contents: items
+				.iter()
+				.map(|item|
+				{
+					ListEntry::new(item.nodeID(), item.displayText()).into()
+				})
+				.collect(),
 			width: Length::Shrink,
 			height: Length::Shrink,
 			class: <Theme as Catalog>::default(),
@@ -134,12 +143,12 @@ where
 {
 	fn tag(&self) -> tree::Tag
 	{
-		tree::Tag::of::<ListViewState>()
+		tree::Tag::of::<ListViewState<Items::ItemID>>()
 	}
 
 	fn state(&self) -> tree::State
 	{
-		tree::State::new(ListViewState::default())
+		tree::State::new(ListViewState::<Items::ItemID>::default())
 	}
 
 	fn children(&self) -> Vec<Tree>
@@ -238,6 +247,21 @@ where
 			return;
 		}
 
+		// Loop through all the items in the list
+		for (item, layout) in tree.children.iter().zip(layout.children())
+		{
+			// Extract the item's bounds and check if the mouse is over this one
+			let bounds = layout.bounds();
+			if cursor.is_over(bounds)
+			{
+				// It is, then this is the item we're interested in
+				let state = tree.state.downcast_mut::<ListViewState<Items::ItemID>>();
+				state.nodeID = Some(*item.state.downcast_ref::<Items::ItemID>());
+				break;
+			}
+		}
+
+		// Figure out how to handle the event that lead us here
 		match event
 		{
 			Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) |
@@ -245,7 +269,7 @@ where
 			{
 				if let Some(cursorPosition) = cursor.position()
 				{
-					let state = tree.state.downcast_mut::<ListViewState>();
+					let state = tree.state.downcast_mut::<ListViewState<Items::ItemID>>();
 					let click = Click::new(cursorPosition, mouse::Button::Left, state.previousClick);
 					state.previousClick = Some(click);
 					shell.capture_event();
@@ -254,27 +278,28 @@ where
 			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) |
 			Event::Touch(touch::Event::FingerLifted { .. }) =>
 			{
-				let state = tree.state.downcast_ref::<ListViewState>();
-				if let Some(click) = &state.previousClick
+				let state = tree.state.downcast_ref::<ListViewState<Items::ItemID>>();
+				if let Some(click) = &state.previousClick && let Some(nodeID) = state.nodeID
 				{
 					if let Some(onDoubeClick) = &self.onDoubeClick && click.kind() == click::Kind::Double
 					{
-						// shell.publish(onDoubeClick());
+						shell.publish(onDoubeClick(nodeID));
 						shell.capture_event();
 					}
 					else if let Some(onSingleClick) = &self.onClick && click.kind() == click::Kind::Single
 					{
-						// shell.publish(onSingleClick());
+						shell.publish(onSingleClick(nodeID));
 						shell.capture_event();
 					}
 				}
 			},
 			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) =>
 			{
+				let state = tree.state.downcast_ref::<ListViewState<Items::ItemID>>();
 				// If the user has a right-click handler registered, handle the event with it
-				if let Some(onRightClick) = &self.onRightClick
+				if let Some(onRightClick) = &self.onRightClick && let Some(nodeID) = state.nodeID
 				{
-					// shell.publish(onRightClick(self.));
+					shell.publish(onRightClick(nodeID));
 					shell.capture_event();
 				}
 			},
@@ -319,6 +344,20 @@ where
 	fn from(listView: ListView<'a, Items, Message, Theme, Renderer>) -> Self
 	{
 		Self::new(listView)
+	}
+}
+
+impl<ItemID> Default for ListViewState<ItemID>
+where
+	ItemID: Copy,
+{
+	fn default() -> Self
+	{
+		Self
+		{
+			nodeID: None,
+			previousClick: None
+		}
 	}
 }
 

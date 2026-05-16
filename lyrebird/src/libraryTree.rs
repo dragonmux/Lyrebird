@@ -101,6 +101,7 @@ impl LibraryTree
 				scrollable
 				(
 					ListView::new(&trackList)
+						.width(Length::Fill)
 				)
 					.width(Length::Fill)
 					.height(Length::Fill)
