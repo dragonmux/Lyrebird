@@ -327,12 +327,12 @@ where
 				let state = tree.state.downcast_ref::<ListViewState<Items::ItemID>>();
 				if let Some(click) = &state.previousClick && let Some(nodeID) = state.nodeID
 				{
-					if let Some(onDoubeClick) = &self.onDoubeClick && click.kind() == click::Kind::Double
+					if click.kind() == click::Kind::Double && let Some(onDoubeClick) = &self.onDoubeClick
 					{
 						shell.publish(onDoubeClick(nodeID));
 						shell.capture_event();
 					}
-					else if let Some(onSingleClick) = &self.onClick && click.kind() == click::Kind::Single
+					else if click.kind() == click::Kind::Single && let Some(onSingleClick) = &self.onClick
 					{
 						shell.publish(onSingleClick(nodeID));
 						shell.capture_event();
@@ -502,7 +502,7 @@ where
 
 		// Extract the layout for the entry and process any required state changes
 		let bounds = layout.bounds();
-		let currentStatus = if cursor.is_over(bounds)
+		let currentState = if cursor.is_over(bounds)
 		{
 			State::Hovered
 		}
@@ -514,9 +514,9 @@ where
 		// Process if we're handling an update for the state, or need to ask for a redraw to make that happen
 		if let Event::Window(window::Event::RedrawRequested(_)) = event
 		{
-			self.state = currentStatus;
+			self.state = currentState;
 		}
-		else if self.state != currentStatus
+		else if self.state != currentState
 		{
 			shell.request_redraw();
 		}
