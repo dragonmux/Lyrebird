@@ -103,6 +103,9 @@ impl MainWindowState
 			Message::PlayNow(trackID) =>
 				self.playTrack(trackID).expect("Playing track should have worked"),
 			Message::TogglePlayback => self.togglePlayback(),
+			Message::PlaybackNotification(notification) =>
+				self.handlePlaybackNotification(notification)
+					.expect("Playback state change notification should not have caused an error"),
 			_ => Task::none(),
 		}
 	}
@@ -224,7 +227,7 @@ impl MainWindowState
 		Task::none()
 	}
 
-	fn handlePlaybackNotification(&mut self, notification: &PlaybackState) -> Result<()>
+	fn handlePlaybackNotification(&mut self, notification: PlaybackState) -> Result<Task<Message>>
 	{
 		match notification
 		{
@@ -236,13 +239,16 @@ impl MainWindowState
 				let nextEntry = nowPlaying.next();
 				match nextEntry
 				{
-					Some(trackID) => { let _ = self.playTrack(trackID)?; },
-					None => self.currentlyPlaying = None,
+					Some(trackID) => self.playTrack(trackID),
+					None =>
+					{
+						self.currentlyPlaying = None;
+						Ok(Task::none())
+					},
 				}
 			},
-			_ => {},
+			_ => Ok(Task::none()),
 		}
-		Ok(())
 	}
 }
 
