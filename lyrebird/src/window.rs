@@ -166,7 +166,7 @@ impl MainWindowState
 			.read()
 			.map_err(|error| eyre!("Library should be lockable for read but was not: {}", error))?;
 		// Grab the track and turn it into state info, dropping our library lock
-		let mut track = TrackState::new(library.trackFor(trackID), &library)?;
+		let (mut track, stateStream) = TrackState::new(library.trackFor(trackID), &library)?;
 		drop(library);
 		// See if another is currently playing, and make it stop if it is
 		let currentlyPlaying = self.currentlyPlaying.take();
@@ -177,7 +177,7 @@ impl MainWindowState
 		// Start the new track playing and push it into the state tracker
 		track.play();
 		self.currentlyPlaying = Some(track);
-		Ok(Task::none())
+		Ok(Task::run(stateStream, |stateChange| Message::PlaybackNotification(stateChange)))
 	}
 
 	#[allow(unused)]
@@ -214,20 +214,6 @@ impl MainWindowState
 				PlaybackState::Unknown(_error) =>
 					{  }
 			}
-		}
-	}
-
-	// Wait for a playback notification from the currently playing song - note, it is an
-	// error to call this function if self.currentlyPlaying is None!
-	async fn playbackNotification(&mut self) -> Option<PlaybackState>
-	{
-		if let Some(track) = &mut self.currentlyPlaying
-		{
-			track.notification().recv().await
-		}
-		else
-		{
-			None
 		}
 	}
 

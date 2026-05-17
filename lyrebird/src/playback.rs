@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
+use std::task::{Context, Poll};
 use std::thread::{spawn, JoinHandle};
 use std::time::Duration;
 
 use color_eyre::eyre::{self, OptionExt, Result, eyre};
 use libAudio::audioFile::AudioFile;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio_stream::Stream;
 
 use crate::library::MusicLibrary;
 use crate::track::Track;
@@ -16,7 +19,6 @@ pub struct TrackState
 	description: String,
 	duration: Option<Duration>,
 	played: Duration,
-	notification: Receiver<PlaybackState>,
 	playbackThread: Option<JoinHandle<()>>,
 	state: Arc<ThreadState>,
 }
@@ -39,9 +41,15 @@ struct ThreadState
 	state: Mutex<PlaybackState>,
 }
 
+/// Structure for tracking events from the playback system for a track
+pub struct TrackStateStream
+{
+	notification: Receiver<PlaybackState>
+}
+
 impl TrackState
 {
-	pub fn new(track: &Track, library: &MusicLibrary) -> Result<Self>
+	pub fn new(track: &Track, library: &MusicLibrary) -> Result<(Self, TrackStateStream)>
 	{
 		let audioFile = track.audioFile()
 			.ok_or_eyre(eyre!("Failed to open file {}", track.fileName()))?;
@@ -56,15 +64,18 @@ impl TrackState
 			.map(|artistID| library.artistFor(artistID))
 			.map(|artist| artist.name());
 
-		Ok(Self
-		{
-			description: Self::buildDescriptionFrom(track.title(), album, artist),
-			duration: if totalTime != 0 { Some(Duration::from_secs(totalTime)) } else { None },
-			played: Duration::default(),
-			notification: receiver,
-			playbackThread: None,
-			state: Arc::new(ThreadState::from(audioFile, sender))
-		})
+		Ok
+		((
+			Self
+			{
+				description: Self::buildDescriptionFrom(track.title(), album, artist),
+				duration: if totalTime != 0 { Some(Duration::from_secs(totalTime)) } else { None },
+				played: Duration::default(),
+				playbackThread: None,
+				state: Arc::new(ThreadState::from(audioFile, sender))
+			},
+			TrackStateStream::new(receiver)
+		))
 	}
 
 	// Try to build a description of this track from parts
@@ -112,8 +123,7 @@ impl TrackState
 		if self.playbackThread.is_none()
 		{
 			let state = self.state.clone();
-			let task = move || { state.play(); };
-			self.playbackThread = Some(spawn(task));
+			self.playbackThread = Some(spawn(move || { state.play(); }));
 		}
 	}
 
@@ -144,11 +154,6 @@ impl TrackState
 				|error| PlaybackState::Unknown(error.to_string()),
 				|lock| lock.clone()
 			)
-	}
-
-	pub fn notification(&mut self) -> &mut Receiver<PlaybackState>
-	{
-		&mut self.notification
 	}
 }
 
@@ -259,5 +264,26 @@ impl Drop for ThreadState
 		{
 			self.audioFile.stop();
 		}
+	}
+}
+
+impl TrackStateStream
+{
+	/// Creates a [`TrackStateStream`] from the receiver end of a channel
+	pub fn new(notification: Receiver<PlaybackState>) -> Self
+	{
+		Self { notification }
+	}
+}
+
+impl Stream for TrackStateStream
+{
+	type Item = PlaybackState;
+
+	/// Try to get the next playback state change notification from the playback engine
+	fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>>
+	{
+		// Then poll it to see if there are notifications
+		self.get_mut().notification.poll_recv(ctx)
 	}
 }
