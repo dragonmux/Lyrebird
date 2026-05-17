@@ -42,6 +42,7 @@ pub enum Message
 	PlayPlaylist,
 	PlayCurrent,
 	PauseCurrent,
+	TogglePlayback,
 	NextTrack,
 	PreviousTrack,
 	PlaybackNotification(PlaybackState),

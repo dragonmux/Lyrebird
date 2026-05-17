@@ -6,6 +6,8 @@ use color_eyre::Result;
 use color_eyre::eyre::eyre;
 use directories::ProjectDirs;
 use iced::alignment::Horizontal;
+use iced::keyboard::Key;
+use iced::keyboard::key::Named;
 use iced::{Length, Program, Settings, Subscription, Task, keyboard, window};
 use iced_futures::backend::default::Executor;
 use iced_widget::{Column, text};
@@ -91,6 +93,8 @@ impl MainWindowState
 			{
 				match event
 				{
+					keyboard::Event::KeyPressed { key: Key::Named(Named::Space), repeat: false, .. } =>
+						Task::done(Message::TogglePlayback),
 					_ => Task::none()
 				}
 			}
@@ -98,6 +102,7 @@ impl MainWindowState
 			Message::WindowClosed(id) => self.handleWindowClose(id),
 			Message::PlayNow(trackID) =>
 				self.playTrack(trackID).expect("Playing track should have worked"),
+			Message::TogglePlayback => self.togglePlayback(),
 			_ => Task::none(),
 		}
 	}
@@ -192,7 +197,7 @@ impl MainWindowState
 		}
 	}
 
-	fn togglePlayback(&mut self)
+	fn togglePlayback(&mut self) -> Task<Message>
 	{
 		if let Some(track) = &mut self.currentlyPlaying
 		{
@@ -215,6 +220,8 @@ impl MainWindowState
 					{  }
 			}
 		}
+
+		Task::none()
 	}
 
 	fn handlePlaybackNotification(&mut self, notification: &PlaybackState) -> Result<()>
