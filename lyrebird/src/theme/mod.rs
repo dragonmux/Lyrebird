@@ -2,6 +2,7 @@
 
 use iced::{Color, theme};
 
+pub mod button;
 pub mod container;
 pub mod groupBox;
 pub mod listView;
@@ -24,6 +25,7 @@ pub struct Styles
 	pub header: Header,
 	pub footer: Footer,
 	pub text: Text,
+	pub button: Button,
 	pub scrollbar: Scrollbar,
 	pub treeView: TreeView,
 	pub listView: ListView,
@@ -69,6 +71,17 @@ pub struct Text
 {
 	pub general: TextStyle,
 	pub title: TextStyle,
+}
+
+pub struct Button
+{
+	pub normal: Color,
+	pub selected: Color,
+	pub hover: Color,
+	pub disabled: Color,
+	pub background: Color,
+	pub backgroundDisabled: Color,
+	pub border: Color,
 }
 
 pub struct TextStyle
@@ -176,6 +189,16 @@ impl Default for Styles
 			{
 				general: TextStyle { colour: Color::from_rgb8(0xd3, 0xd3, 0xd3), },
 				title: TextStyle { colour: Color::from_rgb8(0x53, 0x82, 0xb9) },
+			},
+			button: Button
+			{
+				normal: Color::from_rgb8(0x53, 0x82, 0xb9),
+				selected: Color::from_rgb8(0x72, 0x9f, 0xcf),
+				hover: Color::from_rgb8(0x72, 0x9f, 0xcf),
+				disabled: Color::from_rgb8(0x1a, 0x32, 0x52),
+				background: Color::from_rgb8(0x33, 0x33, 0x33),
+				backgroundDisabled: Color::from_rgb8(0x22, 0x22, 0x22),
+				border: Color::from_rgb8(0x77, 0x77, 0x77),
 			},
 			header: Header
 			{
