@@ -128,13 +128,7 @@ impl LibraryTree
 			.width(Length::Fill)
 			.height(Length::Fill)
 			.spacing(5.0)
-			.padding(Padding
-			{
-				top: 5.0,
-				bottom: 5.0,
-				right: 5.0,
-				left: 5.0,
-			})
+			.padding(5.)
 			.into()
 	}
 
