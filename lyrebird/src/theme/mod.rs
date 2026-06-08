@@ -10,6 +10,7 @@ pub mod progressBar;
 pub mod scrollable;
 pub mod tabBar;
 pub mod text;
+pub mod textInput;
 pub mod trackProgress;
 pub mod treeView;
 
@@ -25,6 +26,7 @@ pub struct Styles
 	pub header: Header,
 	pub footer: Footer,
 	pub text: Text,
+	pub textInput: TextInput,
 	pub button: Button,
 	pub scrollbar: Scrollbar,
 	pub treeView: TreeView,
@@ -73,6 +75,11 @@ pub struct Text
 	pub title: TextStyle,
 }
 
+pub struct TextStyle
+{
+	pub colour: Color,
+}
+
 pub struct Button
 {
 	pub normal: Color,
@@ -84,9 +91,14 @@ pub struct Button
 	pub border: Color,
 }
 
-pub struct TextStyle
+pub struct TextInput
 {
-	pub colour: Color,
+	pub normal: Color,
+	pub hover: Color,
+	pub disabled: Color,
+	pub placeholder: Color,
+	pub selection: Color,
+	pub border: Color,
 }
 
 pub struct Scrollbar
@@ -189,6 +201,15 @@ impl Default for Styles
 			{
 				general: TextStyle { colour: Color::from_rgb8(0xd3, 0xd3, 0xd3), },
 				title: TextStyle { colour: Color::from_rgb8(0x53, 0x82, 0xb9) },
+			},
+			textInput: TextInput
+			{
+				normal: Color::from_rgb8(0x53, 0x82, 0xb9),
+				hover: Color::from_rgb8(0x72, 0x9f, 0xcf),
+				disabled: Color::from_rgb8(0x1a, 0x32, 0x52),
+				placeholder: Color::from_rgb8(0x55, 0x55, 0x55),
+				selection: Color::from_rgb8(0x91, 0xbc, 0xe5),
+				border: Color::from_rgb8(0x77, 0x77, 0x77),
 			},
 			button: Button
 			{
