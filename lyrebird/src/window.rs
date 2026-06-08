@@ -52,6 +52,7 @@ pub struct MainWindowState
 pub struct MainWindow
 {
 	musicLibrary: Arc<RwLock<MusicLibrary>>,
+	settings: Arc<RwLock<Config>>,
 }
 
 impl MainWindowState
@@ -255,8 +256,9 @@ impl MainWindowState
 impl MainWindow
 {
 	// Set up a new main window, loading the music library and config settings
-	pub fn new(paths: &ProjectDirs, config: &mut Config) -> Result<Self>
+	pub fn new(paths: &ProjectDirs) -> Result<Self>
 	{
+		let config = Arc::new(RwLock::new(Config::read(paths)?));
 		Ok(Self
 		{
 			musicLibrary: Arc::new
@@ -266,10 +268,11 @@ impl MainWindow
 					MusicLibrary::new
 					(
 						&paths.cache_dir().join("library.json"),
-						&config.libraryPath,
+						&config.read().map_err(|error| eyre!("Failed to read lock program config: {}", error))?.libraryPath,
 					)
 				)
 			),
+			settings: config.clone(),
 		})
 	}
 }

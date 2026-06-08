@@ -5,7 +5,6 @@
 #![warn(clippy::pedantic)]
 
 use color_eyre::{eyre, Result};
-use config::Config;
 use directories::ProjectDirs;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
@@ -41,14 +40,10 @@ fn main() -> Result<()>
 	// Try to get the application paths available
 	let paths = ProjectDirs::from("com", "rachelmant", "Lyrebird").
 		ok_or_else(|| eyre::eyre!("Failed to get program working paths"))?;
-	// Now try to get a configuration object so we know where to find things and such
-	let mut config = Config::read(&paths)?;
 
 	// Set up the main window w/ the configuration
-	let mainWindow = MainWindow::new(&paths, &mut config)?;
+	let mainWindow = MainWindow::new(&paths)?;
 	// Now run the main window of Lyrebird till the user exits the program
     let result = iced_winit::run(mainWindow);
-	// Re-serialise the user's config as our last step
-	config.write(&paths)?;
 	Ok(result?)
 }
