@@ -69,7 +69,7 @@ impl MainWindowState
 			libraryTree: LibraryTree::new(mainWindow.musicLibrary.clone()),
 			artistList: ArtistList::new(mainWindow.musicLibrary.clone()),
 			albumList: AlbumList::new(mainWindow.musicLibrary.clone()),
-			optionsPanel: OptionsPanel::new(),
+			optionsPanel: OptionsPanel::new(mainWindow.settings.clone()),
 			playlists: Playlists::new(),
 
 			currentlyPlaying: None,
@@ -123,6 +123,7 @@ impl MainWindowState
 			Tab::LibraryTree => self.libraryTree.view(),
 			Tab::Artists => self.artistList.view(),
 			Tab::Albums => self.albumList.view(),
+			Tab::Options => self.optionsPanel.view(),
 			tab =>
 				text!("{} content", tab.name())
 					.style(theme::text::general)
