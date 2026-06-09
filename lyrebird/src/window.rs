@@ -10,7 +10,7 @@ use iced::keyboard::Key;
 use iced::keyboard::key::Named;
 use iced::{Length, Program, Settings, Subscription, Task, keyboard, window};
 use iced_futures::backend::default::Executor;
-use iced_widget::{Column, text};
+use iced_widget::Column;
 use tokio_util::sync::CancellationToken;
 use tracing::error;
 
@@ -21,11 +21,11 @@ use crate::messages::{Message, Tab};
 use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, TrackState};
 use crate::playlists::Playlists;
-use crate::theme::{self, Theme};
+use crate::theme::Theme;
 use crate::track::TrackID;
 use crate::widgets::trackProgress::TrackProgress;
 use crate::widgets::{Element, Renderer};
-use crate::widgets::tabBar::{TabBar, TabBarEnum};
+use crate::widgets::tabBar::TabBar;
 use crate::{config::Config, libraryTree::LibraryTree};
 
 /// Represents the state of the main window of Lyrebird
@@ -124,12 +124,7 @@ impl MainWindowState
 			Tab::Artists => self.artistList.view(),
 			Tab::Albums => self.albumList.view(),
 			Tab::Options => self.optionsPanel.view(),
-			tab =>
-				text!("{} content", tab.name())
-					.style(theme::text::general)
-					.center()
-					.height(Length::Fill)
-					.into()
+			Tab::Playlists => self.playlists.view(),
 		};
 
 		// Compose the whole lot into a layout
