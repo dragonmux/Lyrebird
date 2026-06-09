@@ -11,11 +11,11 @@ pub struct Playlist
 
 impl Playlist
 {
-	pub fn new(name: String) -> Self
+	pub fn new<S: Into<String>>(name: S) -> Self
 	{
 		Self
 		{
-			name,
+			name: name.into(),
 			entries: Vec::new(),
 			currentEntry: 0,
 		}
