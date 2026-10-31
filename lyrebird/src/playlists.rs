@@ -5,8 +5,10 @@ use std::collections::BTreeMap;
 use iced::{Length, Padding};
 use iced_widget::{Row, scrollable};
 
+use crate::library::MusicLibrary;
 use crate::messages::Message;
 use crate::playlist::Playlist;
+use crate::track::TrackID;
 use crate::widgets::listView::{ListItem, ListView};
 use crate::widgets::{Element, groupBox::GroupBox};
 
@@ -21,6 +23,12 @@ struct PlaylistID(u64);
 struct ListEntry
 {
 	id: PlaylistID,
+	name: String,
+}
+
+struct TrackEntry
+{
+	id: TrackID,
 	name: String,
 }
 
@@ -101,6 +109,40 @@ impl ListItem for ListEntry
 	type ItemID = PlaylistID;
 
 	fn nodeID(&self) -> PlaylistID
+	{
+		self.id
+	}
+
+	fn displayText(&self) -> String
+	{
+		self.name.clone()
+	}
+}
+
+impl TrackEntry
+{
+	pub fn forPlaylist(playlist: &Playlist, library: &MusicLibrary) -> Vec<Self>
+	{
+		let mut tracks = Vec::new();
+		for &trackID in playlist.tracks()
+		{
+			let track = library.trackFor(trackID);
+			tracks.push(Self
+			{
+				id: trackID,
+				name: track.title().into()
+			});
+		}
+
+		tracks
+	}
+}
+
+impl ListItem for TrackEntry
+{
+	type ItemID = TrackID;
+
+	fn nodeID(&self) -> TrackID
 	{
 		self.id
 	}

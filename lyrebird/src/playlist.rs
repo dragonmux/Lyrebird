@@ -62,6 +62,11 @@ impl Playlist
 		self.currentEntry
 	}
 
+	pub fn tracks(&self) -> impl Iterator<Item = &TrackID>
+	{
+		self.entries.values()
+	}
+
 	pub fn next(&mut self) -> Option<TrackID>
 	{
 		// If there are no entries in this playlist, we're done.. nothing comes next
