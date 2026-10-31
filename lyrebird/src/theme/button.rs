@@ -57,7 +57,7 @@ fn generalBase(styles: &Styles) -> Style
 		border: Border
 		{
 			color: styles.button.border,
-			width: 1.0.into(),
+			width: 1.0,
 			radius: 5.0.into(),
 		},
 		..Style::default()
