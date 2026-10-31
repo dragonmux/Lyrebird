@@ -7,7 +7,9 @@
 use color_eyre::{eyre, Result};
 use directories::ProjectDirs;
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 use window::MainWindow;
 
 mod albumList;
@@ -30,10 +32,13 @@ fn main() -> Result<()>
 {
 	color_eyre::install()?;
 	tracing_subscriber::registry()
+		.with(tracing_subscriber::fmt::layer())
 		.with
 		(
-			tracing_subscriber::fmt::layer()
-				.with_filter(LevelFilter::INFO)
+			EnvFilter::builder()
+				.with_env_var("LYREBIRD_LOG")
+				.with_default_directive(LevelFilter::INFO.into())
+				.from_env()?,
 		)
 		.init();
 
