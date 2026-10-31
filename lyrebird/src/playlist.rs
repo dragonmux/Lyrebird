@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+use std::collections::BTreeMap;
+
 use crate::track::TrackID;
 
 pub struct Playlist
 {
 	name: String,
-	entries: Vec<TrackID>,
-	currentEntry: usize,
+	entries: BTreeMap<PlaylistEntryID, TrackID>,
+	nextEntryID: PlaylistEntryID,
+	currentEntry: PlaylistEntryID,
 }
+
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PlaylistEntryID(usize);
 
 impl Playlist
 {
@@ -16,8 +22,9 @@ impl Playlist
 		Self
 		{
 			name: name.into(),
-			entries: Vec::new(),
-			currentEntry: 0,
+			entries: BTreeMap::new(),
+			nextEntryID: PlaylistEntryID::default(),
+			currentEntry: PlaylistEntryID::default(),
 		}
 	}
 
@@ -28,27 +35,30 @@ impl Playlist
 
 	pub fn add(&mut self, trackID: TrackID)
 	{
-		self.entries.push(trackID);
+		let entryID = self.nextEntryID;
+		self.nextEntryID.0 += 1;
+		self.entries.insert(entryID, trackID);
 	}
 
 	pub fn replaceWith(&mut self, trackID: TrackID)
 	{
 		self.entries.clear();
-		self.currentEntry = 0;
+		self.nextEntryID = PlaylistEntryID::default();
+		self.currentEntry = PlaylistEntryID::default();
 		self.add(trackID);
 	}
 
-	pub fn entry(&self, index: usize) -> TrackID
+	pub fn entry(&self, index: PlaylistEntryID) -> Option<TrackID>
 	{
-		self.entries[index]
+		self.entries.get(&index).copied()
 	}
 
-	pub fn nextEntry(&mut self, index: usize)
+	pub fn nextEntry(&mut self, index: PlaylistEntryID)
 	{
 		self.currentEntry = index;
 	}
 
-	pub fn currentEntry(&self) -> usize
+	pub fn currentEntry(&self) -> PlaylistEntryID
 	{
 		self.currentEntry
 	}
@@ -62,17 +72,17 @@ impl Playlist
 		}
 		// If there are entries, figure out how many vs currentEntry
 		let count = self.entries.len();
-		if self.currentEntry < count
+		if self.currentEntry.0 < count
 		{
 			// Increment the current entry counter if there's room to
-			self.currentEntry += 1;
+			self.currentEntry.0 += 1;
 		}
 		// Now check if we're done
-		if self.currentEntry >= count
+		if self.currentEntry.0 >= count
 		{
 			return None;
 		}
 		// Finally, we get to the happy path - give them what they want, a new entry from the playlist!
-		Some(self.entries[self.currentEntry])
+		Some(self.entries[&self.currentEntry])
 	}
 }
