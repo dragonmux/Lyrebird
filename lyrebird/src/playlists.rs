@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 use std::collections::BTreeMap;
+use std::sync::{Arc, RwLock};
 
 use iced::{Length, Padding};
+use iced_widget::scrollable::{Direction, Scrollbar};
 use iced_widget::{Row, scrollable};
 
 use crate::library::MusicLibrary;
@@ -14,7 +16,9 @@ use crate::widgets::{Element, groupBox::GroupBox};
 
 pub struct Playlists
 {
+	library: Arc<RwLock<MusicLibrary>>,
 	lists: BTreeMap<PlaylistID, Playlist>,
+	selectedPlaylist: PlaylistID,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -34,11 +38,14 @@ struct TrackEntry
 
 impl Playlists
 {
-	pub fn new() -> Self
+	pub fn new(musicLibrary: Arc<RwLock<MusicLibrary>>) -> Self
 	{
 		let mut result = Self
 		{
+			library: musicLibrary,
 			lists: BTreeMap::new(),
+			// Default "Now Playing" to being selected
+			selectedPlaylist: PlaylistID(0),
 		};
 
 		result.lists.insert(PlaylistID(0), Playlist::new("Now Playing"));
@@ -49,9 +56,13 @@ impl Playlists
 	pub fn nowPlaying(&mut self) -> &mut Playlist
 		{ self.lists.get_mut(&PlaylistID(0)).expect("Now playing playlist is always valid") }
 
-	pub fn view<'a>(&self) -> Element<'a, Message>
+	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
+		let library = &self.library.read()
+			.expect("Failed to lock library for read");
 		let playlistList = ListEntry::forPlaylists(&self.lists);
+		let selectedPlaylist = &self.lists[&self.selectedPlaylist];
+		let playlistTracks = TrackEntry::forPlaylist(selectedPlaylist, &library);
 
 		let layout = Row::with_children
 		([
@@ -61,7 +72,12 @@ impl Playlists
 				scrollable
 				(
 					ListView::new(&playlistList)
+						.width(Length::Fill)
 				)
+					.width(Length::Fill)
+					.height(Length::Fill)
+					.spacing(5.0)
+					.direction(Direction::Vertical(Scrollbar::default()))
 			)
 				.width(Length::FillPortion(1))
 				.height(Length::Fill)
@@ -74,7 +90,32 @@ impl Playlists
 					right: 2.0,
 					left: 5.0,
 				})
-				.into()
+				.into(),
+			GroupBox::new
+			(
+				selectedPlaylist.name(),
+				scrollable
+				(
+					ListView::new(&playlistTracks)
+						.width(Length::Fill)
+				)
+					.width(Length::Fill)
+					.height(Length::Fill)
+					.spacing(5.0)
+					.direction(Direction::Vertical(Scrollbar::default()))
+			)
+				.width(Length::FillPortion(2))
+				.height(Length::Fill)
+				.titleMargin(5.0)
+				.titlePadding(5.0)
+				.padding(Padding
+				{
+					top: 2.0,
+					bottom: 2.0,
+					right: 2.0,
+					left: 5.0,
+				})
+				.into(),
 		]);
 
 		layout

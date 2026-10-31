@@ -70,7 +70,7 @@ impl MainWindowState
 			artistList: ArtistList::new(mainWindow.musicLibrary.clone()),
 			albumList: AlbumList::new(mainWindow.musicLibrary.clone()),
 			optionsPanel: OptionsPanel::new(mainWindow.settings.clone()),
-			playlists: Playlists::new(),
+			playlists: Playlists::new(mainWindow.musicLibrary.clone()),
 
 			currentlyPlaying: None,
 
