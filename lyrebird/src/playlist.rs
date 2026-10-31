@@ -40,12 +40,11 @@ impl Playlist
 		self.entries.insert(entryID, trackID);
 	}
 
-	pub fn replaceWith(&mut self, trackID: TrackID)
+	pub fn clear(&mut self)
 	{
 		self.entries.clear();
 		self.nextEntryID = PlaylistEntryID::default();
 		self.currentEntry = PlaylistEntryID::default();
-		self.add(trackID);
 	}
 
 	pub fn entry(&self, index: PlaylistEntryID) -> Option<TrackID>
