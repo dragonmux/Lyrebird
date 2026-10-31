@@ -69,17 +69,25 @@ impl Playlist
 		{
 			return None;
 		}
-		// If there are entries, figure out how many vs currentEntry
-		let count = self.entries.len();
-		if self.currentEntry.0 < count
+		// Try finding the next entry, if we're not already at the end
+		loop
 		{
-			// Increment the current entry counter if there's room to
-			self.currentEntry.0 += 1;
-		}
-		// Now check if we're done
-		if self.currentEntry.0 >= count
-		{
-			return None;
+			// If there are entries, try and find the next one
+			if self.currentEntry < self.nextEntryID
+			{
+				// Increment the current entry counter if there's room to
+				self.currentEntry.0 += 1;
+				// If this landed on a valid entry, then we want to emit it, so break out to do so
+				if self.entries.contains_key(&self.currentEntry)
+				{
+					break;
+				}
+			}
+			// Now check if we're done and there's nothing left to give
+			if self.currentEntry >= self.nextEntryID
+			{
+				return None;
+			}
 		}
 		// Finally, we get to the happy path - give them what they want, a new entry from the playlist!
 		Some(self.entries[&self.currentEntry])
