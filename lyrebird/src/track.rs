@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use std::{borrow::Cow, path::PathBuf};
+use std::borrow::Cow;
+use std::fmt::{self, Display};
+use std::path::PathBuf;
 
 use color_eyre::eyre::Result;
 use libAudio::audioFile::AudioFile;
@@ -190,6 +192,14 @@ impl Artist
 	pub fn tracks(&self) -> &[TrackID]
 	{
 		&self.tracks
+	}
+}
+
+impl Display for TrackID
+{
+	fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result
+	{
+		self.0.fmt(fmt)
 	}
 }
 
