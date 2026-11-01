@@ -72,16 +72,6 @@ impl Playlist
 		self.currentEntry = None;
 	}
 
-	pub fn entry(&self, index: PlaylistEntryID) -> Option<TrackID>
-	{
-		self.entries.get(&index).copied()
-	}
-
-	pub fn currentEntry(&self) -> PlaylistEntryID
-	{
-		self.currentEntry.unwrap_or_default()
-	}
-
 	pub fn tracks(&self) -> impl Iterator<Item = &TrackID>
 	{
 		self.entries.values()
