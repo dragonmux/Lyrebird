@@ -52,11 +52,6 @@ impl Playlist
 		self.entries.get(&index).copied()
 	}
 
-	pub fn nextEntry(&mut self, index: PlaylistEntryID)
-	{
-		self.currentEntry = index;
-	}
-
 	pub fn currentEntry(&self) -> PlaylistEntryID
 	{
 		self.currentEntry
