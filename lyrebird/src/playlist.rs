@@ -10,7 +10,7 @@ pub struct Playlist
 	name: String,
 	entries: BTreeMap<PlaylistEntryID, TrackID>,
 	nextEntryID: PlaylistEntryID,
-	currentEntry: PlaylistEntryID,
+	currentEntry: Option<PlaylistEntryID>,
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -25,7 +25,7 @@ impl Playlist
 			name: name.into(),
 			entries: BTreeMap::new(),
 			nextEntryID: PlaylistEntryID::default(),
-			currentEntry: PlaylistEntryID::default(),
+			currentEntry: None,
 		}
 	}
 
@@ -45,7 +45,7 @@ impl Playlist
 	{
 		self.entries.clear();
 		self.nextEntryID = PlaylistEntryID::default();
-		self.currentEntry = PlaylistEntryID::default();
+		self.currentEntry = None;
 	}
 
 	pub fn entry(&self, index: PlaylistEntryID) -> Option<TrackID>
@@ -55,7 +55,7 @@ impl Playlist
 
 	pub fn currentEntry(&self) -> PlaylistEntryID
 	{
-		self.currentEntry
+		self.currentEntry.unwrap_or_default()
 	}
 
 	pub fn tracks(&self) -> impl Iterator<Item = &TrackID>
@@ -73,25 +73,33 @@ impl Playlist
 		// Try finding the next entry, if we're not already at the end
 		loop
 		{
-			// If there are entries, try and find the next one
-			if self.currentEntry < self.nextEntryID
+			let currentEntry = match self.currentEntry
 			{
-				// Increment the current entry counter if there's room to
-				self.currentEntry.0 += 1;
-				// If this landed on a valid entry, then we want to emit it, so break out to do so
-				if self.entries.contains_key(&self.currentEntry)
+				// If the current entry is None, pick the first entry in the list
+				None => PlaylistEntryID::default(),
+				// Otherwise if there are entries, try and find the next one
+				Some(currentEntry) => if currentEntry < self.nextEntryID
 				{
-					break;
+					// Increment the current entry counter if there's room to
+					currentEntry + 1
 				}
+				else
+				{
+					currentEntry
+				}
+			};
+			self.currentEntry = Some(currentEntry);
+			// If this landed on a valid entry, then we want to emit it, and be done
+			if self.entries.contains_key(&currentEntry)
+			{
+				return Some(self.entries[&currentEntry]);
 			}
 			// Now check if we're done and there's nothing left to give
-			if self.currentEntry >= self.nextEntryID
+			else if currentEntry >= self.nextEntryID
 			{
 				return None;
 			}
 		}
-		// Finally, we get to the happy path - give them what they want, a new entry from the playlist!
-		Some(self.entries[&self.currentEntry])
 	}
 }
 
