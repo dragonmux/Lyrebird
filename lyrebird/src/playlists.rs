@@ -4,12 +4,12 @@ use std::collections::BTreeMap;
 use std::fmt::{self, Display};
 use std::sync::{Arc, RwLock};
 
-use iced::{Length, Padding};
+use iced::{Length, Padding, Task};
 use iced_widget::scrollable::{Direction, Scrollbar};
 use iced_widget::{Row, scrollable};
 
 use crate::library::MusicLibrary;
-use crate::messages::Message;
+use crate::messages::{self, Message};
 use crate::playlist::Playlist;
 use crate::track::TrackID;
 use crate::widgets::listView::{ListItem, ListView};
@@ -60,6 +60,21 @@ impl Playlists
 	pub fn playlist(&mut self, playlistID: PlaylistID) -> Option<&mut Playlist>
 		{ self.lists.get_mut(&playlistID) }
 
+	pub fn update(&mut self, message: messages::Playlist) -> Task<Message>
+	{
+		use messages::Playlist;
+
+		match message
+		{
+			Playlist::SelectPlaylist(playlistID) =>
+			{
+				self.selectedPlaylist = playlistID
+			},
+		};
+
+		Task::none()
+	}
+
 	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
 		let library = &self.library.read()
@@ -77,6 +92,7 @@ impl Playlists
 				(
 					ListView::new(&playlistList)
 						.width(Length::Fill)
+						.onDoubeClick(|nodeID| Message::Playlist(messages::Playlist::SelectPlaylist(nodeID)))
 				)
 					.width(Length::Fill)
 					.height(Length::Fill)

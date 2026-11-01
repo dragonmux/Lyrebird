@@ -35,6 +35,7 @@ pub enum Message
 	LibraryTree(LibraryTree),
 	ArtistList(ArtistList),
 	AlbumList(AlbumList),
+	Playlist(Playlist),
 	KeyEvent(keyboard::Event),
 	WindowOpened(window::Id),
 	WindowClosed(window::Id),
@@ -65,6 +66,12 @@ pub enum ArtistList
 pub enum AlbumList
 {
 	SelectAlbum(AlbumID),
+}
+
+#[derive(Clone, Copy)]
+pub enum Playlist
+{
+	SelectPlaylist(PlaylistID),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

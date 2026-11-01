@@ -90,6 +90,7 @@ impl MainWindowState
 			Message::LibraryTree(message) => self.libraryTree.update(message),
 			Message::ArtistList(message) => self.artistList.update(message),
 			Message::AlbumList(message) => self.albumList.update(message),
+			Message::Playlist(message) => self.playlists.update(message),
 			Message::KeyEvent(event) =>
 			{
 				match event
