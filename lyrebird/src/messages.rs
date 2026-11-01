@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+use iced::Point;
 use iced::keyboard;
 use iced::window;
 
@@ -54,6 +55,8 @@ pub enum Message
 pub enum LibraryTree
 {
 	SelectDirectory(DirectoryID),
+	DirectoryMenuOpen(DirectoryID, Point, f32),
+	TrackMenuOpen(TrackID, Point, f32),
 }
 
 #[derive(Clone, Copy)]
