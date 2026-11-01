@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::ops::{Add, AddAssign};
 
-use crate::track::TrackID;
+use crate::{messages::PlayPosition, track::TrackID};
 
 pub struct Playlist
 {
@@ -34,7 +34,7 @@ impl Playlist
 		&self.name
 	}
 
-	pub fn add(&mut self, trackID: TrackID)
+	pub fn add(&mut self, trackID: TrackID, playPosition: PlayPosition)
 	{
 		let entryID = self.nextEntryID;
 		self.nextEntryID.0 += 1;

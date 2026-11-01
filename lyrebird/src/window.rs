@@ -165,7 +165,19 @@ impl MainWindowState
 
 	fn handleAddToPlaylist(&mut self, playlistID: PlaylistID, trackID: TrackID, playPosition: PlayPosition) -> Task<Message>
 	{
-		return self.playTrack(trackID).expect("Playing track should have worked")
+		// Grab the playlist this track is to be added to
+		let playlist = self.playlists.playlist(playlistID);
+		// Add it to the playlist if we could get it back, report an error otherwise
+		if let Some(playlist) = playlist {
+			playlist.add(trackID, playPosition);
+			// If the play position was now and the playlist is Now Playing, trigger playback
+			if playlistID == PlaylistID::nowPlaying() && playPosition == PlayPosition::Now {
+				return self.playTrack(trackID).expect("Playing track should have worked")
+			}
+		} else {
+			error!("Failed to get playlist {playlistID}, not adding track");
+		}
+		Task::none()
 	}
 
 	fn playTrack(&mut self, trackID: TrackID) -> Result<Task<Message>>
@@ -194,7 +206,7 @@ impl MainWindowState
 	fn playlistSong(&mut self, trackID: TrackID) -> Result<Task<Message>>
 	{
 		let nowPlaying = self.playlists.nowPlaying();
-		nowPlaying.add(trackID);
+		nowPlaying.add(trackID, PlayPosition::Last);
 		match &self.currentlyPlaying
 		{
 			Some(_) => Ok(Task::none()),
