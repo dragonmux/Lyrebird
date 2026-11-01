@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 use std::collections::BTreeMap;
+use std::fmt::{self, Display};
 use std::sync::{Arc, RwLock};
 
 use iced::{Length, Padding};
@@ -133,6 +134,14 @@ impl PlaylistID
 	pub const fn nowPlaying() -> Self
 	{
 		Self(0)
+	}
+}
+
+impl Display for PlaylistID
+{
+	fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result
+	{
+		self.0.fmt(fmt)
 	}
 }
 
