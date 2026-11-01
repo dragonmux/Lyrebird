@@ -3,8 +3,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use iced::{Color, Event, Length, Padding, Rectangle, Size, mouse, touch};
-use iced_core::{Clipboard, Layout, Shell, Widget, layout, mouse::{Click, click}, renderer, widget::{Operation, Tree, tree}, window};
+use iced::{Color, Event, Length, Padding, Point, Rectangle, Size, mouse, touch};
+use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer, window};
+use iced_core::mouse::{Click, click};
+use iced_core::widget::{Operation, Tree, tree};
 use iced_widget::text;
 
 pub struct ListView<'a, Items, Message, Theme, Renderer = iced::Renderer>
@@ -24,7 +26,7 @@ where
 
 type OnClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
 type OnDoubeClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
-type OnRightClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
+type OnRightClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID, Point, f32) -> Message + 'a>;
 
 /// Structure to hold the styling setup information for the [`ListView`], to be held via Rc,
 /// so that the [`ListEntry`] items can get their styling information
@@ -41,6 +43,8 @@ where
 	ItemID: Copy,
 {
 	nodeID: Option<ItemID>,
+	nodePosition: Point,
+	nodeHeight: f32,
 	previousClick: Option<Click>,
 }
 
@@ -174,7 +178,7 @@ where
 	/// Sets the function to call to generate a [`Message`] for the [`ListView`] node when
 	/// the node gets clicked if you wish to handle right click somehow
 	#[must_use]
-	pub fn onRightClick(mut self, rightClick: impl Fn(Items::ItemID) -> Message + 'a) -> Self
+	pub fn onRightClick(mut self, rightClick: impl Fn(Items::ItemID, Point, f32) -> Message + 'a) -> Self
 	{
 		self.onRightClick = Some(Box::new(rightClick));
 		self
@@ -304,6 +308,8 @@ where
 				// It is, then this is the item we're interested in
 				let state = tree.state.downcast_mut::<ListViewState<Items::ItemID>>();
 				state.nodeID = Some(*item.state.downcast_ref::<Items::ItemID>());
+				state.nodePosition = cursor.position().unwrap_or_else(|| layout.position());
+				state.nodeHeight = layout.bounds().height;
 				break;
 			}
 		}
@@ -346,7 +352,7 @@ where
 				// If the user has a right-click handler registered, handle the event with it
 				if let Some(onRightClick) = &self.onRightClick && let Some(nodeID) = state.nodeID
 				{
-					shell.publish(onRightClick(nodeID));
+					shell.publish(onRightClick(nodeID, state.nodePosition, state.nodeHeight));
 					shell.capture_event();
 				}
 			},
@@ -401,6 +407,8 @@ where
 		Self
 		{
 			nodeID: None,
+			nodePosition: Point::default(),
+			nodeHeight: 0.0,
 			previousClick: None
 		}
 	}
