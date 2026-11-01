@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 use std::collections::BTreeMap;
+use std::ops::{Add, AddAssign};
 
 use crate::track::TrackID;
 
@@ -91,5 +92,23 @@ impl Playlist
 		}
 		// Finally, we get to the happy path - give them what they want, a new entry from the playlist!
 		Some(self.entries[&self.currentEntry])
+	}
+}
+
+impl Add<usize> for PlaylistEntryID
+{
+	type Output = Self;
+
+	fn add(self, rhs: usize) -> Self
+	{
+		PlaylistEntryID(self.0 + rhs)
+	}
+}
+
+impl AddAssign<usize> for PlaylistEntryID
+{
+	fn add_assign(&mut self, rhs: usize)
+	{
+		self.0 += rhs;
 	}
 }
