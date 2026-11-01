@@ -22,7 +22,7 @@ pub struct Playlists
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-struct PlaylistID(u64);
+pub struct PlaylistID(u64);
 
 struct ListEntry
 {
@@ -45,16 +45,16 @@ impl Playlists
 			library: musicLibrary,
 			lists: BTreeMap::new(),
 			// Default "Now Playing" to being selected
-			selectedPlaylist: PlaylistID(0),
+			selectedPlaylist: PlaylistID::nowPlaying(),
 		};
 
-		result.lists.insert(PlaylistID(0), Playlist::new("Now Playing"));
+		result.lists.insert(PlaylistID::nowPlaying(), Playlist::new("Now Playing"));
 
 		result
 	}
 
 	pub fn nowPlaying(&mut self) -> &mut Playlist
-		{ self.lists.get_mut(&PlaylistID(0)).expect("Now playing playlist is always valid") }
+		{ self.lists.get_mut(&PlaylistID::nowPlaying()).expect("Now playing playlist is always valid") }
 
 	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
@@ -124,6 +124,15 @@ impl Playlists
 			.spacing(5.0)
 			.padding(5.0)
 			.into()
+	}
+}
+
+impl PlaylistID
+{
+	/// Constant special playlist ID for the Now Playing playlist
+	pub const fn nowPlaying() -> Self
+	{
+		Self(0)
 	}
 }
 
