@@ -110,7 +110,16 @@ impl LibraryTree
 				(
 					ListView::new(&trackList)
 						.width(Length::Fill)
-						.onDoubeClick(|nodeID| Message::AddToPlaylist(PlaylistID::nowPlaying(), nodeID, PlayPosition::Now))
+						.onDoubeClick
+						(
+							|nodeID|
+								Message::AddToPlaylist(PlaylistID::nowPlaying(), nodeID, PlayPosition::Now)
+						)
+						.onRightClick
+						(
+							|nodeID, position, nodeHeight|
+									Message::LibraryTree(messages::LibraryTree::TrackMenuOpen(nodeID, position, nodeHeight))
+						)
 				)
 					.width(Length::Fill)
 					.height(Length::Fill)
