@@ -55,7 +55,10 @@ impl Playlists
 	}
 
 	pub fn nowPlaying(&mut self) -> &mut Playlist
-		{ self.lists.get_mut(&PlaylistID::nowPlaying()).expect("Now playing playlist is always valid") }
+		{ self.playlist(PlaylistID::nowPlaying()).expect("Now playing playlist is always valid") }
+
+	pub fn playlist(&mut self, playlistID: PlaylistID) -> Option<&mut Playlist>
+		{ self.lists.get_mut(&playlistID) }
 
 	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
