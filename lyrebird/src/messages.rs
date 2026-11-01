@@ -5,6 +5,8 @@ use iced::window;
 
 use crate::library::DirectoryID;
 use crate::playback::PlaybackState;
+use crate::playlist::PlaylistEntryID;
+use crate::playlists::PlaylistID;
 use crate::track::{AlbumID, ArtistID, TrackID};
 use crate::widgets::tabBar::TabBarEnum;
 
@@ -36,10 +38,9 @@ pub enum Message
 	KeyEvent(keyboard::Event),
 	WindowOpened(window::Id),
 	WindowClosed(window::Id),
-	PlayNow(TrackID),
-	AddToPlaylist,
-	RemoveFromPlaylist,
-	PlayPlaylist,
+	AddToPlaylist(PlaylistID, TrackID, PlayPosition),
+	RemoveFromPlaylist(PlaylistID, PlaylistEntryID),
+	PlayPlaylist(PlaylistID),
 	PlayCurrent,
 	PauseCurrent,
 	TogglePlayback,
@@ -64,6 +65,14 @@ pub enum ArtistList
 pub enum AlbumList
 {
 	SelectAlbum(AlbumID),
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum PlayPosition
+{
+	Now,
+	Next,
+	Last,
 }
 
 impl Default for Tab

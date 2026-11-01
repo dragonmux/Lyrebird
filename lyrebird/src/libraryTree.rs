@@ -10,7 +10,8 @@ use iced_widget::{Row, scrollable};
 use itertools::Itertools;
 
 use crate::library::{Directory, DirectoryID, MusicLibrary};
-use crate::messages::{self, Message};
+use crate::messages::{self, Message, PlayPosition};
+use crate::playlists::PlaylistID;
 use crate::track::TrackID;
 use crate::widgets::Element;
 use crate::widgets::groupBox::GroupBox;
@@ -103,7 +104,7 @@ impl LibraryTree
 				(
 					ListView::new(&trackList)
 						.width(Length::Fill)
-						.onDoubeClick(|nodeID| Message::PlayNow(nodeID))
+						.onDoubeClick(|nodeID| Message::AddToPlaylist(PlaylistID::nowPlaying(), nodeID, PlayPosition::Now))
 				)
 					.width(Length::Fill)
 					.height(Length::Fill)

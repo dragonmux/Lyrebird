@@ -17,10 +17,10 @@ use tracing::error;
 use crate::albumList::AlbumList;
 use crate::artistList::ArtistList;
 use crate::library::MusicLibrary;
-use crate::messages::{Message, Tab};
+use crate::messages::{Message, PlayPosition, Tab};
 use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, TrackState};
-use crate::playlists::Playlists;
+use crate::playlists::{PlaylistID, Playlists};
 use crate::theme::Theme;
 use crate::track::TrackID;
 use crate::widgets::trackProgress::TrackProgress;
@@ -101,8 +101,8 @@ impl MainWindowState
 			}
 			Message::WindowOpened(id) => self.handleWindowOpen(id),
 			Message::WindowClosed(id) => self.handleWindowClose(id),
-			Message::PlayNow(trackID) =>
-				self.playTrack(trackID).expect("Playing track should have worked"),
+			Message::AddToPlaylist(playlistID, trackID, playPosition) =>
+				self.handleAddToPlaylist(playlistID, trackID, playPosition),
 			Message::TogglePlayback => self.togglePlayback(),
 			Message::PlaybackNotification(notification) =>
 				self.handlePlaybackNotification(notification)
@@ -161,6 +161,11 @@ impl MainWindowState
 			self.cancellation.cancel();
 		}
 		Task::none()
+	}
+
+	fn handleAddToPlaylist(&mut self, playlistID: PlaylistID, trackID: TrackID, playPosition: PlayPosition) -> Task<Message>
+	{
+		return self.playTrack(trackID).expect("Playing track should have worked")
 	}
 
 	fn playTrack(&mut self, trackID: TrackID) -> Result<Task<Message>>

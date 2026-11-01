@@ -7,7 +7,8 @@ use iced_widget::scrollable::{Direction, Scrollbar};
 use iced_widget::{Row, scrollable};
 
 use crate::library::MusicLibrary;
-use crate::messages::{self, Message};
+use crate::messages::{self, Message, PlayPosition};
+use crate::playlists::PlaylistID;
 use crate::track::{ArtistID, TrackID};
 use crate::widgets::groupBox::GroupBox;
 use crate::widgets::listView::ListItem;
@@ -99,7 +100,7 @@ impl ArtistList
 				(
 					ListView::new(&trackList)
 						.width(Length::Fill)
-						.onDoubeClick(|nodeID| Message::PlayNow(nodeID))
+						.onDoubeClick(|nodeID| Message::AddToPlaylist(PlaylistID::nowPlaying(), nodeID, PlayPosition::Now))
 				)
 					.width(Length::Fill)
 					.height(Length::Fill)
