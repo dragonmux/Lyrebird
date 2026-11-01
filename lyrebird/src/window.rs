@@ -172,46 +172,13 @@ impl MainWindowState
 			playlist.add(trackID, playPosition);
 			// If the play position was now and the playlist is Now Playing, trigger playback
 			if playlistID == PlaylistID::nowPlaying() && playPosition == PlayPosition::Now {
-				return self.playTrack(trackID).expect("Playing track should have worked")
+				// Handle playing this track via the playback completion mechanism
+				return Task::done(Message::PlaybackNotification(PlaybackState::Complete))
 			}
 		} else {
 			error!("Failed to get playlist {playlistID}, not adding track");
 		}
 		Task::none()
-	}
-
-	fn playTrack(&mut self, trackID: TrackID) -> Result<Task<Message>>
-	{
-		// Try and lock access to the library to get the track data for this track
-		let library= self.libraryTree.library();
-		let library = library
-			.read()
-			.map_err(|error| eyre!("Library should be lockable for read but was not: {}", error))?;
-		// Grab the track and turn it into state info, dropping our library lock
-		let (mut track, stateStream) = TrackState::new(library.trackFor(trackID), &library)?;
-		drop(library);
-		// See if another is currently playing, and make it stop if it is
-		let currentlyPlaying = self.currentlyPlaying.take();
-		if let Some(mut currentTrack) = currentlyPlaying
-		{
-			currentTrack.stop()?;
-		}
-		// Start the new track playing and push it into the state tracker
-		track.play();
-		self.currentlyPlaying = Some(track);
-		Ok(Task::run(stateStream, |stateChange| Message::PlaybackNotification(stateChange)))
-	}
-
-	#[allow(unused)]
-	fn playlistSong(&mut self, trackID: TrackID) -> Result<Task<Message>>
-	{
-		let nowPlaying = self.playlists.nowPlaying();
-		nowPlaying.add(trackID, PlayPosition::Last);
-		match &self.currentlyPlaying
-		{
-			Some(_) => Ok(Task::none()),
-			None => self.playTrack(trackID),
-		}
 	}
 
 	fn togglePlayback(&mut self) -> Task<Message>
@@ -239,6 +206,28 @@ impl MainWindowState
 		}
 
 		Task::none()
+	}
+
+	fn playTrack(&mut self, trackID: TrackID) -> Result<Task<Message>>
+	{
+		// Try and lock access to the library to get the track data for this track
+		let library= self.libraryTree.library();
+		let library = library
+			.read()
+			.map_err(|error| eyre!("Library should be lockable for read but was not: {}", error))?;
+		// Grab the track and turn it into state info, dropping our library lock
+		let (mut track, stateStream) = TrackState::new(library.trackFor(trackID), &library)?;
+		drop(library);
+		// See if another is currently playing, and make it stop if it is
+		let currentlyPlaying = self.currentlyPlaying.take();
+		if let Some(mut currentTrack) = currentlyPlaying
+		{
+			currentTrack.stop()?;
+		}
+		// Start the new track playing and push it into the state tracker
+		track.play();
+		self.currentlyPlaying = Some(track);
+		Ok(Task::run(stateStream, |stateChange| Message::PlaybackNotification(stateChange)))
 	}
 
 	fn handlePlaybackNotification(&mut self, notification: PlaybackState) -> Result<Task<Message>>
