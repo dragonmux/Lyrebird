@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
-use iced::{Length, Padding, Task};
+use iced::{Length, Padding, Point, Task};
 use iced_widget::scrollable::{Direction, Scrollbar};
 use iced_widget::{Row, scrollable};
 use itertools::Itertools;
@@ -22,6 +22,8 @@ pub struct LibraryTree
 {
 	library: Arc<RwLock<MusicLibrary>>,
 	selectedDirectory: DirectoryID,
+	directoryMenu: Option<(DirectoryID, Point, f32)>,
+	trackMenu: Option<(TrackID, Point, f32)>,
 }
 
 struct DirectoryTree
@@ -44,7 +46,9 @@ impl LibraryTree
 		Self
 		{
 			library: musicLibrary,
-			selectedDirectory: DirectoryID::new(0)
+			selectedDirectory: DirectoryID::new(0),
+			directoryMenu: None,
+			trackMenu: None,
 		}
 	}
 
@@ -55,9 +59,11 @@ impl LibraryTree
 		match message
 		{
 			LibraryTree::SelectDirectory(directoryID) =>
-			{
-				self.selectedDirectory = directoryID
-			},
+				self.selectedDirectory = directoryID,
+			LibraryTree::DirectoryMenuOpen(directoryID, position, entryHeight) =>
+				self.directoryMenu = Some((directoryID, position, entryHeight)),
+			LibraryTree::TrackMenuOpen(trackID, position, entryHeight) =>
+				self.trackMenu = Some((trackID, position, entryHeight)),
 		};
 
 		Task::none()
