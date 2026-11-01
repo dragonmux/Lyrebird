@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 use std::collections::BTreeMap;
-use std::ops::{Add, AddAssign};
+use std::ops::Add;
 
 use crate::{messages::PlayPosition, track::TrackID};
 
@@ -36,8 +36,32 @@ impl Playlist
 
 	pub fn add(&mut self, trackID: TrackID, playPosition: PlayPosition)
 	{
-		let entryID = self.nextEntryID;
-		self.nextEntryID.0 += 1;
+		let entryID = match playPosition
+		{
+			PlayPosition::Now => {
+				// If the tune is to be played now, replace the playlist with it
+				self.clear();
+				self.nextEntryID.fetch_inc()
+			}
+			PlayPosition::Next => {
+				// If it should go after the curently playing track, figure out what that is,
+				// move everything else down, and then add the new track
+				let entryID = self.currentEntry.map_or_default(|entryID| entryID + 1);
+				// Extract the list of tracks that follow the new entry ID
+				let tracks = self.entries.split_off(&entryID);
+				// Add the new track and then re-add all the following tracks
+				self.entries.insert(entryID, trackID);
+				for (offset, track) in tracks.into_values().enumerate()
+				{
+					self.entries.insert(entryID + offset + 1, track);
+				}
+				entryID
+			}
+			PlayPosition::Last => {
+				// If it should go on the end, figure out the ID of the end entry
+				self.nextEntryID.fetch_inc()
+			}
+		};
 		self.entries.insert(entryID, trackID);
 	}
 
@@ -103,6 +127,16 @@ impl Playlist
 	}
 }
 
+impl PlaylistEntryID
+{
+	pub fn fetch_inc(&mut self) -> Self
+	{
+		let result = *self;
+		self.0 += 1;
+		result
+	}
+}
+
 impl Add<usize> for PlaylistEntryID
 {
 	type Output = Self;
@@ -110,13 +144,5 @@ impl Add<usize> for PlaylistEntryID
 	fn add(self, rhs: usize) -> Self
 	{
 		PlaylistEntryID(self.0 + rhs)
-	}
-}
-
-impl AddAssign<usize> for PlaylistEntryID
-{
-	fn add_assign(&mut self, rhs: usize)
-	{
-		self.0 += rhs;
 	}
 }
