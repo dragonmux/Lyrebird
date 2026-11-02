@@ -4,23 +4,31 @@ use iced::{Background, Border, Color, Event, Length, Point, Rectangle, Size, Vec
 use iced_core::{Clipboard, Element, Layout, Shell, Widget, layout, overlay, renderer, widget::Operation};
 use iced_core::widget::{Tree, tree};
 
-pub struct ContextMenu<'a, MenuItem, Context, Message, Theme, Renderer = iced::Renderer>
+pub struct ContextMenu<'a, Item, Context, Message, Theme, Renderer = iced::Renderer>
 where
-	MenuItem: Clone + ToString,
+	Item: Copy + ToString,
 	Context: Copy,
 	Theme: Catalog,
 	Renderer: iced_core::Renderer,
 {
 	content: Element<'a, Message, Theme, Renderer>,
-	menuItems: &'a [MenuItem],
+	menuItems: Vec<MenuItem<Item>>,
 	state: &'a ContextMenuState<Context>,
-	onMenuClick: OnMenuClickFn<'a, MenuItem, Context, Message>,
+	onMenuClick: OnMenuClickFn<'a, Item, Context, Message>,
 	onMenuClose: OnMenuCloseFn<'a, Message>,
 	class: Theme::Class<'a>,
 }
 
 type OnMenuClickFn<'a, MenuItem, Context, Message> = Box<dyn Fn(MenuItem, Context) -> Message + 'a>;
 type OnMenuCloseFn<'a, Message> = Box<dyn Fn() -> Message + 'a>;
+
+pub enum MenuItem<Item>
+where
+	Item: Copy + ToString,
+{
+	Item(Item),
+	Separator,
+}
 
 #[derive(Clone)]
 pub struct ContextMenuState<Context>
@@ -59,28 +67,28 @@ where
 
 pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
 
-impl<'a, MenuItem, Context, Message, Theme, Renderer> ContextMenu<'a, MenuItem, Context, Message, Theme, Renderer>
+impl<'a, Item, Context, Message, Theme, Renderer> ContextMenu<'a, Item, Context, Message, Theme, Renderer>
 where
-	MenuItem: Clone + ToString + 'a,
+	Item: Copy + ToString + 'a,
 	Context: Copy,
 	Message: 'a,
 	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + 'a,
 {
 	/// Creates a new [`ContextMenu`] for `content` with the given menu items and click handler
-	pub fn new
+	pub fn new<const N: usize>
 	(
 		content: impl Into<Element<'a, Message, Theme, Renderer>>,
-		menuItems: &'a [MenuItem],
+		menuItems: [impl Into<MenuItem<Item>>; N],
 		state: &'a ContextMenuState<Context>,
-		onMenuClick: impl Fn(MenuItem, Context) -> Message + 'a,
+		onMenuClick: impl Fn(Item, Context) -> Message + 'a,
 		onMenuClose: impl Fn() -> Message + 'a,
 	) -> Self
 	{
 		Self
 		{
 			content: content.into(),
-			menuItems,
+			menuItems: menuItems.into_iter().map(Into::into).collect(),
 			state,
 			onMenuClick: Box::new(onMenuClick),
 			onMenuClose: Box::new(onMenuClose),
@@ -99,9 +107,9 @@ where
 	}
 }
 
-impl<'a, MenuItem, Context, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for ContextMenu<'a, MenuItem, Context, Message, Theme, Renderer>
+impl<'a, Item, Context, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for ContextMenu<'a, Item, Context, Message, Theme, Renderer>
 where
-	MenuItem: Clone + ToString,
+	Item: Copy + ToString,
 	Context: Copy,
 	Theme: Catalog,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer,
@@ -231,18 +239,28 @@ where
 	}
 }
 
-impl<'a, MenuItem, Context, Message, Theme, Renderer> From<ContextMenu<'a, MenuItem, Context, Message, Theme, Renderer>>
+impl<'a, Item, Context, Message, Theme, Renderer> From<ContextMenu<'a, Item, Context, Message, Theme, Renderer>>
 	for iced::Element<'a, Message, Theme, Renderer>
 where
-	MenuItem: Clone + ToString + 'a,
+	Item: Copy + ToString + 'a,
 	Context: Copy + 'a,
 	Message: 'a,
 	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
 {
-	fn from(contextMenu: ContextMenu<'a, MenuItem, Context, Message, Theme, Renderer>) -> Self
+	fn from(contextMenu: ContextMenu<'a, Item, Context, Message, Theme, Renderer>) -> Self
 	{
 		Self::new(contextMenu)
+	}
+}
+
+impl<Item> From<Item> for MenuItem<Item>
+where
+	Item: Copy + ToString,
+{
+	fn from(item: Item) -> Self
+	{
+		Self::Item(item)
 	}
 }
 
