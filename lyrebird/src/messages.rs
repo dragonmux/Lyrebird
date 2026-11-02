@@ -60,6 +60,8 @@ pub enum LibraryTree
 	SelectDirectory(DirectoryID),
 	DirectoryMenuOpen(DirectoryID, Point, f32),
 	TrackMenuOpen(TrackID, Point, f32),
+	TrackMenuClose,
+	TrackAction(TrackID, TrackMenuItem),
 }
 
 #[derive(Clone, Copy)]
