@@ -171,10 +171,13 @@ where
 			Event::Touch(touch::Event::FingerPressed { .. }) |
 			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) =>
 			{
-				// Event wasn't processed by the overlay, so needs closing and the menu state resetting
-				let onMenuClose = &self.onMenuClose;
-				shell.publish(onMenuClose());
-				state.close();
+				if self.state.menuOpen
+				{
+					// Event wasn't processed by the overlay, so needs closing and the menu state resetting
+					let onMenuClose = &self.onMenuClose;
+					shell.publish(onMenuClose());
+					state.close();
+				}
 			},
 			_ => {},
 		};
