@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 use iced::{Background, Border, Color, Event, Length, Point, Rectangle, Size, Vector, mouse, touch};
+use iced_core::Overlay;
 use iced_core::{Clipboard, Element, Layout, Shell, Widget, layout, overlay, renderer, widget::Operation};
 use iced_core::widget::{Tree, tree};
+use iced_widget::{rule, text};
 
 pub struct ContextMenu<'a, Item, Context, Message, Theme, Renderer = iced::Renderer>
 where
@@ -39,6 +41,14 @@ where
 	context: Option<Context>,
 	position: Point,
 	entryHeight: f32,
+}
+
+struct Menu<'a, Message, Theme, Renderer = iced::Renderer>
+where
+	Theme: Catalog,
+	Renderer: iced_core::Renderer,
+{
+	items: Vec<Element<'a, Message, Theme, Renderer>>,
 }
 
 struct State
@@ -111,7 +121,7 @@ impl<'a, Item, Context, Message, Theme, Renderer> Widget<Message, Theme, Rendere
 where
 	Item: Copy + ToString,
 	Context: Copy,
-	Theme: Catalog,
+	Theme: Catalog + text::Catalog + rule::Catalog,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer,
 {
 	fn tag(&self) -> tree::Tag
@@ -230,7 +240,12 @@ where
 			let bounds = layout.bounds();
 			let position = layout.position() + translation;
 
-			None
+			let items = self.menuItems
+				.iter()
+				.map(|item| item.into())
+				.collect();
+			let menu = Menu::new(items);
+			Some(menu.into())
 		}
 		else
 		{
@@ -245,7 +260,7 @@ where
 	Item: Copy + ToString + 'a,
 	Context: Copy + 'a,
 	Message: 'a,
-	Theme: Catalog + 'a,
+	Theme: Catalog + text::Catalog + rule::Catalog + 'a,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
 {
 	fn from(contextMenu: ContextMenu<'a, Item, Context, Message, Theme, Renderer>) -> Self
@@ -261,6 +276,33 @@ where
 	fn from(item: Item) -> Self
 	{
 		Self::Item(item)
+	}
+}
+
+impl<Item> From<&Item> for MenuItem<Item>
+where
+	Item: Copy + ToString,
+{
+	fn from(item: &Item) -> Self
+	{
+		Self::Item(*item)
+	}
+}
+
+impl<'a, Item, Message, Theme, Renderer> From<&MenuItem<Item>> for iced::Element<'a, Message, Theme, Renderer>
+where
+	Item: Copy + ToString + 'a,
+	Message: 'a,
+	Theme: Catalog + text::Catalog + rule::Catalog + 'a,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
+{
+	fn from(menuItem: &MenuItem<Item>) -> Self
+	{
+		match menuItem
+		{
+			MenuItem::Item(item) => text(item.to_string()).into(),
+			MenuItem::Separator => rule::horizontal(1).into(),
+		}
 	}
 }
 
@@ -291,6 +333,59 @@ where
 	{
 		self.menuOpen = false;
 		self.context = None;
+	}
+}
+
+impl<'a, Message, Theme, Renderer> Menu<'a, Message, Theme, Renderer>
+where
+	Message: 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + 'a,
+{
+	pub fn new(items: Vec<Element<'a, Message, Theme, Renderer>>) -> Self
+	{
+		Self
+		{
+			items,
+		}
+	}
+}
+
+impl<'a, Message, Theme, Renderer> Overlay<Message, Theme, Renderer> for Menu<'a, Message, Theme, Renderer>
+where
+	Message: 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + 'a,
+{
+	fn layout(&mut self, _renderer: &Renderer, bounds: Size) -> layout::Node
+	{
+		layout::Node::new(bounds)
+	}
+
+	fn draw
+	(
+		&self,
+		_renderer: &mut Renderer,
+		_theme: &Theme,
+		_style: &renderer::Style,
+		_layout: Layout<'_>,
+		_cursor: mouse::Cursor,
+	)
+	{
+		//
+	}
+}
+
+impl<'a, Message, Theme, Renderer> From<Menu<'a, Message, Theme, Renderer>>
+	for overlay::Element<'a, Message, Theme, Renderer>
+where
+	Message: 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
+{
+	fn from(menu: Menu<'a, Message, Theme, Renderer>) -> Self
+	{
+		Self::new(Box::new(menu))
 	}
 }
 
