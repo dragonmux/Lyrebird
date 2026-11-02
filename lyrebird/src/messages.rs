@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+use std::fmt;
+use std::fmt::Display;
+
 use iced::Point;
 use iced::keyboard;
 use iced::window;
@@ -57,6 +60,14 @@ pub enum LibraryTree
 	SelectDirectory(DirectoryID),
 	DirectoryMenuOpen(DirectoryID, Point, f32),
 	TrackMenuOpen(TrackID, Point, f32),
+}
+
+#[derive(Clone, Copy)]
+pub enum TrackMenuItem
+{
+	PlayNow,
+	PlayNext,
+	PlayLast,
 }
 
 #[derive(Clone, Copy)]
@@ -120,5 +131,18 @@ impl TabBarEnum for Tab
 	fn message_for(&self) -> Message
 	{
 		Message::SwitchTo(self.clone())
+	}
+}
+
+impl Display for TrackMenuItem
+{
+	fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result
+	{
+		match self
+		{
+			TrackMenuItem::PlayNow => write!(fmt, "Play Now"),
+			TrackMenuItem::PlayNext =>  write!(fmt, "Play Next"),
+			TrackMenuItem::PlayLast => write!(fmt, "Play Last"),
+		}
 	}
 }
