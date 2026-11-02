@@ -6,6 +6,7 @@ pub mod button;
 pub mod container;
 pub mod groupBox;
 pub mod listView;
+pub mod contextMenu;
 pub mod progressBar;
 pub mod scrollable;
 pub mod tabBar;
