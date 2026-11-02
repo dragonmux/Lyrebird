@@ -8,6 +8,7 @@ pub mod groupBox;
 pub mod listView;
 pub mod contextMenu;
 pub mod progressBar;
+pub mod rule;
 pub mod scrollable;
 pub mod tabBar;
 pub mod text;
