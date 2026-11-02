@@ -10,10 +10,11 @@ use iced_widget::{Row, scrollable};
 use itertools::Itertools;
 
 use crate::library::{Directory, DirectoryID, MusicLibrary};
-use crate::messages::{self, Message, PlayPosition};
+use crate::messages::{self, Message, PlayPosition, TrackMenuItem};
 use crate::playlists::PlaylistID;
 use crate::track::TrackID;
 use crate::widgets::Element;
+use crate::widgets::contextMenu::{ContextMenu, ContextMenuState};
 use crate::widgets::groupBox::GroupBox;
 use crate::widgets::listView::{ListItem, ListView};
 use crate::widgets::treeView::{TreeItem, TreeView};
@@ -23,7 +24,7 @@ pub struct LibraryTree
 	library: Arc<RwLock<MusicLibrary>>,
 	selectedDirectory: DirectoryID,
 	directoryMenu: Option<(DirectoryID, Point, f32)>,
-	trackMenu: Option<(TrackID, Point, f32)>,
+	trackMenu: ContextMenuState<TrackID>,
 }
 
 struct DirectoryTree
@@ -48,7 +49,7 @@ impl LibraryTree
 			library: musicLibrary,
 			selectedDirectory: DirectoryID::new(0),
 			directoryMenu: None,
-			trackMenu: None,
+			trackMenu: ContextMenuState::new(),
 		}
 	}
 
@@ -63,7 +64,18 @@ impl LibraryTree
 			LibraryTree::DirectoryMenuOpen(directoryID, position, entryHeight) =>
 				self.directoryMenu = Some((directoryID, position, entryHeight)),
 			LibraryTree::TrackMenuOpen(trackID, position, entryHeight) =>
-				self.trackMenu = Some((trackID, position, entryHeight)),
+				self.trackMenu.open(trackID, position, entryHeight),
+			LibraryTree::TrackMenuClose =>
+				self.trackMenu.close(),
+			LibraryTree::TrackAction(trackID, menuEntry) =>
+			{
+				return Task::done(match menuEntry
+				{
+					TrackMenuItem::PlayNow => Message::AddToPlaylist(PlaylistID::nowPlaying(), trackID, PlayPosition::Now),
+					TrackMenuItem::PlayNext => Message::AddToPlaylist(PlaylistID::nowPlaying(), trackID, PlayPosition::Next),
+					TrackMenuItem::PlayLast => Message::AddToPlaylist(PlaylistID::nowPlaying(), trackID, PlayPosition::Last),
+				});
+			},
 		};
 
 		Task::none()
@@ -106,25 +118,32 @@ impl LibraryTree
 			GroupBox::new
 			(
 				"Tracks",
-				scrollable
+				ContextMenu::new
 				(
-					ListView::new(&trackList)
+					scrollable
+					(
+						ListView::new(&trackList)
+							.width(Length::Fill)
+							.onDoubeClick
+							(
+								|nodeID|
+									Message::AddToPlaylist(PlaylistID::nowPlaying(), nodeID, PlayPosition::Now)
+							)
+							.onRightClick
+							(
+								|nodeID, position, nodeHeight|
+										Message::LibraryTree(messages::LibraryTree::TrackMenuOpen(nodeID, position, nodeHeight))
+							)
+					)
 						.width(Length::Fill)
-						.onDoubeClick
-						(
-							|nodeID|
-								Message::AddToPlaylist(PlaylistID::nowPlaying(), nodeID, PlayPosition::Now)
-						)
-						.onRightClick
-						(
-							|nodeID, position, nodeHeight|
-									Message::LibraryTree(messages::LibraryTree::TrackMenuOpen(nodeID, position, nodeHeight))
-						)
+						.height(Length::Fill)
+						.spacing(5.0)
+						.direction(Direction::Vertical(Scrollbar::default())),
+					&[TrackMenuItem::PlayNow, TrackMenuItem::PlayNext, TrackMenuItem::PlayLast],
+					&self.trackMenu,
+					|item, trackID| Message::LibraryTree(messages::LibraryTree::TrackAction(trackID, item)),
+					|| Message::LibraryTree(messages::LibraryTree::TrackMenuClose),
 				)
-					.width(Length::Fill)
-					.height(Length::Fill)
-					.spacing(5.0)
-					.direction(Direction::Vertical(Scrollbar::default()))
 			)
 				.width(Length::FillPortion(2))
 				.height(Length::Fill)
