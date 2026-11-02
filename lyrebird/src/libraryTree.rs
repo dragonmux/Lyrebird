@@ -139,7 +139,7 @@ impl LibraryTree
 						.height(Length::Fill)
 						.spacing(5.0)
 						.direction(Direction::Vertical(Scrollbar::default())),
-					&[TrackMenuItem::PlayNow, TrackMenuItem::PlayNext, TrackMenuItem::PlayLast],
+					[TrackMenuItem::PlayNow, TrackMenuItem::PlayNext, TrackMenuItem::PlayLast],
 					&self.trackMenu,
 					|item, trackID| Message::LibraryTree(messages::LibraryTree::TrackAction(trackID, item)),
 					|| Message::LibraryTree(messages::LibraryTree::TrackMenuClose),
