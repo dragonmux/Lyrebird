@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::{Event, Length, Point, Rectangle, Size, Vector, mouse, touch};
-use iced::overlay::menu::{self, Menu, Style};
+use iced::{Background, Border, Color, Event, Length, Point, Rectangle, Size, Vector, mouse, touch};
 use iced_core::{Clipboard, Element, Layout, Shell, Widget, layout, overlay, renderer, widget::Operation};
 use iced_core::widget::{Tree, tree};
 
@@ -17,7 +16,7 @@ where
 	state: &'a ContextMenuState<Context>,
 	onMenuClick: OnMenuClickFn<'a, MenuItem, Context, Message>,
 	onMenuClose: OnMenuCloseFn<'a, Message>,
-	class: ContextMenuClass<'a, Theme>,
+	class: Theme::Class<'a>,
 }
 
 type OnMenuClickFn<'a, MenuItem, Context, Message> = Box<dyn Fn(MenuItem, Context) -> Message + 'a>;
@@ -36,25 +35,29 @@ where
 
 struct State
 {
-	menuState: menu::State,
 	hoveredOption: Option<usize>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Style
+{
+	pub background: Background,
+	pub normalColour: Color,
+	pub hoverBackground: Background,
+	pub hoverColour: Color,
+	pub border: Border,
 }
 
 pub trait Catalog
 where
 	Self: Sized,
 {
-	fn default<'a>() -> ContextMenuClass<'a, Self>;
-	fn style(&self, class: &ContextMenuClass<'_, Self>) -> Style;
+	type Class<'a>;
+	fn default<'a>() -> Self::Class<'a>;
+	fn style(&self, class: &Self::Class<'_>) -> Style;
 }
 
 pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
-
-pub struct ContextMenuClass<'a, Theme>
-{
-	widgetStyle: StyleFn<'a, Theme>,
-	menuStyle: menu::StyleFn<'a, Theme>,
-}
 
 impl<'a, MenuItem, Context, Message, Theme, Renderer> ContextMenu<'a, MenuItem, Context, Message, Theme, Renderer>
 where
@@ -88,8 +91,10 @@ where
 	/// Changes the style of the [`ContextMenu`]
 	#[must_use]
 	pub fn style(mut self, style: impl Fn(&Theme) -> Style + 'a) -> Self
+	where
+		<Theme as Catalog>::Class<'a>: From<StyleFn<'a, Theme>>,
 	{
-		self.class.menuStyle = Box::new(style);
+		self.class = (Box::new(style) as StyleFn<'a, Theme>).into();
 		self
 	}
 }
@@ -98,7 +103,7 @@ impl<'a, MenuItem, Context, Message, Theme, Renderer> Widget<Message, Theme, Ren
 where
 	MenuItem: Clone + ToString,
 	Context: Copy,
-	Theme: Catalog + menu::Catalog<Class<'a> = menu::StyleFn<'a, Theme>>,
+	Theme: Catalog,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer,
 {
 	fn tag(&self) -> tree::Tag
@@ -216,19 +221,8 @@ where
 		{
 			let bounds = layout.bounds();
 			let position = layout.position() + translation;
-			let menu = Menu::new
-			(
-				&mut state.menuState,
-				self.menuItems,
-				&mut state.hoveredOption,
-				|item|
-					(self.onMenuClick)(item, self.state.context.expect("A valid menu context has been established")),
-				None,
-				&self.class.menuStyle
-			)
-				.width(bounds.width);
 
-			Some(menu.overlay(position, *viewport, self.state.entryHeight, Length::Shrink))
+			None
 		}
 		else
 		{
@@ -243,7 +237,7 @@ where
 	MenuItem: Clone + ToString + 'a,
 	Context: Copy + 'a,
 	Message: 'a,
-	Theme: Catalog + menu::Catalog<Class<'a> = menu::StyleFn<'a, Theme>> + 'a,
+	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
 {
 	fn from(contextMenu: ContextMenu<'a, MenuItem, Context, Message, Theme, Renderer>) -> Self
@@ -288,38 +282,12 @@ impl State
 	{
 		Self
 		{
-			menuState: menu::State::new(),
 			hoveredOption: None,
 		}
 	}
 
 	pub fn close(&mut self)
 	{
-		self.menuState = menu::State::new();
 		self.hoveredOption = None;
-	}
-}
-
-impl<'a, Theme> ContextMenuClass<'a, Theme>
-{
-	pub fn new(widgetStyle: impl Fn(&Theme) -> Style + 'a, menuStyle: impl Fn(&Theme) -> menu::Style + 'a) -> Self
-	{
-		Self
-		{
-			widgetStyle: Box::new(widgetStyle),
-			menuStyle: Box::new(menuStyle),
-		}
-	}
-
-	pub fn widgetStyle(&self, theme: &Theme) -> Style
-	{
-		let style = &self.widgetStyle;
-		style(theme)
-	}
-
-	pub fn menuStyle(&self, theme: &Theme) -> menu::Style
-	{
-		let style = &self.menuStyle;
-		style(theme)
 	}
 }

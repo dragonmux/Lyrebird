@@ -1,43 +1,24 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::{Background, Border, Shadow, overlay::menu};
-use iced_widget::overlay::menu::Style;
+use iced::{Background, Border};
 
-use crate::widgets::contextMenu::{Catalog, ContextMenuClass};
+use crate::widgets::contextMenu::{Catalog, Style, StyleFn};
 
 use super::Theme;
 
 impl Catalog for Theme
 {
-	fn default<'a>() -> ContextMenuClass<'a, Self>
+	type Class<'a> = StyleFn<'a, Self>;
+
+	fn default<'a>() -> Self::Class<'a>
 	{
-		ContextMenuClass::new(default, contextMenu)
+		Box::new(default)
 	}
 
-	fn style(&self, class: &ContextMenuClass<'_, Self>) -> Style
-	{
-		class.widgetStyle(self)
-	}
-}
-
-impl menu::Catalog for Theme
-{
-	type Class<'a> = menu::StyleFn<'a, Self>;
-
-	fn default<'a>() -> menu::StyleFn<'a, Self>
-	{
-		Box::new(contextMenu)
-	}
-
-	fn style(&self, class: &menu::StyleFn<'_, Self>) -> Style
+	fn style(&self, class: &Self::Class<'_>) -> Style
 	{
 		class(self)
 	}
-}
-
-fn contextMenu(theme: &Theme) -> Style
-{
-	default(theme)
 }
 
 fn default(theme: &Theme) -> Style
@@ -47,15 +28,14 @@ fn default(theme: &Theme) -> Style
 	Style
 	{
 		background: Background::Color(styles.general.background),
+		normalColour: styles.button.normal,
+		hoverBackground: Background::Color(styles.general.background),
+		hoverColour: styles.button.hover,
 		border: Border
 		{
 			color: styles.general.border,
 			width: 1.0,
 			radius: 5.0.into(),
 		},
-		text_color: styles.button.normal,
-		selected_text_color: styles.button.selected,
-		selected_background: Background::Color(styles.general.background),
-		shadow: Shadow::default(),
 	}
 }
