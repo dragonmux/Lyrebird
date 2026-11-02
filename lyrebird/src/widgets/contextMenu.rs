@@ -49,7 +49,11 @@ where
 	Renderer: iced_core::Renderer,
 {
 	items: Vec<Element<'a, Message, Theme, Renderer>>,
+	state: &'a mut State,
+	onClick: OnClickFn<'a, Message>,
 }
+
+type OnClickFn<'a, Message> = Box<dyn Fn(usize) -> Option<Message> + 'a>;
 
 struct State
 {
@@ -240,11 +244,31 @@ where
 			let bounds = layout.bounds();
 			let position = layout.position() + translation;
 
+			// Turn all the menu items into iced display widgets
 			let items = self.menuItems
 				.iter()
 				.map(|item| item.into())
 				.collect();
-			let menu = Menu::new(items);
+
+			// Build the actual menu overlay and return it
+			let menu = Menu::new
+			(
+				items,
+				state,
+				|index: usize|
+				{
+					let menuItem = &self.menuItems[index];
+					match menuItem
+					{
+						MenuItem::Item(item) =>
+						{
+							let onMenuClick = &self.onMenuClick;
+							Some(onMenuClick(*item, self.state.context.expect("A valid menu context has been established")))
+						},
+						MenuItem::Separator => None,
+					}
+				},
+			);
 			Some(menu.into())
 		}
 		else
@@ -342,11 +366,18 @@ where
 	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + 'a,
 {
-	pub fn new(items: Vec<Element<'a, Message, Theme, Renderer>>) -> Self
+	pub fn new
+	(
+		items: Vec<Element<'a, Message, Theme, Renderer>>,
+		state: &'a mut State,
+		onClick: impl Fn(usize) -> Option<Message> + 'a,
+	) -> Self
 	{
 		Self
 		{
 			items,
+			state,
+			onClick: Box::new(onClick),
 		}
 	}
 }
