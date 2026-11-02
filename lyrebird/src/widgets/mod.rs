@@ -2,6 +2,7 @@
 
 use crate::theme::Theme;
 
+pub mod contextMenu;
 pub mod groupBox;
 pub mod listView;
 pub mod tabBar;
