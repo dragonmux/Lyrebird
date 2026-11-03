@@ -3,6 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use iced::{Background, Border, Color, Event, Length, Point, Rectangle, Size, Vector, mouse, touch};
+use iced_core::renderer::Quad;
 use iced_core::Overlay;
 use iced_core::{Clipboard, Element, Layout, Shell, Widget, layout, overlay, renderer, widget::Operation};
 use iced_core::widget::{Tree, tree};
@@ -399,20 +400,43 @@ where
 {
 	fn layout(&mut self, _renderer: &Renderer, bounds: Size) -> layout::Node
 	{
+		let state = self.state.clone();
+		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
+
+		let limits = layout::Limits::new
+		(
+			Size::ZERO,
+			bounds,
+		)
+			.width(Length::Shrink);
+
 		layout::Node::new(bounds)
 	}
 
 	fn draw
 	(
 		&self,
-		_renderer: &mut Renderer,
-		_theme: &Theme,
-		_style: &renderer::Style,
-		_layout: Layout<'_>,
+		renderer: &mut Renderer,
+		theme: &Theme,
+		_defaults: &renderer::Style,
+		layout: Layout<'_>,
 		_cursor: mouse::Cursor,
 	)
 	{
-		//
+		let state = self.state.lock().expect("Concurrency error, unable to lock context menu state");
+		let bounds = layout.bounds();
+		let style = Catalog::style(theme, &self.class);
+
+		renderer.fill_quad
+		(
+			Quad
+			{
+				bounds,
+				border: style.border,
+				..Quad::default()
+			},
+			style.background,
+		);
 	}
 }
 
