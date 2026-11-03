@@ -153,8 +153,7 @@ where
 
 	fn diff(&self, tree: &mut Tree)
 	{
-		tree.children.clear();
-		tree.children.extend([Tree::new(&self.content)]);
+		tree.diff_children(&[&self.content]);
 	}
 
 	fn size(&self) -> Size<Length>
@@ -195,11 +194,12 @@ where
 	)
 	{
 		operation.container(None, layout.bounds());
-		operation.traverse
-		(
-			&mut |operation|
-				self.content.as_widget_mut().operate(&mut tree.children[0], layout.child(0), renderer, operation)
-		);
+		operation.traverse(&mut |operation|
+		{
+			self.content
+				.as_widget_mut()
+				.operate(&mut tree.children[0], layout.child(0), renderer, operation)
+		});
 	}
 
 	fn update(
@@ -249,7 +249,9 @@ where
 		viewport: &Rectangle,
 	)
 	{
-		self.content.as_widget().draw(&tree.children[0], renderer, theme, style, layout.child(0), cursor, viewport);
+		self.content
+			.as_widget()
+			.draw(&tree.children[0], renderer, theme, style, layout.child(0), cursor, viewport);
 	}
 
 	fn mouse_interaction
@@ -263,7 +265,7 @@ where
 	) -> mouse::Interaction
 	{
 		// Check if the cursor is over the content of the widget
-		if cursor.is_over(layout.bounds())
+		if cursor.is_over(layout.child(0).bounds())
 		{
 			// As it is, see what the content wants to do with the mouse and return that
 			self.content
@@ -280,9 +282,9 @@ where
 		&'b mut self,
 		tree: &'b mut Tree,
 		layout: Layout<'b>,
-		_renderer: &Renderer,
-		_viewport: &Rectangle,
-		_translation: Vector,
+		renderer: &Renderer,
+		viewport: &Rectangle,
+		translation: Vector,
 	) -> Option<overlay::Element<'b, Message, Theme, Renderer>>
 	{
 		if self.state.menuOpen
@@ -321,7 +323,9 @@ where
 		}
 		else
 		{
-			None
+			self.content
+				.as_widget_mut()
+				.overlay(&mut tree.children[0], layout.child(0), renderer, viewport, translation)
 		}
 	}
 }
