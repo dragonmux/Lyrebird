@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use iced::{Background, Border, Color, Event, Length, Point, Rectangle, Size, Vector, mouse, touch};
+use iced::{Alignment, Background, Border, Color, Event, Length, Point, Rectangle, Size, Vector, mouse, touch};
 use iced_core::renderer::Quad;
 use iced_core::Overlay;
 use iced_core::{Clipboard, Element, Layout, Shell, Widget, layout, overlay, renderer, widget::Operation};
@@ -52,6 +52,8 @@ where
 	Renderer: iced_core::Renderer,
 {
 	items: Vec<Element<'a, Message, Theme, Renderer>>,
+	width: Length,
+	height: Length,
 	state: Arc<Mutex<State>>,
 	onClick: OnClickFn<'a, Message>,
 	class: Theme::Class<'a>,
@@ -239,7 +241,7 @@ where
 		tree: &'b mut Tree,
 		layout: Layout<'b>,
 		_renderer: &Renderer,
-		viewport: &Rectangle,
+		_viewport: &Rectangle,
 		translation: Vector,
 	) -> Option<overlay::Element<'b, Message, Theme, Renderer>>
 	{
@@ -247,8 +249,8 @@ where
 
 		if self.state.menuOpen
 		{
-			let bounds = layout.bounds();
-			let position = layout.position() + translation;
+			let _bounds = layout.bounds();
+			let _position = layout.position() + translation;
 
 			// Turn all the menu items into iced display widgets
 			let items = self.menuItems
@@ -386,6 +388,8 @@ where
 		Self
 		{
 			items,
+			width: Length::Shrink,
+			height: Length::Shrink,
 			state,
 			onClick: Box::new(onClick),
 			class: (Box::new(style) as StyleFn<'a, Theme>).into(),
@@ -466,39 +470,70 @@ where
 	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + 'a,
 {
+	fn children(&self) -> Vec<Tree>
+	{
+		self.items.iter().map(Tree::new).collect()
+	}
+
+	fn diff(&self, tree: &mut Tree)
+	{
+		tree.diff_children(&self.items);
+	}
+
 	fn size(&self) -> Size<Length>
 	{
 		Size
 		{
-			width: Length::Shrink,
-			height: Length::Shrink,
+			width: self.width,
+			height: self.height,
 		}
 	}
 
 	fn layout
 	(
 		&mut self,
-		_tree: &mut Tree,
-		_renderer: &Renderer,
+		tree: &mut Tree,
+		renderer: &Renderer,
 		limits: &layout::Limits,
 	) -> layout::Node
 	{
-		layout::Node::new(limits.min())
+		let limits = limits.max_width(f32::INFINITY);
+
+		layout::flex::resolve
+		(
+			layout::flex::Axis::Vertical,
+			renderer,
+			&limits,
+			self.width,
+			self.height,
+			5.into(),
+			0.0,
+			Alignment::Start,
+			&mut self.items,
+			&mut tree.children
+		)
 	}
 
 	fn draw
 	(
 		&self,
-		_tree: &Tree,
-		_renderer: &mut Renderer,
-		_theme: &Theme,
-		_style: &renderer::Style,
-		_layout: Layout<'_>,
-		_cursor: iced_core::mouse::Cursor,
-		_viewport: &Rectangle,
+		tree: &Tree,
+		renderer: &mut Renderer,
+		theme: &Theme,
+		style: &renderer::Style,
+		layout: Layout<'_>,
+		cursor: iced_core::mouse::Cursor,
+		viewport: &Rectangle,
 	)
 	{
-		//
+		for ((child, tree), layout) in self.items
+			.iter()
+			.zip(&tree.children)
+			.zip(layout.children())
+			.filter(|(_, layout)| layout.bounds().intersects(viewport))
+		{
+			child.as_widget().draw(tree, renderer, theme, style, layout, cursor, viewport);
+		}
 	}
 }
 
