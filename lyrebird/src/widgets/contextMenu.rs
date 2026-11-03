@@ -508,6 +508,35 @@ where
 		);
 	}
 
+	fn update
+	(
+		&mut self,
+		event: &Event,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		renderer: &Renderer,
+		clipboard: &mut dyn Clipboard,
+		shell: &mut Shell<'_, Message>,
+	)
+	{
+		let state = self.state.clone();
+		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
+		let bounds = layout.bounds();
+
+		<Self as Widget<Message, Theme, Renderer>>::update
+		(
+			self,
+			&mut state.menuTree,
+			event,
+			layout,
+			cursor,
+			renderer,
+			clipboard,
+			shell,
+			&bounds
+		);
+	}
+
 	fn draw
 	(
 		&self,
@@ -544,6 +573,28 @@ where
 			cursor,
 			&bounds,
 		);
+	}
+
+	fn mouse_interaction
+	(
+		&self,
+		layout: Layout<'_>,
+		cursor: iced_core::mouse::Cursor,
+		renderer: &Renderer,
+	) -> iced_core::mouse::Interaction
+	{
+		let state = self.state.lock().expect("Concurrency error, unable to lock context menu state");
+		let bounds = layout.bounds();
+
+		<Self as Widget<Message, Theme, Renderer>>::mouse_interaction
+		(
+			&self,
+			&state.menuTree,
+			layout,
+			cursor,
+			&bounds,
+			renderer
+		)
 	}
 }
 
