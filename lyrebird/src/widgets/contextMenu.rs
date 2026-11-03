@@ -53,6 +53,7 @@ where
 	items: Vec<Element<'a, Message, Theme, Renderer>>,
 	state: Arc<Mutex<State>>,
 	onClick: OnClickFn<'a, Message>,
+	class: Theme::Class<'a>,
 }
 
 type OnClickFn<'a, Message> = Box<dyn Fn(usize) -> Option<Message> + 'a>;
@@ -76,7 +77,7 @@ pub trait Catalog
 where
 	Self: Sized,
 {
-	type Class<'a>;
+	type Class<'a>: From<StyleFn<'a, Self>>;
 	fn default<'a>() -> Self::Class<'a>;
 	fn style(&self, class: &Self::Class<'_>) -> Style;
 }
@@ -271,6 +272,7 @@ where
 						MenuItem::Separator => None,
 					}
 				},
+				|theme| Catalog::style(theme, &self.class),
 			);
 			Some(menu.into())
 		}
@@ -374,13 +376,17 @@ where
 		items: Vec<Element<'a, Message, Theme, Renderer>>,
 		state: Arc<Mutex<State>>,
 		onClick: impl Fn(usize) -> Option<Message> + 'a,
+		style: impl Fn(&Theme) -> Style + 'a,
 	) -> Self
+	where
+		<Theme as Catalog>::Class<'a>: From<StyleFn<'a, Theme>>,
 	{
 		Self
 		{
 			items,
 			state,
 			onClick: Box::new(onClick),
+			class: (Box::new(style) as StyleFn<'a, Theme>).into(),
 		}
 	}
 }
