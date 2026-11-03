@@ -182,7 +182,11 @@ where
 	)
 	{
 		operation.container(None, layout.bounds());
-		self.content.as_widget_mut().operate(&mut tree.children[0], layout, renderer, operation);
+		operation.traverse
+		(
+			&mut |operation|
+				self.content.as_widget_mut().operate(&mut tree.children[0], layout, renderer, operation)
+		);
 	}
 
 	fn update(
@@ -197,15 +201,14 @@ where
 		viewport: &Rectangle,
 	)
 	{
-		let state = tree.state.downcast_mut::<Arc<Mutex<State>>>();
-		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
-
 		match event
 		{
 			Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) |
 			Event::Touch(touch::Event::FingerPressed { .. }) |
 			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) =>
 			{
+				let state = tree.state.downcast_mut::<Arc<Mutex<State>>>();
+				let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
 				if self.state.menuOpen
 				{
 					// Event wasn't processed by the overlay, so needs closing and the menu state resetting
@@ -245,10 +248,9 @@ where
 		translation: Vector,
 	) -> Option<overlay::Element<'b, Message, Theme, Renderer>>
 	{
-		let state = tree.state.downcast_mut::<Arc<Mutex<State>>>();
-
 		if self.state.menuOpen
 		{
+			let state = tree.state.downcast_mut::<Arc<Mutex<State>>>();
 			let _bounds = layout.bounds();
 			let _position = layout.position() + translation;
 
