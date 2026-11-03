@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use iced::{Background, Border, Color, Event, Length, Padding, Pixels, Rectangle, Size, mouse};
+use iced::{Background, Border, Color, Event, Length, Padding, Pixels, Rectangle, Size, Vector, mouse, overlay};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer::{self, Quad}, widget::{Operation, Tree}};
 use iced_widget::text;
 
@@ -380,6 +380,19 @@ where
 			// Otherwise make the cursor the default for anywhere else in the widget
 			mouse::Interaction::default()
 		}
+	}
+
+	fn overlay<'b>
+	(
+		&'b mut self,
+		tree: &'b mut Tree,
+		layout: Layout<'b>,
+		renderer: &Renderer,
+		viewport: &Rectangle,
+		translation: Vector,
+	) -> Option<overlay::Element<'b, Message, Theme, Renderer>>
+	{
+		self.content.as_widget_mut().overlay(&mut tree.children[1], layout.child(1), renderer, viewport, translation)
 	}
 }
 
