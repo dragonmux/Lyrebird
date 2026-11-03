@@ -120,11 +120,10 @@ where
 {
 	fn children(&self) -> Vec<Tree>
 	{
-		vec!
 		[
 			Tree::new(&self.title),
 			Tree::new(&self.content),
-		]
+		].into()
 	}
 
 	fn diff(&self, tree: &mut Tree)
