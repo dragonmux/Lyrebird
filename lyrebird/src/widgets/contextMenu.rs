@@ -61,6 +61,7 @@ type OnClickFn<'a, Message> = Box<dyn Fn(usize) -> Option<Message> + 'a>;
 
 struct State
 {
+	menuTree: Tree,
 	hoveredOption: Option<usize>,
 }
 
@@ -398,7 +399,7 @@ where
 	Theme: Catalog + 'a,
 	Renderer: iced_core::Renderer + 'a,
 {
-	fn layout(&mut self, _renderer: &Renderer, bounds: Size) -> layout::Node
+	fn layout(&mut self, renderer: &Renderer, bounds: Size) -> layout::Node
 	{
 		let state = self.state.clone();
 		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
@@ -410,7 +411,14 @@ where
 		)
 			.width(Length::Shrink);
 
-		layout::Node::new(bounds)
+		let node = <Self as Widget<Message, Theme, Renderer>>::layout
+		(
+			self,
+			&mut state.menuTree,
+			renderer,
+			&limits
+		);
+		node
 	}
 
 	fn draw
@@ -418,9 +426,9 @@ where
 		&self,
 		renderer: &mut Renderer,
 		theme: &Theme,
-		_defaults: &renderer::Style,
+		defaults: &renderer::Style,
 		layout: Layout<'_>,
-		_cursor: mouse::Cursor,
+		cursor: mouse::Cursor,
 	)
 	{
 		let state = self.state.lock().expect("Concurrency error, unable to lock context menu state");
@@ -437,6 +445,60 @@ where
 			},
 			style.background,
 		);
+
+		<Self as Widget<Message, Theme, Renderer>>::draw
+		(
+			&self,
+			&state.menuTree,
+			renderer,
+			theme,
+			defaults,
+			layout,
+			cursor,
+			&bounds,
+		);
+	}
+}
+
+impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for Menu<'a, Message, Theme, Renderer>
+where
+	Message: 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + 'a,
+{
+	fn size(&self) -> Size<Length>
+	{
+		Size
+		{
+			width: Length::Shrink,
+			height: Length::Shrink,
+		}
+	}
+
+	fn layout
+	(
+		&mut self,
+		_tree: &mut Tree,
+		_renderer: &Renderer,
+		limits: &layout::Limits,
+	) -> layout::Node
+	{
+		layout::Node::new(limits.min())
+	}
+
+	fn draw
+	(
+		&self,
+		_tree: &Tree,
+		_renderer: &mut Renderer,
+		_theme: &Theme,
+		_style: &renderer::Style,
+		_layout: Layout<'_>,
+		_cursor: iced_core::mouse::Cursor,
+		_viewport: &Rectangle,
+	)
+	{
+		//
 	}
 }
 
@@ -459,6 +521,7 @@ impl State
 	{
 		Self
 		{
+			menuTree: Tree::empty(),
 			hoveredOption: None,
 		}
 	}
