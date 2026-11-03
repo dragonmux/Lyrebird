@@ -54,6 +54,7 @@ where
 	items: Vec<Element<'a, Message, Theme, Renderer>>,
 	width: Length,
 	height: Length,
+	position: Point,
 	state: Arc<Mutex<State>>,
 	onClick: OnClickFn<'a, Message>,
 	class: Theme::Class<'a>,
@@ -245,14 +246,13 @@ where
 		layout: Layout<'b>,
 		_renderer: &Renderer,
 		_viewport: &Rectangle,
-		translation: Vector,
+		_translation: Vector,
 	) -> Option<overlay::Element<'b, Message, Theme, Renderer>>
 	{
 		if self.state.menuOpen
 		{
 			let state = tree.state.downcast_mut::<Arc<Mutex<State>>>();
 			let _bounds = layout.bounds();
-			let _position = layout.position() + translation;
 
 			// Turn all the menu items into iced display widgets
 			let items = self.menuItems
@@ -265,6 +265,7 @@ where
 			(
 				items,
 				state.clone(),
+				self.state.position,
 				|index: usize|
 				{
 					let menuItem = &self.menuItems[index];
@@ -381,6 +382,7 @@ where
 	(
 		items: Vec<Element<'a, Message, Theme, Renderer>>,
 		state: Arc<Mutex<State>>,
+		position: Point,
 		onClick: impl Fn(usize) -> Option<Message> + 'a,
 		style: impl Fn(&Theme) -> Style + 'a,
 	) -> Self
@@ -392,6 +394,7 @@ where
 			items,
 			width: Length::Shrink,
 			height: Length::Shrink,
+			position,
 			state,
 			onClick: Box::new(onClick),
 			class: (Box::new(style) as StyleFn<'a, Theme>).into(),
@@ -410,13 +413,30 @@ where
 		let state = self.state.clone();
 		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
 
+		// Compute how much space there is above and below the location we're to be displayed
+		let spaceAbove = self.position.y;
+		let spaceBelow = bounds.height - spaceAbove;
+
 		let limits = layout::Limits::new
 		(
 			Size::ZERO,
-			bounds,
+			// Menu can't be wider than the max amount of space around where it will display
+			Size::new
+			(
+				bounds.width - self.position.x,
+				if spaceBelow > spaceAbove
+				{
+					spaceBelow
+				}
+				else
+				{
+					spaceAbove
+				},
+			),
 		)
 			.width(Length::Shrink);
 
+		// Compute the menu layout and locate it where the menu should actually display
 		let node = <Self as Widget<Message, Theme, Renderer>>::layout
 		(
 			self,
@@ -424,7 +444,7 @@ where
 			renderer,
 			&limits
 		);
-		node
+		node.move_to(self.position)
 	}
 
 	fn draw
