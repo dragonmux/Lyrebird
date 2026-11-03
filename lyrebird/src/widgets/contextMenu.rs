@@ -487,6 +487,27 @@ where
 		node.move_to(self.position)
 	}
 
+	fn operate
+	(
+		&mut self,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
+	{
+		let state = self.state.clone();
+		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
+
+		<Self as Widget<Message, Theme, Renderer>>::operate
+		(
+			self,
+			&mut state.menuTree,
+			layout,
+			renderer,
+			operation
+		);
+	}
+
 	fn draw
 	(
 		&self,
@@ -574,6 +595,30 @@ where
 			&mut self.items,
 			&mut tree.children
 		)
+	}
+
+	fn operate
+	(
+		&mut self,
+		tree: &mut Tree,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
+	{
+		operation.container(None, layout.bounds());
+		for ((content, tree), layout) in self.items
+			.iter_mut()
+			.zip(&mut tree.children)
+			.zip(layout.children())
+		{
+			operation.traverse(&mut |operation|
+			{
+				content
+					.as_widget_mut()
+					.operate(tree, layout, renderer, operation);
+			});
+		}
 	}
 
 	fn draw
