@@ -240,6 +240,30 @@ where
 		self.content.as_widget().draw(&tree.children[0], renderer, theme, style, layout, cursor, viewport);
 	}
 
+	fn mouse_interaction
+	(
+		&self,
+		tree: &Tree,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		viewport: &Rectangle,
+		renderer: &Renderer,
+	) -> mouse::Interaction
+	{
+		// Check if the cursor is over the content of the widget
+		if cursor.is_over(layout.bounds())
+		{
+			// As it is, see what the content wants to do with the mouse and return that
+			self.content
+				.as_widget()
+				.mouse_interaction(&tree.children[0], layout, cursor, viewport, renderer)
+		}
+		else
+		{
+			mouse::Interaction::default()
+		}
+	}
+
 	fn overlay<'b>(
 		&'b mut self,
 		tree: &'b mut Tree,
