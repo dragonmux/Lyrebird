@@ -211,7 +211,7 @@ where
 					height: titleSize.height + contentSize.height + innerPadding.bottom,
 				}
 			),
-			vec![titleLayout, contentLayout],
+			[titleLayout, contentLayout].into(),
 		)
 	}
 

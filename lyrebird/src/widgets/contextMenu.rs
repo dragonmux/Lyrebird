@@ -170,7 +170,19 @@ where
 		limits: &layout::Limits,
 	) -> layout::Node
 	{
-		self.content.as_widget_mut().layout(&mut tree.children[0], renderer, limits)
+		let size = self.size();
+		let contentLayout = self.content.as_widget_mut().layout(&mut tree.children[0], renderer, limits);
+
+		layout::Node::with_children
+		(
+			limits.resolve
+			(
+				size.width,
+				size.height,
+				contentLayout.size()
+			),
+			[contentLayout].into(),
+		)
 	}
 
 	fn operate
@@ -186,7 +198,7 @@ where
 		operation.traverse
 		(
 			&mut |operation|
-				self.content.as_widget_mut().operate(&mut tree.children[0], layout, renderer, operation)
+				self.content.as_widget_mut().operate(&mut tree.children[0], layout.child(0), renderer, operation)
 		);
 	}
 
@@ -223,7 +235,7 @@ where
 
 		self.content
 			.as_widget_mut()
-			.update(&mut tree.children[0], event, layout, cursor, renderer, clipboard, shell, viewport);
+			.update(&mut tree.children[0], event, layout.child(0), cursor, renderer, clipboard, shell, viewport);
 	}
 
 	fn draw(
@@ -237,7 +249,7 @@ where
 		viewport: &Rectangle,
 	)
 	{
-		self.content.as_widget().draw(&tree.children[0], renderer, theme, style, layout, cursor, viewport);
+		self.content.as_widget().draw(&tree.children[0], renderer, theme, style, layout.child(0), cursor, viewport);
 	}
 
 	fn mouse_interaction
@@ -256,7 +268,7 @@ where
 			// As it is, see what the content wants to do with the mouse and return that
 			self.content
 				.as_widget()
-				.mouse_interaction(&tree.children[0], layout, cursor, viewport, renderer)
+				.mouse_interaction(&tree.children[0], layout.child(0), cursor, viewport, renderer)
 		}
 		else
 		{
