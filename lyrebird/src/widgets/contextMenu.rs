@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
+use std::sync::{Arc, Mutex};
+
 use iced::{Background, Border, Color, Event, Length, Point, Rectangle, Size, Vector, mouse, touch};
 use iced_core::Overlay;
 use iced_core::{Clipboard, Element, Layout, Shell, Widget, layout, overlay, renderer, widget::Operation};
@@ -49,7 +51,7 @@ where
 	Renderer: iced_core::Renderer,
 {
 	items: Vec<Element<'a, Message, Theme, Renderer>>,
-	state: &'a mut State,
+	state: Arc<Mutex<State>>,
 	onClick: OnClickFn<'a, Message>,
 }
 
@@ -130,12 +132,12 @@ where
 {
 	fn tag(&self) -> tree::Tag
 	{
-		tree::Tag::of::<State>()
+		tree::Tag::of::<Arc<Mutex<State>>>()
 	}
 
 	fn state(&self) -> tree::State
 	{
-		tree::State::new(State::new())
+		tree::State::new(Arc::new(Mutex::new(State::new())))
 	}
 
 	fn children(&self) -> Vec<Tree>
@@ -190,7 +192,8 @@ where
 		viewport: &Rectangle,
 	)
 	{
-		let state = tree.state.downcast_mut::<State>();
+		let state = tree.state.downcast_mut::<Arc<Mutex<State>>>();
+		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
 
 		match event
 		{
@@ -237,7 +240,7 @@ where
 		translation: Vector,
 	) -> Option<overlay::Element<'b, Message, Theme, Renderer>>
 	{
-		let state = tree.state.downcast_mut::<State>();
+		let state = tree.state.downcast_mut::<Arc<Mutex<State>>>();
 
 		if self.state.menuOpen
 		{
@@ -254,7 +257,7 @@ where
 			let menu = Menu::new
 			(
 				items,
-				state,
+				state.clone(),
 				|index: usize|
 				{
 					let menuItem = &self.menuItems[index];
@@ -369,7 +372,7 @@ where
 	pub fn new
 	(
 		items: Vec<Element<'a, Message, Theme, Renderer>>,
-		state: &'a mut State,
+		state: Arc<Mutex<State>>,
 		onClick: impl Fn(usize) -> Option<Message> + 'a,
 	) -> Self
 	{
