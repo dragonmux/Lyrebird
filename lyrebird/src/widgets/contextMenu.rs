@@ -452,6 +452,8 @@ where
 	{
 		let state = self.state.clone();
 		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
+		// Ensure the menu Node tree is set up
+		<Self as Widget<Message, Theme, Renderer>>::diff(&self, &mut state.menuTree);
 
 		// Compute how much space there is above and below the location we're to be displayed
 		let spaceAbove = self.position.y;
@@ -473,8 +475,7 @@ where
 					spaceAbove
 				},
 			),
-		)
-			.width(Length::Shrink);
+		);
 
 		// Compute the menu layout and locate it where the menu should actually display
 		let node = <Self as Widget<Message, Theme, Renderer>>::layout
@@ -631,8 +632,6 @@ where
 		limits: &layout::Limits,
 	) -> layout::Node
 	{
-		let limits = limits.max_width(f32::INFINITY);
-
 		layout::flex::resolve
 		(
 			layout::flex::Axis::Vertical,
@@ -641,7 +640,7 @@ where
 			self.width,
 			self.height,
 			5.into(),
-			0.0,
+			5.0,
 			Alignment::Start,
 			&mut self.items,
 			&mut tree.children
