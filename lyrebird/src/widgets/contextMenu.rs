@@ -293,6 +293,7 @@ where
 			let _bounds = layout.bounds();
 
 			// Turn all the menu items into iced display widgets
+			// XXX: This needs to apply the style for whether the entry is currently hovered
 			let items = self.menuItems
 				.iter()
 				.map(|item| item.into())
@@ -515,8 +516,8 @@ where
 		event: &Event,
 		layout: Layout<'_>,
 		cursor: mouse::Cursor,
-		renderer: &Renderer,
-		clipboard: &mut dyn Clipboard,
+		_renderer: &Renderer,
+		_clipboard: &mut dyn Clipboard,
 		shell: &mut Shell<'_, Message>,
 	)
 	{
@@ -524,18 +525,42 @@ where
 		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
 		let bounds = layout.bounds();
 
-		<Self as Widget<Message, Theme, Renderer>>::update
-		(
-			self,
-			&mut state.menuTree,
-			event,
-			layout,
-			cursor,
-			renderer,
-			clipboard,
-			shell,
-			&bounds
-		);
+		match event
+		{
+			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) |
+			Event::Touch(touch::Event::FingerLifted { .. }) =>
+			{
+				if cursor.is_over(bounds) && let Some(index) = state.hoveredOption
+				{
+					let onClick = &self.onClick;
+					let message = onClick(index);
+					if let Some(message) = message
+					{
+						shell.publish(message);
+					}
+					shell.capture_event();
+				}
+			},
+			Event::Mouse(mouse::Event::CursorMoved { .. }) =>
+			{
+				if cursor.is_over(bounds)
+				{
+					for (index, item) in layout.children().enumerate()
+					{
+						if cursor.is_over(item.bounds())
+						{
+							state.hoveredOption = Some(index);
+						}
+					}
+					shell.request_redraw();
+				}
+				else
+				{
+					state.hoveredOption = None;
+				}
+			}
+			_ => {},
+		}
 	}
 
 	fn draw
