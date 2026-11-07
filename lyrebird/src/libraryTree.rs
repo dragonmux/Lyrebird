@@ -65,8 +65,18 @@ impl LibraryTree
 				self.directoryMenu.open(directoryID, position, entryHeight),
 			LibraryTree::DirectoryMenuClose =>
 				self.directoryMenu.close(),
-			LibraryTree::DirectoryAction(_directoryID, _menuEntry) =>
-				{ },
+			LibraryTree::DirectoryAction(directoryID, menuEntry) =>
+			{
+				return Task::done(match menuEntry
+				{
+					DirectoryMenuItem::Play =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Directory(directoryID), PlayPosition::Now),
+					DirectoryMenuItem::AddNextToNowPlaying =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Directory(directoryID), PlayPosition::Next),
+					DirectoryMenuItem::AddLastToNowPlaying =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Directory(directoryID), PlayPosition::Last),
+				});
+			},
 			LibraryTree::TrackMenuOpen(trackID, position, entryHeight) =>
 				self.trackMenu.open(trackID, position, entryHeight),
 			LibraryTree::TrackMenuClose =>
