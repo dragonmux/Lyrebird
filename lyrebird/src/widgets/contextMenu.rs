@@ -293,7 +293,6 @@ where
 			let _bounds = layout.bounds();
 
 			// Turn all the menu items into iced display widgets
-			// XXX: This needs to apply the style for whether the entry is currently hovered
 			let items = self.menuItems
 				.iter()
 				.map(|item| item.into())
@@ -568,7 +567,7 @@ where
 		&self,
 		renderer: &mut Renderer,
 		theme: &Theme,
-		defaults: &renderer::Style,
+		_defaults: &renderer::Style,
 		layout: Layout<'_>,
 		cursor: mouse::Cursor,
 	)
@@ -588,17 +587,23 @@ where
 			style.background,
 		);
 
-		<Self as Widget<Message, Theme, Renderer>>::draw
-		(
-			&self,
-			&state.menuTree,
-			renderer,
-			theme,
-			defaults,
-			layout,
-			cursor,
-			&bounds,
-		);
+		for (((index, child), tree), layout) in self.items
+			.iter()
+			.enumerate()
+			.zip(&state.menuTree.children)
+			.zip(layout.children())
+			.filter(|(_, layout)| layout.bounds().intersects(&bounds))
+		{
+			let style = renderer::Style
+			{
+				// If this entry is text and the currently hovered over one, then use the hover
+				// colour, otherwise use the normal one.
+				text_color: (state.hoveredOption == Some(index))
+					.then_some(style.hoverColour)
+					.unwrap_or(style.normalColour)
+			};
+			child.as_widget().draw(tree, renderer, theme, &style, layout, cursor, &bounds);
+		}
 	}
 
 	fn mouse_interaction
@@ -699,24 +704,14 @@ where
 	fn draw
 	(
 		&self,
-		tree: &Tree,
-		renderer: &mut Renderer,
-		theme: &Theme,
-		style: &renderer::Style,
-		layout: Layout<'_>,
-		cursor: iced_core::mouse::Cursor,
-		viewport: &Rectangle,
-	)
-	{
-		for ((child, tree), layout) in self.items
-			.iter()
-			.zip(&tree.children)
-			.zip(layout.children())
-			.filter(|(_, layout)| layout.bounds().intersects(viewport))
-		{
-			child.as_widget().draw(tree, renderer, theme, style, layout, cursor, viewport);
-		}
-	}
+		_tree: &Tree,
+		_renderer: &mut Renderer,
+		_theme: &Theme,
+		_style: &renderer::Style,
+		_layout: Layout<'_>,
+		_cursor: iced_core::mouse::Cursor,
+		_viewport: &Rectangle,
+	) { }
 }
 
 impl<'a, Message, Theme, Renderer> From<Menu<'a, Message, Theme, Renderer>>

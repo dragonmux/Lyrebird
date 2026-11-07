@@ -420,7 +420,7 @@ where
 	Theme: Catalog + text::Catalog + 'a,
 	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
 {
-	pub fn new(nodeID: ItemID, displayText: String, setup:Rc<RefCell<ListViewSetup<'a, Theme>>>) -> Self
+	pub fn new(nodeID: ItemID, displayText: String, setup: Rc<RefCell<ListViewSetup<'a, Theme>>>) -> Self
 	{
 		Self
 		{
