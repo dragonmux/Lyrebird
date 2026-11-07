@@ -216,7 +216,7 @@ where
 	{
 		match event
 		{
-			Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) |
+			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) |
 			Event::Touch(touch::Event::FingerPressed { .. }) |
 			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) =>
 			{
@@ -551,6 +551,7 @@ where
 							state.hoveredOption = Some(index);
 						}
 					}
+					shell.capture_event();
 					shell.request_redraw();
 				}
 				else
