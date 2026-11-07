@@ -18,8 +18,3 @@ impl Catalog for Theme
 		class(self)
 	}
 }
-
-pub fn general(theme: &Theme) -> Style
-{
-	Style { color: Some(theme.styles().text.general.colour) }
-}
