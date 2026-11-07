@@ -182,8 +182,14 @@ impl MainWindowState
 				},
 			};
 			// If the play position was now and the playlist is Now Playing, trigger playback
-			if playlistID == PlaylistID::nowPlaying() && playPosition == PlayPosition::Now {
+			if playlistID == PlaylistID::nowPlaying() && playPosition == PlayPosition::Now
+			{
 				// Handle playing this track via the playback completion mechanism
+				return Task::done(Message::PlaybackNotification(PlaybackState::Complete))
+			}
+			// If it's now playing and nothing is currently playing, then set things in motion again
+			else if playlistID == PlaylistID::nowPlaying() && self.currentlyPlaying.is_none()
+			{
 				return Task::done(Message::PlaybackNotification(PlaybackState::Complete))
 			}
 		} else {
