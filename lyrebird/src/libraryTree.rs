@@ -4,13 +4,13 @@ use std::collections::BTreeMap;
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
-use iced::{Length, Padding, Point, Task};
+use iced::{Length, Padding, Task};
 use iced_widget::scrollable::{Direction, Scrollbar};
 use iced_widget::{Row, scrollable};
 use itertools::Itertools;
 
 use crate::library::{Directory, DirectoryID, MusicLibrary};
-use crate::messages::{self, Message, PlayPosition, TrackMenuItem};
+use crate::messages::{self, DirectoryMenuItem, Message, PlayPosition, TrackMenuItem};
 use crate::playlists::PlaylistID;
 use crate::track::TrackID;
 use crate::widgets::Element;
@@ -23,7 +23,7 @@ pub struct LibraryTree
 {
 	library: Arc<RwLock<MusicLibrary>>,
 	selectedDirectory: DirectoryID,
-	directoryMenu: Option<(DirectoryID, Point, f32)>,
+	directoryMenu: ContextMenuState<DirectoryID>,
 	trackMenu: ContextMenuState<TrackID>,
 }
 
@@ -48,7 +48,7 @@ impl LibraryTree
 		{
 			library: musicLibrary,
 			selectedDirectory: DirectoryID::new(0),
-			directoryMenu: None,
+			directoryMenu: ContextMenuState::new(),
 			trackMenu: ContextMenuState::new(),
 		}
 	}
@@ -62,7 +62,11 @@ impl LibraryTree
 			LibraryTree::SelectDirectory(directoryID) =>
 				self.selectedDirectory = directoryID,
 			LibraryTree::DirectoryMenuOpen(directoryID, position, entryHeight) =>
-				self.directoryMenu = Some((directoryID, position, entryHeight)),
+				self.directoryMenu.open(directoryID, position, entryHeight),
+			LibraryTree::DirectoryMenuClose =>
+				self.directoryMenu.close(),
+			LibraryTree::DirectoryAction(_directoryID, _menuEntry) =>
+				{ },
 			LibraryTree::TrackMenuOpen(trackID, position, entryHeight) =>
 				self.trackMenu.open(trackID, position, entryHeight),
 			LibraryTree::TrackMenuClose =>
@@ -93,15 +97,26 @@ impl LibraryTree
 			GroupBox::new
 			(
 				"Directory Tree",
-				scrollable
+				ContextMenu::new
 				(
-					TreeView::new(&directoryTree, Some(self.selectedDirectory))
-						.onSelect(|nodeID| Message::LibraryTree(messages::LibraryTree::SelectDirectory(nodeID)))
+					scrollable
+					(
+						TreeView::new(&directoryTree, Some(self.selectedDirectory))
+							.onSelect(|nodeID| Message::LibraryTree(messages::LibraryTree::SelectDirectory(nodeID)))
+					)
+						.width(Length::Fill)
+						.height(Length::Fill)
+						.spacing(5.0)
+						.direction(Direction::Vertical(Scrollbar::default())),
+					[
+						DirectoryMenuItem::Play,
+						DirectoryMenuItem::AddNextToNowPlaying,
+						DirectoryMenuItem::AddLastToNowPlaying,
+					],
+					&self.directoryMenu,
+					|item, directoryID| Message::LibraryTree(messages::LibraryTree::DirectoryAction(directoryID, item)),
+					|| Message::LibraryTree(messages::LibraryTree::DirectoryMenuClose),
 				)
-					.width(Length::Fill)
-					.height(Length::Fill)
-					.spacing(5.0)
-					.direction(Direction::Vertical(Scrollbar::default()))
 			)
 				.width(Length::FillPortion(1))
 				.height(Length::Fill)

@@ -59,6 +59,8 @@ pub enum LibraryTree
 {
 	SelectDirectory(DirectoryID),
 	DirectoryMenuOpen(DirectoryID, Point, f32),
+	DirectoryMenuClose,
+	DirectoryAction(DirectoryID, DirectoryMenuItem),
 	TrackMenuOpen(TrackID, Point, f32),
 	TrackMenuClose,
 	TrackAction(TrackID, TrackMenuItem),
@@ -70,6 +72,14 @@ pub enum TrackMenuItem
 	PlayNow,
 	PlayNext,
 	PlayLast,
+}
+
+#[derive(Clone, Copy)]
+pub enum DirectoryMenuItem
+{
+	Play,
+	AddNextToNowPlaying,
+	AddLastToNowPlaying,
 }
 
 #[derive(Clone, Copy)]
@@ -145,6 +155,19 @@ impl Display for TrackMenuItem
 			TrackMenuItem::PlayNow => write!(fmt, "Play Now"),
 			TrackMenuItem::PlayNext =>  write!(fmt, "Play Next"),
 			TrackMenuItem::PlayLast => write!(fmt, "Play Last"),
+		}
+	}
+}
+
+impl Display for DirectoryMenuItem
+{
+	fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result
+	{
+		match self
+		{
+			DirectoryMenuItem::Play => write!(fmt, "Play Tracks"),
+			DirectoryMenuItem::AddNextToNowPlaying => write!(fmt, "Add tracks next to Now Playing"),
+			DirectoryMenuItem::AddLastToNowPlaying => write!(fmt, "Add tracks to end of Now Playing"),
 		}
 	}
 }
