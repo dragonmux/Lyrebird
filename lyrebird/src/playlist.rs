@@ -49,6 +49,8 @@ impl Playlist
 				let entryID = self.currentEntry.map_or_default(|entryID| entryID + 1);
 				// Extract the list of tracks that follow the new entry ID
 				let tracks = self.entries.split_off(&entryID);
+				// Compute the resulting next entry ID for future additions
+				self.nextEntryID = entryID + tracks.len() + 1;
 				// Add the new track and then re-add all the following tracks
 				self.entries.insert(entryID, trackID);
 				for (offset, track) in tracks.into_values().enumerate()
