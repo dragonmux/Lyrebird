@@ -57,6 +57,7 @@ where
 	position: Point,
 	state: Arc<Mutex<State>>,
 	onClick: OnClickFn<'a, Message>,
+	onClose: OnMenuCloseFn<'a, Message>,
 	class: Theme::Class<'a>,
 }
 
@@ -317,6 +318,7 @@ where
 						MenuItem::Separator => None,
 					}
 				},
+				|| (self.onMenuClose)(),
 				|theme| Catalog::style(theme, &self.class),
 			);
 			Some(menu.into())
@@ -424,6 +426,7 @@ where
 		state: Arc<Mutex<State>>,
 		position: Point,
 		onClick: impl Fn(usize) -> Option<Message> + 'a,
+		onClose: impl Fn() -> Message + 'a,
 		style: impl Fn(&Theme) -> Style + 'a,
 	) -> Self
 	where
@@ -437,6 +440,7 @@ where
 			position,
 			state,
 			onClick: Box::new(onClick),
+			onClose: Box::new(onClose),
 			class: (Box::new(style) as StyleFn<'a, Theme>).into(),
 		}
 	}
@@ -529,34 +533,43 @@ where
 			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) |
 			Event::Touch(touch::Event::FingerLifted { .. }) =>
 			{
+				// See if this mouse click activated one of the context menu entries
 				if cursor.is_over(bounds) && let Some(index) = state.hoveredOption
 				{
 					let onClick = &self.onClick;
 					let message = onClick(index);
+					// If it did actually result in something to do, consider the menu done with
 					if let Some(message) = message
 					{
+						// So publish the action we've been given, then close the menu
 						shell.publish(message);
+						let onClose = &self.onClose;
+						shell.publish(onClose());
+						state.close();
 					}
+					// Make sure this event, as we handled it, doesn't go anywhere else.
 					shell.capture_event();
 				}
 			},
 			Event::Mouse(mouse::Event::CursorMoved { .. }) =>
 			{
+				// Reset the hover state as the base case
+				state.hoveredOption = None;
+				// If the mouse is now over the menu
 				if cursor.is_over(bounds)
 				{
+					// Check to see what menu item it's over, if any
 					for (index, item) in layout.children().enumerate()
 					{
+						// If it's over a specific option, then update the hover state accordingly
 						if cursor.is_over(item.bounds())
 						{
 							state.hoveredOption = Some(index);
 						}
 					}
+					// We handled this, so make sure it goes no further
 					shell.capture_event();
 					shell.request_redraw();
-				}
-				else
-				{
-					state.hoveredOption = None;
 				}
 			}
 			_ => {},
