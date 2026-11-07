@@ -3,7 +3,7 @@
 use std::{collections::BTreeMap, ops::AddAssign};
 use std::ops::Add;
 
-use crate::{messages::PlayPosition, track::TrackID};
+use crate::{library::{DirectoryID, MusicLibrary}, messages::PlayPosition, track::TrackID};
 
 pub struct Playlist
 {
@@ -65,6 +65,31 @@ impl Playlist
 			}
 		};
 		self.entries.insert(entryID, trackID);
+	}
+
+	pub fn addFrom(&mut self, library: &MusicLibrary, directoryID: DirectoryID, playPosition: PlayPosition)
+	{
+		// Extract the list of tracks to playlist
+		let directory = library.directoryFor(directoryID);
+		let tracks = directory.contents();
+		// Process the request based on the mode selected
+		match playPosition
+		{
+			PlayPosition::Now =>
+			{
+				// If this is a request to playlist the list now, replace the playlist contents with it
+				self.clear();
+				// Compute the new next entry ID and store that, keeping the original for the insert
+				let entryID = self.nextEntryID;
+				self.nextEntryID += tracks.len();
+				// Insert all the new tracks into the playlist
+				for (offset, &track) in tracks.into_iter().enumerate()
+				{
+					self.entries.insert(entryID + offset, track);
+				}
+			},
+			_ => {},
+		};
 	}
 
 	pub fn clear(&mut self)
