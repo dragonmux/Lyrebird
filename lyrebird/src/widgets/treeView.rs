@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use iced::{Background, Border, Color, Event, Length, Rectangle, Size, mouse, touch};
+use iced::{Background, Border, Color, Event, Length, Point, Rectangle, Size, mouse, touch};
 use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer::{self, Quad}, widget::{Operation, Tree, tree}, window};
 use iced_widget::{column, text};
 
@@ -33,9 +33,11 @@ where
 	height: Length,
 	class: Theme::Class<'a>,
 	onSelect: Option<OnSelectFn<'a, ItemID, Message>>,
+	onRightClick: Option<OnRightClickFn<'a, ItemID, Message>>,
 }
 
 type OnSelectFn<'a, ItemID, Message> = Box<dyn Fn(ItemID) -> Message + 'a>;
+type OnRightClickFn<'a, ItemID, Message> = Box<dyn Fn(ItemID, Point, f32) -> Message + 'a>;
 
 /// The possible states of a [`TabButton`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -101,13 +103,14 @@ where
 					height: Length::Shrink,
 					class: <Theme as Catalog>::default(),
 					onSelect: None,
+					onRightClick: None,
 				}
 			)
 		);
-		Self::with_setup(model, selectedNode, setup)
+		Self::withSetup(model, selectedNode, setup)
 	}
 
-	fn with_setup
+	fn withSetup
 	(
 		model: &Model,
 		selectedNode: Option<Model::ItemID>,
@@ -117,7 +120,7 @@ where
 		// Turn all the child items into tree views of their own
 		let subtree = model.children()
 			.into_iter()
-			.map(|item| Self::with_setup(item, selectedNode, setup.clone()).into());
+			.map(|item| Self::withSetup(item, selectedNode, setup.clone()).into());
 
 		let isSelected = selectedNode == Some(model.nodeID());
 
@@ -163,6 +166,15 @@ where
 	pub fn onSelect(self, select: impl Fn(Model::ItemID) -> Message + 'a) -> Self
 	{
 		self.setup.borrow_mut().onSelect = Some(Box::new(select));
+		self
+	}
+
+	/// Sets the function to call to generate a [`Message`] for the [`TreeView`] node when
+	/// the node gets clicked if you wish to handle right click somehow
+	#[must_use]
+	pub fn onRightClick(self, rightClick: impl Fn(Model::ItemID, Point, f32) -> Message + 'a) -> Self
+	{
+		self.setup.borrow_mut().onRightClick = Some(Box::new(rightClick));
 		self
 	}
 }
@@ -366,6 +378,22 @@ where
 						}
 					}
 					shell.capture_event();
+				}
+			},
+			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) =>
+			{
+				if cursor.is_over(bounds)
+				{
+					let onRightClick = &self.setup.borrow().onRightClick;
+					// If the user has a right-click handler registered, handle the event with it
+					if let Some(onRightClick) = onRightClick
+					{
+						shell.publish
+						(
+							onRightClick(self.nodeID, cursor.position().unwrap_or(bounds.position()), bounds.height)
+						);
+						shell.capture_event();
+					}
 				}
 			},
 			Event::Touch(touch::Event::FingerLost { .. }) =>
