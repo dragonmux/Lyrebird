@@ -41,6 +41,7 @@ pub struct MainWindowState
 	optionsPanel: OptionsPanel,
 	playlists: Playlists,
 
+	musicLibrary: Arc<RwLock<MusicLibrary>>,
 	currentlyPlaying: Option<TrackState>,
 
 	/// Global cancellation token to shut down anything still running such as discovery
@@ -72,6 +73,7 @@ impl MainWindowState
 			optionsPanel: OptionsPanel::new(mainWindow.settings.clone()),
 			playlists: Playlists::new(mainWindow.musicLibrary.clone()),
 
+			musicLibrary: mainWindow.musicLibrary.clone(),
 			currentlyPlaying: None,
 
 			cancellation: CancellationToken::new(),
@@ -173,7 +175,11 @@ impl MainWindowState
 			match entityID
 			{
 				EntityID::Track(trackID) => playlist.add(trackID, playPosition),
-				EntityID::Directory(_directoryID) => { },
+				EntityID::Directory(directoryID) =>
+				{
+					let library = self.musicLibrary.read().expect("Concurrency error, could not lock music library for read");
+					playlist.addFrom(&library, directoryID, playPosition);
+				},
 			};
 			// If the play position was now and the playlist is Now Playing, trigger playback
 			if playlistID == PlaylistID::nowPlaying() && playPosition == PlayPosition::Now {
