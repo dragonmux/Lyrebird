@@ -298,6 +298,12 @@ where
 			return;
 		}
 
+		// If the cursor is not over the widget, reset the node ID for things like right-click
+		if !cursor.is_over(layout.bounds())
+		{
+			let state = tree.state.downcast_mut::<ListViewState<Items::ItemID>>();
+			state.nodeID = None;
+		}
 		// Loop through all the items in the list
 		for (item, layout) in tree.children.iter().zip(layout.children())
 		{
