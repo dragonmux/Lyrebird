@@ -723,9 +723,29 @@ where
 		_theme: &Theme,
 		_style: &renderer::Style,
 		_layout: Layout<'_>,
-		_cursor: iced_core::mouse::Cursor,
+		_cursor: mouse::Cursor,
 		_viewport: &Rectangle,
 	) { }
+
+	fn mouse_interaction(
+		&self,
+		_tree: &Tree,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		_viewport: &Rectangle,
+		_renderer: &Renderer,
+	) -> mouse::Interaction
+	{
+		// If the mouse is over the menu, say we interact with it
+		if cursor.is_over(layout.bounds())
+		{
+			mouse::Interaction::Idle
+		}
+		else
+		{
+			mouse::Interaction::default()
+		}
+	}
 }
 
 impl<'a, Message, Theme, Renderer> From<Menu<'a, Message, Theme, Renderer>>
