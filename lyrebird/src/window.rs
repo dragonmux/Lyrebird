@@ -17,7 +17,7 @@ use tracing::error;
 use crate::albumList::AlbumList;
 use crate::artistList::ArtistList;
 use crate::library::MusicLibrary;
-use crate::messages::{Message, PlayPosition, Tab};
+use crate::messages::{EntityID, Message, PlayPosition, Tab};
 use crate::options::OptionsPanel;
 use crate::playback::{PlaybackState, TrackState};
 use crate::playlists::{PlaylistID, Playlists};
@@ -102,8 +102,8 @@ impl MainWindowState
 			}
 			Message::WindowOpened(id) => self.handleWindowOpen(id),
 			Message::WindowClosed(id) => self.handleWindowClose(id),
-			Message::AddToPlaylist(playlistID, trackID, playPosition) =>
-				self.handleAddToPlaylist(playlistID, trackID, playPosition),
+			Message::AddToPlaylist(playlistID, entityID, playPosition) =>
+				self.handleAddToPlaylist(playlistID, entityID, playPosition),
 			Message::TogglePlayback => self.togglePlayback(),
 			Message::PlaybackNotification(notification) =>
 				self.handlePlaybackNotification(notification)
@@ -164,13 +164,17 @@ impl MainWindowState
 		Task::none()
 	}
 
-	fn handleAddToPlaylist(&mut self, playlistID: PlaylistID, trackID: TrackID, playPosition: PlayPosition) -> Task<Message>
+	fn handleAddToPlaylist(&mut self, playlistID: PlaylistID, entityID: EntityID, playPosition: PlayPosition) -> Task<Message>
 	{
 		// Grab the playlist this track is to be added to
 		let playlist = self.playlists.playlist(playlistID);
 		// Add it to the playlist if we could get it back, report an error otherwise
 		if let Some(playlist) = playlist {
-			playlist.add(trackID, playPosition);
+			match entityID
+			{
+				EntityID::Track(trackID) => playlist.add(trackID, playPosition),
+				EntityID::Directory(_directoryID) => { },
+			};
 			// If the play position was now and the playlist is Now Playing, trigger playback
 			if playlistID == PlaylistID::nowPlaying() && playPosition == PlayPosition::Now {
 				// Handle playing this track via the playback completion mechanism

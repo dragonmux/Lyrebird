@@ -10,7 +10,7 @@ use iced_widget::{Row, scrollable};
 use itertools::Itertools;
 
 use crate::library::{Directory, DirectoryID, MusicLibrary};
-use crate::messages::{self, DirectoryMenuItem, Message, PlayPosition, TrackMenuItem};
+use crate::messages::{self, DirectoryMenuItem, EntityID, Message, PlayPosition, TrackMenuItem};
 use crate::playlists::PlaylistID;
 use crate::track::TrackID;
 use crate::widgets::Element;
@@ -75,9 +75,12 @@ impl LibraryTree
 			{
 				return Task::done(match menuEntry
 				{
-					TrackMenuItem::PlayNow => Message::AddToPlaylist(PlaylistID::nowPlaying(), trackID, PlayPosition::Now),
-					TrackMenuItem::PlayNext => Message::AddToPlaylist(PlaylistID::nowPlaying(), trackID, PlayPosition::Next),
-					TrackMenuItem::PlayLast => Message::AddToPlaylist(PlaylistID::nowPlaying(), trackID, PlayPosition::Last),
+					TrackMenuItem::PlayNow =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Track(trackID), PlayPosition::Now),
+					TrackMenuItem::PlayNext =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Track(trackID), PlayPosition::Next),
+					TrackMenuItem::PlayLast =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Track(trackID), PlayPosition::Last),
 				});
 			},
 		};
@@ -142,7 +145,7 @@ impl LibraryTree
 							.onDoubeClick
 							(
 								|nodeID|
-									Message::AddToPlaylist(PlaylistID::nowPlaying(), nodeID, PlayPosition::Now)
+									Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Track(nodeID), PlayPosition::Now)
 							)
 							.onRightClick
 							(

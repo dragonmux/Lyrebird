@@ -43,7 +43,7 @@ pub enum Message
 	KeyEvent(keyboard::Event),
 	WindowOpened(window::Id),
 	WindowClosed(window::Id),
-	AddToPlaylist(PlaylistID, TrackID, PlayPosition),
+	AddToPlaylist(PlaylistID, EntityID, PlayPosition),
 	RemoveFromPlaylist(PlaylistID, PlaylistEntryID),
 	PlayPlaylist(PlaylistID),
 	PlayCurrent,
@@ -98,6 +98,13 @@ pub enum AlbumList
 pub enum Playlist
 {
 	SelectPlaylist(PlaylistID),
+}
+
+#[derive(Clone, Copy)]
+pub enum EntityID
+{
+	Directory(DirectoryID),
+	Track(TrackID),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
