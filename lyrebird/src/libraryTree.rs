@@ -116,6 +116,10 @@ impl LibraryTree
 					(
 						TreeView::new(&directoryTree, Some(self.selectedDirectory))
 							.onSelect(|nodeID| Message::LibraryTree(messages::LibraryTree::SelectDirectory(nodeID)))
+							.onRightClick(
+								|nodeID, position, nodeHeight|
+										Message::LibraryTree(messages::LibraryTree::DirectoryMenuOpen(nodeID, position, nodeHeight))
+							)
 					)
 						.width(Length::Fill)
 						.height(Length::Fill)
@@ -127,7 +131,8 @@ impl LibraryTree
 						DirectoryMenuItem::AddLastToNowPlaying,
 					],
 					&self.directoryMenu,
-					|item, directoryID| Message::LibraryTree(messages::LibraryTree::DirectoryAction(directoryID, item)),
+					|item, directoryID|
+						Message::LibraryTree(messages::LibraryTree::DirectoryAction(directoryID, item)),
 					|| Message::LibraryTree(messages::LibraryTree::DirectoryMenuClose),
 				)
 			)
