@@ -462,6 +462,9 @@ where
 		// Compute how much space there is above and below the location we're to be displayed
 		let spaceAbove = self.position.y;
 		let spaceBelow = bounds.height - spaceAbove;
+		// Likewise to the left vs right
+		let spaceLeft = self.position.x;
+		let spaceRight = bounds.width - spaceLeft;
 
 		let limits = layout::Limits::new
 		(
@@ -469,7 +472,14 @@ where
 			// Menu can't be wider than the max amount of space around where it will display
 			Size::new
 			(
-				bounds.width - self.position.x,
+				if spaceRight > spaceLeft
+				{
+					spaceRight
+				}
+				else
+				{
+					spaceLeft
+				},
 				if spaceBelow > spaceAbove
 				{
 					spaceBelow
@@ -489,7 +499,19 @@ where
 			renderer,
 			&limits
 		);
-		node.move_to(self.position)
+		// Take the click position and if there's not enough space below it, transform
+		// it by the height of the menu layout to push the menu above it
+		let mut position = self.position;
+		if spaceBelow < node.bounds().height
+		{
+			position.y -= node.bounds().height;
+		}
+		// Likewise for space to the right
+		if spaceRight < node.bounds().width
+		{
+			position.x -= node.bounds().width;
+		}
+		node.move_to(position)
 	}
 
 	fn operate
