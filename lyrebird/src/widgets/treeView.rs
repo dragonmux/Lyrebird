@@ -29,6 +29,7 @@ where
 	Message: Clone,
 	Theme: Catalog,
 {
+	rootPositon: Option<Point>,
 	width: Length,
 	height: Length,
 	class: Theme::Class<'a>,
@@ -99,6 +100,7 @@ where
 			(
 				TreeViewSetup
 				{
+					rootPositon: None,
 					width: Length::Shrink,
 					height: Length::Shrink,
 					class: <Theme as Catalog>::default(),
@@ -313,6 +315,14 @@ where
 		viewport: &Rectangle,
 	)
 	{
+		// If we're the root node, then we need to take the node layout position and stuff it
+		// into the setup data so the position calculations below work right
+		let isRoot = self.setup.borrow().rootPositon.is_none();
+		if isRoot
+		{
+			self.setup.borrow_mut().rootPositon = Some(layout.child(0).position());
+		}
+
 		// Start by running updates on all the subcomponents
 		self.node
 			.as_widget_mut()
@@ -388,9 +398,16 @@ where
 					// If the user has a right-click handler registered, handle the event with it
 					if let Some(onRightClick) = onRightClick
 					{
+						// Figure out where the entry is suplement that with the entry bounds if needed
+						let mut position = cursor.position().unwrap_or(bounds.position());
+						// Compute any transformation being applied on the viewport (scrolling, for example)
+						let rootPosition = self.setup.borrow().rootPositon.unwrap_or_default();
+						let translation = viewport.position() - rootPosition;
+						// And de-transform the position clicked to bring it back out of scroll space to screen space
+						position -= translation;
 						shell.publish
 						(
-							onRightClick(self.nodeID, cursor.position().unwrap_or(bounds.position()), bounds.height)
+							onRightClick(self.nodeID, position, bounds.height)
 						);
 						shell.capture_event();
 					}
@@ -429,6 +446,11 @@ where
 			{
 				shell.request_redraw();
 			}
+		}
+
+		if isRoot
+		{
+			self.setup.borrow_mut().rootPositon = None;
 		}
 	}
 
