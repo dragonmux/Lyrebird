@@ -304,6 +304,10 @@ where
 			let state = tree.state.downcast_mut::<ListViewState<Items::ItemID>>();
 			state.nodeID = None;
 		}
+
+		// Grab the position of the layout root
+		let rootPosition = layout.position();
+
 		// Loop through all the items in the list
 		for (item, layout) in tree.children.iter().zip(layout.children())
 		{
@@ -315,6 +319,10 @@ where
 				let state = tree.state.downcast_mut::<ListViewState<Items::ItemID>>();
 				state.nodeID = Some(*item.state.downcast_ref::<Items::ItemID>());
 				state.nodePosition = cursor.position().unwrap_or_else(|| layout.position());
+				// Compute any transformation being applied on the viewport (scrolling, for example)
+				// and de-transform the node position by that to bring it back into screen space
+				let translation = viewport.position() - rootPosition;
+				state.nodePosition -= translation;
 				state.nodeHeight = layout.bounds().height;
 				break;
 			}
