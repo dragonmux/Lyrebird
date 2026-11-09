@@ -1,0 +1,66 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+use iced::Border;
+
+use crate::{theme::{Styles, Theme}, widgets::tabBar::{Catalog, State, Style, StyleFn}};
+
+impl Catalog for Theme
+{
+	type Class<'a> = StyleFn<'a, Self>;
+
+	fn default<'a>() -> Self::Class<'a>
+	{
+		Box::new(header)
+	}
+
+	fn style(&self, class: &Self::Class<'_>, status: State) -> Style
+	{
+		class(self, status)
+	}
+}
+
+/// Styler for when a TabBar is used as the program header
+pub fn header(theme: &Theme, status: State) -> Style
+{
+	// Extract the styling information and construct a base style
+	let styles = theme.styles();
+	let base = headerBase(styles);
+
+	// Customise the base as required by the status being rendered for
+	match status
+	{
+		// TabButton is just pressable but not pressed
+		State::Normal => base,
+		// TabButton is actively pressed or selected
+		State::Pressed | State::Selected => Style
+		{
+			tabTextColour: styles.header.tab.button.selected.colour,
+			..base
+		},
+		// TabButton is being hovered over
+		State::Hovered => Style
+		{
+			tabTextColour: styles.header.tab.button.hover.colour,
+			..base
+		},
+	}
+}
+
+/// Creates a base style for the tab bar when used in the program header
+fn headerBase(styles: &Styles) -> Style
+{
+	Style
+	{
+		background: Some(iced::Background::Color(styles.header.background)),
+		titleColour: styles.header.programName.colour,
+		tabTextColour:  styles.header.tab.button.normal.colour,
+		tabNumberColour: styles.header.tab.button.number.colour,
+		seperatorColour: styles.header.tab.seperator,
+		border: Border
+		{
+			color: styles.header.tab.border,
+			width: 1.0,
+			radius: 0.0.into(),
+		},
+	}
+}

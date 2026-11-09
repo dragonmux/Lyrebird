@@ -1,281 +1,253 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::path::{Path, PathBuf};
-use std::time::Duration;
+
+use std::sync::{Arc, RwLock};
 
 use color_eyre::Result;
-use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
+use color_eyre::eyre::eyre;
 use directories::ProjectDirs;
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint, Flex, Layout, Rect, Size};
-use ratatui::style::{Style, Stylize};
-use ratatui::text::{Line, Span};
-use ratatui::widgets::Widget;
-use ratatui::{DefaultTerminal, Frame};
-use tokio::sync::mpsc::{channel, Receiver};
-use tokio_stream::StreamExt;
+use iced::alignment::Horizontal;
+use iced::keyboard::Key;
+use iced::keyboard::key::Named;
+use iced::{Length, Program, Settings, Subscription, Task, keyboard, window};
+use iced_futures::backend::default::Executor;
+use iced_widget::Column;
+use tokio_util::sync::CancellationToken;
+use tracing::error;
 
+use crate::albumList::AlbumList;
+use crate::artistList::ArtistList;
+use crate::library::MusicLibrary;
+use crate::messages::{EntityID, Message, PlayPosition, Tab};
 use crate::options::OptionsPanel;
-use crate::playback::{PlaybackState, Song};
-use crate::playlists::Playlists;
+use crate::playback::{PlaybackState, TrackState};
+use crate::playlists::{PlaylistID, Playlists};
+use crate::theme::Theme;
+use crate::track::TrackID;
+use crate::widgets::trackProgress::TrackProgress;
+use crate::widgets::{Element, Renderer};
 use crate::widgets::tabBar::TabBar;
 use crate::{config::Config, libraryTree::LibraryTree};
 
-/// Represents the main window of Lyrebird
-pub struct MainWindow
+/// Represents the state of the main window of Lyrebird
+pub struct MainWindowState
 {
-	header: Style,
-	headerEntry: Style,
-	headerNumber: Style,
-	activeEntry: Style,
-	footer: Style,
+	windowID: Option<window::Id>,
 
-	exit: bool,
-	activeTab: Tab,
+	tabBar: TabBar<Tab>,
 
 	libraryTree: LibraryTree,
+	artistList: ArtistList,
+	albumList: AlbumList,
 	optionsPanel: OptionsPanel,
 	playlists: Playlists,
 
-	currentlyPlaying: Option<(Song, Receiver<PlaybackState>)>,
-	errorState: Option<String>
+	musicLibrary: Arc<RwLock<MusicLibrary>>,
+	currentlyPlaying: Option<TrackState>,
+
+	/// Global cancellation token to shut down anything still running such as discovery
+	/// when the user closes the main interface window
+	cancellation: CancellationToken,
 }
 
-#[derive(Clone, Copy)]
-enum Tab
+/// Represents the main window of Lyrebird itself
+pub struct MainWindow
 {
-	LibraryTree = 0,
-	Options = 3,
-	Playlists = 4,
+	musicLibrary: Arc<RwLock<MusicLibrary>>,
+	settings: Arc<RwLock<Config>>,
 }
 
-impl Tab
+impl MainWindowState
 {
-	const fn value(self) -> usize
+	/// Set up the main window state
+	pub fn new(mainWindow: &MainWindow) -> Self
 	{
-		self as usize
-	}
-}
-
-pub enum Operation
-{
-	/// Processing event determined there's nothing needs to be done
-	None,
-	/// Play a file, replacing the Now Playing playlist
-	Play(PathBuf),
-	/// Play a file already in the Now Playing playlist as if the current reached `PlaybackState::Complete`
-	PlayNext(PathBuf),
-	/// Add a file to the Now Playing playlist
-	Playlist(PathBuf),
-}
-
-impl Operation
-{
-	pub fn playlist(song: Option<PathBuf>) -> Self
-	{
-		match song
+		Self
 		{
-			Some(song) => Operation::Playlist(song),
-			None => Operation::None,
-		}
-	}
-}
+			windowID: None,
 
-impl MainWindow
-{
-	/// Set up a new main window, building the style pallet needed
-	pub fn new(paths: &ProjectDirs, config: &mut Config, initialSize: Size) -> Result<Self>
-	{
-		let activeEntry = Style::new().light_blue();
+			tabBar: TabBar::new("Lyrebird"),
 
-		Ok(Self
-		{
-			header: Style::new().blue().on_black(),
-			headerEntry: Style::new().blue().on_black(),
-			headerNumber: Style::new().light_blue().on_black(),
-			activeEntry,
-			footer: Style::new().blue().on_black(),
+			libraryTree: LibraryTree::new(mainWindow.musicLibrary.clone()),
+			artistList: ArtistList::new(mainWindow.musicLibrary.clone()),
+			albumList: AlbumList::new(mainWindow.musicLibrary.clone()),
+			optionsPanel: OptionsPanel::new(mainWindow.settings.clone()),
+			playlists: Playlists::new(mainWindow.musicLibrary.clone()),
 
-			exit: false,
-			activeTab: Tab::LibraryTree,
-
-			libraryTree: LibraryTree::new
-			(
-				activeEntry,
-				&paths.cache_dir().join("library.json"),
-				&config.libraryPath,
-				Size::new(initialSize.width, initialSize.height.saturating_sub(2)),
-			)?,
-			optionsPanel: OptionsPanel::new(),
-			playlists: Playlists::new(activeEntry),
-
+			musicLibrary: mainWindow.musicLibrary.clone(),
 			currentlyPlaying: None,
-			errorState: None,
-		})
-	}
 
-	/// Run the program window until an exit-causing event occurs
-	pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()>
-	{
-		// Set up an events stream for console events happening
-		let mut events = EventStream::new();
-		// Set up a redraw timer
-		let mut frameTimer = tokio::time::interval(Duration::from_secs(1).div_f32(50.0));
-
-		// Until the user's asked us to exit
-		while !self.exit
-		{
-			// If we're not discovering the library tree any more, check if we don't need to join the background
-			// thread for discovery
-			if !self.libraryTree.isDiscovering()
-			{
-				self.libraryTree.maybeJoinDiscovery().await?;
-				// Redraw the terminal before trying to process an event
-				terminal.draw(|frame| self.draw(frame))?;
-			}
-			// See if there's something to do from one of our event sources
-			tokio::select!
-			{
-				// Redraw the terminal every 50th of a second while discovery runs
-				_ = frameTimer.tick(), if self.libraryTree.isDiscovering() =>
-					{ terminal.draw(|frame| self.draw(frame))?; },
-				// Ask if there are more events to handle
-				Some(Ok(event)) = events.next() => { self.handleEvent(&event)?; },
-				// If there is a file playing, check to see if it's giving us any notifications
-				Some(notification) = self.playbackNotification(), if self.currentlyPlaying.is_some() =>
-					{ self.handlePlaybackNotification(&notification)? },
-			}
+			cancellation: CancellationToken::new(),
 		}
-		Ok(())
 	}
 
-	fn handleEvent(&mut self, event: &Event) -> Result<()>
+	pub fn update(&mut self, mainWindow: &MainWindow, message: Message) -> Task<Message>
 	{
-		// We did! find out what it was and handle it
-		match event
+		match message
 		{
-			// Key change event?
-			Event::Key(key) =>
+			Message::SwitchTo(tab) => self.tabBar.switchTo(tab),
+			Message::LibraryDiscover =>
+				Task::future(MusicLibrary::discover(mainWindow.musicLibrary.clone(), self.cancellation.clone())),
+			Message::LibraryDiscovered =>
+				Task::future(MusicLibrary::writeCache(mainWindow.musicLibrary.clone())),
+			Message::LibraryTree(message) => self.libraryTree.update(message),
+			Message::ArtistList(message) => self.artistList.update(message),
+			Message::AlbumList(message) => self.albumList.update(message),
+			Message::Playlist(message) => self.playlists.update(message),
+			Message::KeyEvent(event) =>
 			{
-				// Key press?
-				if key.kind == KeyEventKind::Press
+				match event
 				{
-					// Check to see if the event is for quitting
-					match key.code
-					{
-						KeyCode::Char('q' | 'Q') => { return self.quit(); },
-						KeyCode::Char(' ') => { self.togglePlayback(); },
-						KeyCode::Char('1') => { self.activeTab = Tab::LibraryTree; }
-						KeyCode::Char('4') => { self.activeTab = Tab::Options; }
-						KeyCode::Char('5') => { self.activeTab = Tab::Playlists; }
-						_ => {}
-					}
+					keyboard::Event::KeyPressed { key: Key::Named(Named::Space), repeat: false, .. } =>
+						Task::done(Message::TogglePlayback),
+					_ => Task::none()
 				}
-				// It's some other kind of event, so figure out which is the active
-				// tab and ask it what it thinks of this
-				let operation = match self.activeTab
-				{
-					Tab::LibraryTree => self.libraryTree.handleKeyEvent(key),
-					Tab::Options => self.optionsPanel.handleKeyEvent(key),
-					Tab::Playlists => self.playlists.handleKeyEvent(key),
-				};
-				// If that key event resulted in a new file to play, process that
-				match operation
-				{
-					Operation::Play(fileName) =>
-					{
-						let song = fileName.as_path();
-						self.playlists.nowPlaying().replaceWith(song);
-						self.playSong(song)?;
-					},
-					Operation::PlayNext(fileName) => self.playSong(fileName.as_path())?,
-					Operation::Playlist(song) => self.playlistSong(song.as_path())?,
-					Operation::None => {},
-				}
-			},
-			Event::Resize(width, height) =>
+			}
+			Message::WindowOpened(id) => self.handleWindowOpen(id),
+			Message::WindowClosed(id) => self.handleWindowClose(id),
+			Message::AddToPlaylist(playlistID, entityID, playPosition) =>
+				self.handleAddToPlaylist(playlistID, entityID, playPosition),
+			Message::TogglePlayback => self.togglePlayback(),
+			Message::PlaybackNotification(notification) =>
+				self.handlePlaybackNotification(notification)
+					.expect("Playback state change notification should not have caused an error"),
+			_ => Task::none(),
+		}
+	}
+
+	pub fn view(&self, _mainWindow: &MainWindow) -> Element<'_, Message>
+	{
+		// Build the window header (view selector) and footer (playback status bar)
+		let header = self.tabBar.view();
+		let footer = TrackProgress::new(self.currentlyPlaying.as_ref());
+
+		// Figure out what to display in the main area
+		let content = match self.tabBar.activeTab()
+		{
+			Tab::LibraryTree => self.libraryTree.view(),
+			Tab::Artists => self.artistList.view(),
+			Tab::Albums => self.albumList.view(),
+			Tab::Options => self.optionsPanel.view(),
+			Tab::Playlists => self.playlists.view(),
+		};
+
+		// Compose the whole lot into a layout
+		let layout = Column::with_children
+		([
+			header,
+			content.into(),
+			footer.into(),
+		]);
+
+		// And set that layout up to display things full window size nicely
+		layout
+			.width(Length::Fill)
+			.height(Length::Fill)
+			.align_x(Horizontal::Center)
+			.into()
+	}
+
+	fn handleWindowOpen(&mut self, id: window::Id) -> Task<Message>
+	{
+		if self.windowID.is_none()
+		{
+			self.windowID = Some(id);
+		}
+		Task::none()
+	}
+
+	fn handleWindowClose(&mut self, id: window::Id) -> Task<Message>
+	{
+		// If this is our main window
+		if self.windowID == Some(id)
+		{
+			// Cancel any ongoing discovery if there is any
+			self.cancellation.cancel();
+		}
+		Task::none()
+	}
+
+	fn handleAddToPlaylist(&mut self, playlistID: PlaylistID, entityID: EntityID, playPosition: PlayPosition) -> Task<Message>
+	{
+		// Grab the playlist this track is to be added to
+		let playlist = self.playlists.playlist(playlistID);
+		// Add it to the playlist if we could get it back, report an error otherwise
+		if let Some(playlist) = playlist {
+			match entityID
 			{
-				self.libraryTree.handleResize(Size::new(*width, *height));
-			},
-			_ => {}
+				EntityID::Track(trackID) => playlist.add(trackID, playPosition),
+				EntityID::Directory(directoryID) =>
+				{
+					let library = self.musicLibrary.read().expect("Concurrency error, could not lock music library for read");
+					playlist.addFrom(&library, directoryID, playPosition);
+				},
+			};
+			// If the play position was now and the playlist is Now Playing, trigger playback
+			if playlistID == PlaylistID::nowPlaying() && playPosition == PlayPosition::Now
+			{
+				// Handle playing this track via the playback completion mechanism
+				return Task::done(Message::PlaybackNotification(PlaybackState::Complete))
+			}
+			// If it's now playing and nothing is currently playing, then set things in motion again
+			else if playlistID == PlaylistID::nowPlaying() && self.currentlyPlaying.is_none()
+			{
+				return Task::done(Message::PlaybackNotification(PlaybackState::Complete))
+			}
+		} else {
+			error!("Failed to get playlist {playlistID}, not adding track");
 		}
-		Ok(())
+		Task::none()
 	}
 
-	fn quit(&mut self) -> Result<()>
+	fn togglePlayback(&mut self) -> Task<Message>
 	{
-		self.exit = true;
-		self.libraryTree.writeCache()
-	}
-
-	// Draw the program window to the terminal
-	fn draw(&mut self, frame: &mut Frame)
-	{
-		frame.render_widget(self, frame.area());
-	}
-
-	fn playSong(&mut self, fileName: &Path) -> Result<()>
-	{
-		// Make a new channel for the new playback thread to communicate back to us with
-		let (sender, receiver) = channel(1);
-		let mut song = Song::from(fileName, sender)?;
-		let currentlyPlaying = self.currentlyPlaying.take();
-		// If we already have a song playing, stop it
-		if let Some((mut currentSong, _)) = currentlyPlaying
+		if let Some(track) = &mut self.currentlyPlaying
 		{
-			currentSong.stop()?;
-		}
-		// Now replace the current playing state with the new one having asked this new one to start
-		song.play();
-		self.currentlyPlaying = Some((song, receiver));
-		Ok(())
-	}
-
-	fn playlistSong(&mut self, fileName: &Path) -> Result<()>
-	{
-		let nowPlaying = self.playlists.nowPlaying();
-		nowPlaying.add(fileName);
-		match &self.currentlyPlaying
-		{
-			Some(_) => Ok(()),
-			None => self.playSong(fileName),
-		}
-	}
-
-	fn togglePlayback(&mut self)
-	{
-		if let Some((song, _)) = &mut self.currentlyPlaying
-		{
-			match song.state()
+			match track.state()
 			{
 				PlaybackState::Playing =>
 				{
-					let result = song.pause();
+					let result = track.pause();
 					if let Err(error) = result
 					{
-						self.errorState = Some(error.to_string());
+						error!("{}", error);
 					}
 				},
 				PlaybackState::Paused |
 				PlaybackState::Stopped |
 				PlaybackState::NotStarted =>
-					{ song.play(); }
+					{ track.play(); }
 				PlaybackState::Complete => {}
-				PlaybackState::Unknown(error) =>
-					{ self.errorState = Some(error); }
+				PlaybackState::Unknown(_error) =>
+					{  }
 			}
 		}
+
+		Task::none()
 	}
 
-	// Wait for a playback notification from the currently playing song - note, it is an
-	// error to call this function if self.currentlyPlaying is None!
-	async fn playbackNotification(&mut self) -> Option<PlaybackState>
+	fn playTrack(&mut self, trackID: TrackID) -> Result<Task<Message>>
 	{
-		#[expect(clippy::unwrap_used, reason = "impossible in context")]
-		let (_, channel) = self.currentlyPlaying.as_mut().unwrap();
-		channel.recv().await
+		// Try and lock access to the library to get the track data for this track
+		let library= self.libraryTree.library();
+		let library = library
+			.read()
+			.map_err(|error| eyre!("Library should be lockable for read but was not: {}", error))?;
+		// Grab the track and turn it into state info, dropping our library lock
+		let (mut track, stateStream) = TrackState::new(library.trackFor(trackID), &library)?;
+		drop(library);
+		// See if another is currently playing, and make it stop if it is
+		let currentlyPlaying = self.currentlyPlaying.take();
+		if let Some(mut currentTrack) = currentlyPlaying
+		{
+			currentTrack.stop()?;
+		}
+		// Start the new track playing and push it into the state tracker
+		track.play();
+		self.currentlyPlaying = Some(track);
+		Ok(Task::run(stateStream, |stateChange| Message::PlaybackNotification(stateChange)))
 	}
 
-	fn handlePlaybackNotification(&mut self, notification: &PlaybackState) -> Result<()>
+	fn handlePlaybackNotification(&mut self, notification: PlaybackState) -> Result<Task<Message>>
 	{
 		match notification
 		{
@@ -287,121 +259,103 @@ impl MainWindow
 				let nextEntry = nowPlaying.next();
 				match nextEntry
 				{
-					Some(fileName) => self.playSong(fileName.as_path())?,
-					None => self.currentlyPlaying = None,
+					Some(trackID) => self.playTrack(trackID),
+					None =>
+					{
+						self.currentlyPlaying = None;
+						Ok(Task::none())
+					},
 				}
 			},
-			_ => {},
+			_ => Ok(Task::none()),
 		}
-		Ok(())
 	}
 }
 
-fn durationAsString(duration: Duration) -> String
+impl MainWindow
 {
-	if duration.is_zero()
+	// Set up a new main window, loading the music library and config settings
+	pub fn new(paths: &ProjectDirs) -> Result<Self>
 	{
-		"--:--".to_string()
-	}
-	else
-	{
-		let seconds = duration.as_secs();
-		let minutes = seconds / 60;
-		let seconds = seconds % 60;
-		format!("{minutes:2}:{seconds:02}")
-	}
-}
-
-// Turn the window into a widget for rendering to make the rendering phase simpler
-impl Widget for &mut MainWindow
-{
-	fn render(self, area: Rect, buf: &mut Buffer)
-		where Self: Sized
-	{
-		// Split the screen up into 3 major chunks - the header line, content, and footer line
-		let areas = Layout::vertical
-		(
-			[Constraint::Length(1), Constraint::Fill(1), Constraint::Length(1)]
-		).split(area);
-
-		// Make the header tab titles
-		let headerTabs = ["Tree", "Artists", "Albums", "Options", "Playlist"]
-			.map(ToString::to_string)
-			.into_iter()
-			.enumerate()
-			.map(|(num, tabTitle)|
-				[
-					Span::styled((num + 1).to_string(), self.headerNumber),
-					Span::from(" "),
-					Span::styled(tabTitle, self.headerEntry),
-				]
-			)
-			.map(|spans| Line::from(spans.to_vec()).left_aligned());
-
-		// Build a layout for the header line
-		let headerLayout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(5)])
-			.flex(Flex::SpaceBetween)
-			.split(areas[0]);
-
-		// Display the program header - starting with the program name, followed by the tabs
-		Line::styled(" Lyrebird", self.header).render(headerLayout[0], buf);
-		TabBar::new(headerTabs)
-			.style(self.headerEntry)
-			.highlightedStyle(self.activeEntry)
-			.select(self.activeTab.value())
-			.firstTabDivider(true)
-			.render(headerLayout[1], buf);
-
-		// Figure out which tab is currently active and draw that
-		match self.activeTab
+		let config = Arc::new(RwLock::new(Config::read(paths)?));
+		Ok(Self
 		{
-			Tab::LibraryTree => self.libraryTree.render(areas[1], buf),
-			Tab::Options => self.optionsPanel.render(areas[1], buf),
-			Tab::Playlists => self.playlists.render(areas[1], buf),
-		}
+			musicLibrary: Arc::new
+			(
+				RwLock::new
+				(
+					MusicLibrary::new
+					(
+						&paths.cache_dir().join("library.json"),
+						&config.read().map_err(|error| eyre!("Failed to read lock program config: {}", error))?.libraryPath,
+					)
+				)
+			),
+			settings: config.clone(),
+		})
+	}
+}
 
-		// Build a layout for the footer line
-		let (footerLayout, footerSpacers ) = Layout::horizontal
+impl Program for MainWindow
+{
+	type State = MainWindowState;
+	type Message = Message;
+	type Theme = Theme;
+	type Renderer = Renderer;
+	type Executor = Executor;
+
+	fn name() -> &'static str
+	{
+		"Lyrebird"
+	}
+
+	fn title(&self, _state: &MainWindowState, _window: window::Id) -> String
+	{
+		Self::name().to_string()
+	}
+
+	fn theme(&self, _state: &MainWindowState, _window: window::Id) -> Option<Theme>
+	{
+		Some(<Theme as Default>::default())
+	}
+
+	fn boot(&self) -> (MainWindowState, Task<Message>)
+	{
 		(
-			[Constraint::Percentage(50), Constraint::Fill(1), Constraint::Fill(3)]
+			MainWindowState::new(self),
+			Task::future(MusicLibrary::load(self.musicLibrary.clone()))
 		)
-			.flex(Flex::SpaceBetween)
-			.spacing(1)
-			.split_with_spacers(areas[2]);
+	}
 
-		// Figure out what strings are to be displayed in the footer
-		let currentlyPlaying = self.currentlyPlaying.as_ref()
-			.map_or_else(|| String::from("Nothing playing"), |(song, _)| song.description());
-		let songDuration = self.currentlyPlaying.as_ref()
-			.and_then(|(song, _)| song.songDuration())
-			.map_or_else
-			(
-				|| String::from("--:--"), durationAsString
-			);
-		let playedDuration = self.currentlyPlaying.as_ref()
-			.map_or_else
-			(
-				|| String::from("--:--"),
-				|(song, _)| durationAsString(song.playedDuration())
-			);
-		let errorState = self.errorState.as_ref().map_or_else
-		(
-			|| String::from("No errors"), Clone::clone
-		);
+	fn update(&self, state: &mut MainWindowState, message: Message) -> Task<Message>
+	{
+		state.update(self, message)
+	}
 
-		// Display the program footer - which song is currently playing, song runtime, and whether errors have occured
-		Line::from_iter([String::from(" "), currentlyPlaying])
-			.style(self.footer)
-			.render(footerLayout[0], buf);
-		Line::styled(format!("{playedDuration}/{songDuration}"), self.footer)
-			.centered()
-			.render(footerLayout[1], buf);
-		Line::styled(errorState, self.footer).render(footerLayout[2], buf);
+	fn view<'a>(&self, state: &'a MainWindowState, _windowID: window::Id) -> Element<'a, Message>
+	{
+		state.view(self)
+	}
 
-		// Render the spacers for all the components of the footer
-		for spacerRect in footerSpacers.iter()
-		{
-			Line::styled("│", self.footer).render(*spacerRect, buf);
-		}
+	fn subscription(&self, _state: &MainWindowState) -> Subscription<Message>
+	{
+		// Return a slew of things we want events for
+		Subscription::batch
+		([
+			// Listen to keyboard events that haven't been captured by anything else
+			keyboard::listen().map(Message::KeyEvent),
+			window::open_events().map(Message::WindowOpened),
+			window::close_events().map(Message::WindowClosed),
+		])
+	}
+
+	fn settings(&self) -> Settings
+	{
+		Settings::default()
+	}
+
+	fn window(&self) -> Option<window::Settings>
+	{
+		Some(window::Settings::default())
 	}
 }

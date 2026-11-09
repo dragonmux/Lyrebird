@@ -58,7 +58,7 @@ impl FileInfo<'_>
 			return Ok(None);
 		}
 		let title = unsafe { CStr::from_ptr(title) };
-		Ok(Some(String::from_utf8(title.to_bytes().to_vec())?))
+		Ok(Some(String::from_utf8_lossy(title.to_bytes()).to_string()))
 	}
 
 	/// # Errors
@@ -71,7 +71,7 @@ impl FileInfo<'_>
 			return Ok(None);
 		}
 		let artist = unsafe { CStr::from_ptr(artist) };
-		Ok(Some(String::from_utf8(artist.to_bytes().to_vec())?))
+		Ok(Some(String::from_utf8_lossy(artist.to_bytes()).to_string()))
 	}
 
 	/// # Errors
@@ -84,7 +84,7 @@ impl FileInfo<'_>
 			return Ok(None);
 		}
 		let album = unsafe { CStr::from_ptr(album) };
-		Ok(Some(String::from_utf8(album.to_bytes().to_vec())?))
+		Ok(Some(String::from_utf8_lossy(album.to_bytes()).to_string()))
 	}
 
 	/// # Errors

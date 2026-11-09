@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::{ffi::CString, os::{raw::c_void, unix::ffi::OsStrExt}, path::Path, ptr::NonNull};
+use std::{ffi::CString, os::{raw::c_void, unix::ffi::OsStrExt}, path::{Path, PathBuf}, ptr::NonNull};
 
 use crate::{fileInfo::FileInfo, AudioType};
 use crate::bindings::
@@ -9,6 +9,7 @@ use crate::bindings::
 
 pub struct AudioFile
 {
+	path: PathBuf,
 	inner: NonNull<c_void>,
 }
 
@@ -23,7 +24,11 @@ impl AudioFile
 		let fileName = CString::new(fileName).ok()?;
 
 		let file = unsafe { audioOpenR(fileName.as_ptr()) };
-		Some(AudioFile { inner: NonNull::new(file)? })
+		Some(AudioFile
+		{
+			path: path.to_path_buf(),
+			inner: NonNull::new(file)?
+		})
 	}
 
 	/// Try to open the given file as an audio file
@@ -35,7 +40,11 @@ impl AudioFile
 		let fileName = CString::new(fileName).ok()?;
 
 		let file = unsafe { audioOpenW(fileName.as_ptr(), format) };
-		Some(AudioFile { inner: NonNull::new(file)? })
+		Some(AudioFile
+		{
+			path: path.to_path_buf(),
+			inner: NonNull::new(file)?
+		})
 	}
 
 	/// Check if the target file is a valid audio file
@@ -45,11 +54,14 @@ impl AudioFile
 		let fileName = path.to_path_buf();
 		let fileName = fileName.as_os_str().as_bytes();
 		let fileName = CString::new(fileName);
-		match fileName
-		{
-			Ok(fileName) => unsafe { isAudio(fileName.as_ptr()) }
-			Err(_) => false
-		}
+		fileName.map_or_else(|_| false, |fileName| unsafe { isAudio(fileName.as_ptr()) })
+	}
+
+	/// Get the path to this audio file
+	#[must_use]
+	pub fn path(&self) -> &Path
+	{
+		&self.path
 	}
 
 	/// Get the metadata for this audio file

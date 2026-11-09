@@ -1,0 +1,801 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+use std::sync::{Arc, Mutex};
+
+use iced::{Alignment, Background, Border, Color, Event, Length, Point, Rectangle, Size, Vector, mouse, touch};
+use iced_core::renderer::Quad;
+use iced_core::Overlay;
+use iced_core::{Clipboard, Element, Layout, Shell, Widget, layout, overlay, renderer, widget::Operation};
+use iced_core::widget::{Tree, tree};
+use iced_widget::{rule, text};
+
+pub struct ContextMenu<'a, Item, Context, Message, Theme, Renderer = iced::Renderer>
+where
+	Item: Copy + ToString,
+	Context: Copy,
+	Theme: Catalog,
+	Renderer: iced_core::Renderer,
+{
+	content: Element<'a, Message, Theme, Renderer>,
+	menuItems: Vec<MenuItem<Item>>,
+	state: &'a ContextMenuState<Context>,
+	onMenuClick: OnMenuClickFn<'a, Item, Context, Message>,
+	onMenuClose: OnMenuCloseFn<'a, Message>,
+	class: Theme::Class<'a>,
+}
+
+type OnMenuClickFn<'a, MenuItem, Context, Message> = Box<dyn Fn(MenuItem, Context) -> Message + 'a>;
+type OnMenuCloseFn<'a, Message> = Box<dyn Fn() -> Message + 'a>;
+
+pub enum MenuItem<Item>
+where
+	Item: Copy + ToString,
+{
+	Item(Item),
+	Separator,
+}
+
+#[derive(Clone)]
+pub struct ContextMenuState<Context>
+where
+	Context: Copy,
+{
+	menuOpen: bool,
+	context: Option<Context>,
+	position: Point,
+	entryHeight: f32,
+}
+
+struct Menu<'a, Message, Theme, Renderer = iced::Renderer>
+where
+	Theme: Catalog,
+	Renderer: iced_core::Renderer,
+{
+	items: Vec<Element<'a, Message, Theme, Renderer>>,
+	width: Length,
+	height: Length,
+	position: Point,
+	state: Arc<Mutex<State>>,
+	onClick: OnClickFn<'a, Message>,
+	onClose: OnMenuCloseFn<'a, Message>,
+	class: Theme::Class<'a>,
+}
+
+type OnClickFn<'a, Message> = Box<dyn Fn(usize) -> Option<Message> + 'a>;
+
+struct State
+{
+	menuTree: Tree,
+	hoveredOption: Option<usize>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Style
+{
+	pub background: Background,
+	pub normalColour: Color,
+	pub hoverBackground: Background,
+	pub hoverColour: Color,
+	pub border: Border,
+}
+
+pub trait Catalog
+where
+	Self: Sized,
+{
+	type Class<'a>: From<StyleFn<'a, Self>>;
+	fn default<'a>() -> Self::Class<'a>;
+	fn style(&self, class: &Self::Class<'_>) -> Style;
+}
+
+pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme) -> Style + 'a>;
+
+impl<'a, Item, Context, Message, Theme, Renderer> ContextMenu<'a, Item, Context, Message, Theme, Renderer>
+where
+	Item: Copy + ToString + 'a,
+	Context: Copy,
+	Message: 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + 'a,
+{
+	/// Creates a new [`ContextMenu`] for `content` with the given menu items and click handler
+	pub fn new<const N: usize>
+	(
+		content: impl Into<Element<'a, Message, Theme, Renderer>>,
+		menuItems: [impl Into<MenuItem<Item>>; N],
+		state: &'a ContextMenuState<Context>,
+		onMenuClick: impl Fn(Item, Context) -> Message + 'a,
+		onMenuClose: impl Fn() -> Message + 'a,
+	) -> Self
+	{
+		Self
+		{
+			content: content.into(),
+			menuItems: menuItems.into_iter().map(Into::into).collect(),
+			state,
+			onMenuClick: Box::new(onMenuClick),
+			onMenuClose: Box::new(onMenuClose),
+			class: <Theme as Catalog>::default(),
+		}
+	}
+
+	/// Changes the style of the [`ContextMenu`]
+	#[must_use]
+	pub fn style(mut self, style: impl Fn(&Theme) -> Style + 'a) -> Self
+	where
+		<Theme as Catalog>::Class<'a>: From<StyleFn<'a, Theme>>,
+	{
+		self.class = (Box::new(style) as StyleFn<'a, Theme>).into();
+		self
+	}
+}
+
+impl<'a, Item, Context, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for ContextMenu<'a, Item, Context, Message, Theme, Renderer>
+where
+	Item: Copy + ToString,
+	Context: Copy,
+	Theme: Catalog + text::Catalog + rule::Catalog,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer,
+{
+	fn tag(&self) -> tree::Tag
+	{
+		tree::Tag::of::<Arc<Mutex<State>>>()
+	}
+
+	fn state(&self) -> tree::State
+	{
+		tree::State::new(Arc::new(Mutex::new(State::new())))
+	}
+
+	fn children(&self) -> Vec<Tree>
+	{
+		[Tree::new(&self.content)].into()
+	}
+
+	fn diff(&self, tree: &mut Tree)
+	{
+		tree.diff_children(&[&self.content]);
+	}
+
+	fn size(&self) -> Size<Length>
+	{
+		self.content.as_widget().size()
+	}
+
+	fn layout
+	(
+		&mut self,
+		tree: &mut Tree,
+		renderer: &Renderer,
+		limits: &layout::Limits,
+	) -> layout::Node
+	{
+		let size = self.size();
+		let contentLayout = self.content.as_widget_mut().layout(&mut tree.children[0], renderer, limits);
+
+		layout::Node::with_children
+		(
+			limits.resolve
+			(
+				size.width,
+				size.height,
+				contentLayout.size()
+			),
+			[contentLayout].into(),
+		)
+	}
+
+	fn operate
+	(
+		&mut self,
+		tree: &mut Tree,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
+	{
+		operation.container(None, layout.bounds());
+		operation.traverse(&mut |operation|
+		{
+			self.content
+				.as_widget_mut()
+				.operate(&mut tree.children[0], layout.child(0), renderer, operation)
+		});
+	}
+
+	fn update(
+		&mut self,
+		tree: &mut Tree,
+		event: &iced::Event,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		renderer: &Renderer,
+		clipboard: &mut dyn Clipboard,
+		shell: &mut Shell<'_, Message>,
+		viewport: &Rectangle,
+	)
+	{
+		match event
+		{
+			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) |
+			Event::Touch(touch::Event::FingerPressed { .. }) |
+			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Right)) =>
+			{
+				let state = tree.state.downcast_mut::<Arc<Mutex<State>>>();
+				let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
+				if self.state.menuOpen
+				{
+					// Event wasn't processed by the overlay, so needs closing and the menu state resetting
+					let onMenuClose = &self.onMenuClose;
+					shell.publish(onMenuClose());
+					state.close();
+				}
+			},
+			_ => {},
+		};
+
+		self.content
+			.as_widget_mut()
+			.update(&mut tree.children[0], event, layout.child(0), cursor, renderer, clipboard, shell, viewport);
+	}
+
+	fn draw(
+		&self,
+		tree: &Tree,
+		renderer: &mut Renderer,
+		theme: &Theme,
+		style: &renderer::Style,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		viewport: &Rectangle,
+	)
+	{
+		self.content
+			.as_widget()
+			.draw(&tree.children[0], renderer, theme, style, layout.child(0), cursor, viewport);
+	}
+
+	fn mouse_interaction
+	(
+		&self,
+		tree: &Tree,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		viewport: &Rectangle,
+		renderer: &Renderer,
+	) -> mouse::Interaction
+	{
+		// Check if the cursor is over the content of the widget
+		if cursor.is_over(layout.child(0).bounds())
+		{
+			// As it is, see what the content wants to do with the mouse and return that
+			self.content
+				.as_widget()
+				.mouse_interaction(&tree.children[0], layout.child(0), cursor, viewport, renderer)
+		}
+		else
+		{
+			mouse::Interaction::default()
+		}
+	}
+
+	fn overlay<'b>(
+		&'b mut self,
+		tree: &'b mut Tree,
+		layout: Layout<'b>,
+		renderer: &Renderer,
+		viewport: &Rectangle,
+		translation: Vector,
+	) -> Option<overlay::Element<'b, Message, Theme, Renderer>>
+	{
+		if self.state.menuOpen
+		{
+			let state = tree.state.downcast_mut::<Arc<Mutex<State>>>();
+			let _bounds = layout.bounds();
+
+			// Turn all the menu items into iced display widgets
+			let items = self.menuItems
+				.iter()
+				.map(|item| item.into())
+				.collect();
+
+			// Build the actual menu overlay and return it
+			let menu = Menu::new
+			(
+				items,
+				state.clone(),
+				self.state.position,
+				|index: usize|
+				{
+					let menuItem = &self.menuItems[index];
+					match menuItem
+					{
+						MenuItem::Item(item) =>
+						{
+							let onMenuClick = &self.onMenuClick;
+							Some(onMenuClick(*item, self.state.context.expect("A valid menu context has been established")))
+						},
+						MenuItem::Separator => None,
+					}
+				},
+				|| (self.onMenuClose)(),
+				|theme| Catalog::style(theme, &self.class),
+			);
+			Some(menu.into())
+		}
+		else
+		{
+			self.content
+				.as_widget_mut()
+				.overlay(&mut tree.children[0], layout.child(0), renderer, viewport, translation)
+		}
+	}
+}
+
+impl<'a, Item, Context, Message, Theme, Renderer> From<ContextMenu<'a, Item, Context, Message, Theme, Renderer>>
+	for iced::Element<'a, Message, Theme, Renderer>
+where
+	Item: Copy + ToString + 'a,
+	Context: Copy + 'a,
+	Message: 'a,
+	Theme: Catalog + text::Catalog + rule::Catalog + 'a,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
+{
+	fn from(contextMenu: ContextMenu<'a, Item, Context, Message, Theme, Renderer>) -> Self
+	{
+		Self::new(contextMenu)
+	}
+}
+
+impl<Item> From<Item> for MenuItem<Item>
+where
+	Item: Copy + ToString,
+{
+	fn from(item: Item) -> Self
+	{
+		Self::Item(item)
+	}
+}
+
+impl<Item> From<&Item> for MenuItem<Item>
+where
+	Item: Copy + ToString,
+{
+	fn from(item: &Item) -> Self
+	{
+		Self::Item(*item)
+	}
+}
+
+impl<'a, Item, Message, Theme, Renderer> From<&MenuItem<Item>> for iced::Element<'a, Message, Theme, Renderer>
+where
+	Item: Copy + ToString + 'a,
+	Message: 'a,
+	Theme: Catalog + text::Catalog + rule::Catalog + 'a,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
+{
+	fn from(menuItem: &MenuItem<Item>) -> Self
+	{
+		match menuItem
+		{
+			MenuItem::Item(item) => text(item.to_string()).into(),
+			MenuItem::Separator => rule::horizontal(1).into(),
+		}
+	}
+}
+
+impl<Context> ContextMenuState<Context>
+where
+	Context: Copy,
+{
+	pub fn new() -> Self
+	{
+		Self
+		{
+			menuOpen: false,
+			context: None,
+			position: Point::default(),
+			entryHeight: 0.0,
+		}
+	}
+
+	pub fn open(&mut self, context: Context, position: Point, entryHeight: f32)
+	{
+		self.menuOpen = true;
+		self.context = Some(context);
+		self.position = position;
+		self.entryHeight = entryHeight;
+	}
+
+	pub fn close(&mut self)
+	{
+		self.menuOpen = false;
+		self.context = None;
+	}
+}
+
+impl<'a, Message, Theme, Renderer> Menu<'a, Message, Theme, Renderer>
+where
+	Message: 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + 'a,
+{
+	pub fn new
+	(
+		items: Vec<Element<'a, Message, Theme, Renderer>>,
+		state: Arc<Mutex<State>>,
+		position: Point,
+		onClick: impl Fn(usize) -> Option<Message> + 'a,
+		onClose: impl Fn() -> Message + 'a,
+		style: impl Fn(&Theme) -> Style + 'a,
+	) -> Self
+	where
+		<Theme as Catalog>::Class<'a>: From<StyleFn<'a, Theme>>,
+	{
+		Self
+		{
+			items,
+			width: Length::Shrink,
+			height: Length::Shrink,
+			position,
+			state,
+			onClick: Box::new(onClick),
+			onClose: Box::new(onClose),
+			class: (Box::new(style) as StyleFn<'a, Theme>).into(),
+		}
+	}
+}
+
+impl<'a, Message, Theme, Renderer> Overlay<Message, Theme, Renderer> for Menu<'a, Message, Theme, Renderer>
+where
+	Message: 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + 'a,
+{
+	fn layout(&mut self, renderer: &Renderer, bounds: Size) -> layout::Node
+	{
+		let state = self.state.clone();
+		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
+		// Ensure the menu Node tree is set up
+		<Self as Widget<Message, Theme, Renderer>>::diff(&self, &mut state.menuTree);
+
+		// Compute how much space there is above and below the location we're to be displayed
+		let spaceAbove = self.position.y;
+		let spaceBelow = bounds.height - spaceAbove;
+		// Likewise to the left vs right
+		let spaceLeft = self.position.x;
+		let spaceRight = bounds.width - spaceLeft;
+
+		let limits = layout::Limits::new
+		(
+			Size::ZERO,
+			// Menu can't be wider than the max amount of space around where it will display
+			Size::new
+			(
+				if spaceRight > spaceLeft
+				{
+					spaceRight
+				}
+				else
+				{
+					spaceLeft
+				},
+				if spaceBelow > spaceAbove
+				{
+					spaceBelow
+				}
+				else
+				{
+					spaceAbove
+				},
+			),
+		);
+
+		// Compute the menu layout and locate it where the menu should actually display
+		let node = <Self as Widget<Message, Theme, Renderer>>::layout
+		(
+			self,
+			&mut state.menuTree,
+			renderer,
+			&limits
+		);
+		// Take the click position and if there's not enough space below it, transform
+		// it by the height of the menu layout to push the menu above it
+		let mut position = self.position;
+		if spaceBelow < node.bounds().height
+		{
+			position.y -= node.bounds().height;
+		}
+		// Likewise for space to the right
+		if spaceRight < node.bounds().width
+		{
+			position.x -= node.bounds().width;
+		}
+		node.move_to(position)
+	}
+
+	fn operate
+	(
+		&mut self,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
+	{
+		let state = self.state.clone();
+		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
+
+		<Self as Widget<Message, Theme, Renderer>>::operate
+		(
+			self,
+			&mut state.menuTree,
+			layout,
+			renderer,
+			operation
+		);
+	}
+
+	fn update
+	(
+		&mut self,
+		event: &Event,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		_renderer: &Renderer,
+		_clipboard: &mut dyn Clipboard,
+		shell: &mut Shell<'_, Message>,
+	)
+	{
+		let state = self.state.clone();
+		let mut state = state.lock().expect("Concurrency error, unable to lock context menu state");
+		let bounds = layout.bounds();
+
+		match event
+		{
+			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) |
+			Event::Touch(touch::Event::FingerLifted { .. }) =>
+			{
+				// See if this mouse click activated one of the context menu entries
+				if cursor.is_over(bounds) && let Some(index) = state.hoveredOption
+				{
+					let onClick = &self.onClick;
+					let message = onClick(index);
+					// If it did actually result in something to do, consider the menu done with
+					if let Some(message) = message
+					{
+						// So publish the action we've been given, then close the menu
+						shell.publish(message);
+						let onClose = &self.onClose;
+						shell.publish(onClose());
+						state.close();
+					}
+					// Make sure this event, as we handled it, doesn't go anywhere else.
+					shell.capture_event();
+				}
+			},
+			Event::Mouse(mouse::Event::CursorMoved { .. }) =>
+			{
+				// Reset the hover state as the base case
+				state.hoveredOption = None;
+				// If the mouse is now over the menu
+				if cursor.is_over(bounds)
+				{
+					// Check to see what menu item it's over, if any
+					for (index, item) in layout.children().enumerate()
+					{
+						// If it's over a specific option, then update the hover state accordingly
+						if cursor.is_over(item.bounds())
+						{
+							state.hoveredOption = Some(index);
+						}
+					}
+					// We handled this, so make sure it goes no further
+					shell.capture_event();
+					shell.request_redraw();
+				}
+			}
+			_ => {},
+		}
+	}
+
+	fn draw
+	(
+		&self,
+		renderer: &mut Renderer,
+		theme: &Theme,
+		_defaults: &renderer::Style,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+	)
+	{
+		let state = self.state.lock().expect("Concurrency error, unable to lock context menu state");
+		let bounds = layout.bounds();
+		let style = Catalog::style(theme, &self.class);
+
+		renderer.fill_quad
+		(
+			Quad
+			{
+				bounds,
+				border: style.border,
+				..Quad::default()
+			},
+			style.background,
+		);
+
+		for (((index, child), tree), layout) in self.items
+			.iter()
+			.enumerate()
+			.zip(&state.menuTree.children)
+			.zip(layout.children())
+			.filter(|(_, layout)| layout.bounds().intersects(&bounds))
+		{
+			let style = renderer::Style
+			{
+				// If this entry is text and the currently hovered over one, then use the hover
+				// colour, otherwise use the normal one.
+				text_color: (state.hoveredOption == Some(index))
+					.then_some(style.hoverColour)
+					.unwrap_or(style.normalColour)
+			};
+			child.as_widget().draw(tree, renderer, theme, &style, layout, cursor, &bounds);
+		}
+	}
+
+	fn mouse_interaction
+	(
+		&self,
+		layout: Layout<'_>,
+		cursor: iced_core::mouse::Cursor,
+		renderer: &Renderer,
+	) -> iced_core::mouse::Interaction
+	{
+		let state = self.state.lock().expect("Concurrency error, unable to lock context menu state");
+		let bounds = layout.bounds();
+
+		<Self as Widget<Message, Theme, Renderer>>::mouse_interaction
+		(
+			&self,
+			&state.menuTree,
+			layout,
+			cursor,
+			&bounds,
+			renderer
+		)
+	}
+}
+
+impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for Menu<'a, Message, Theme, Renderer>
+where
+	Message: 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + 'a,
+{
+	fn children(&self) -> Vec<Tree>
+	{
+		self.items.iter().map(Tree::new).collect()
+	}
+
+	fn diff(&self, tree: &mut Tree)
+	{
+		tree.diff_children(&self.items);
+	}
+
+	fn size(&self) -> Size<Length>
+	{
+		Size
+		{
+			width: self.width,
+			height: self.height,
+		}
+	}
+
+	fn layout
+	(
+		&mut self,
+		tree: &mut Tree,
+		renderer: &Renderer,
+		limits: &layout::Limits,
+	) -> layout::Node
+	{
+		layout::flex::resolve
+		(
+			layout::flex::Axis::Vertical,
+			renderer,
+			&limits,
+			self.width,
+			self.height,
+			5.into(),
+			5.0,
+			Alignment::Start,
+			&mut self.items,
+			&mut tree.children
+		)
+	}
+
+	fn operate
+	(
+		&mut self,
+		tree: &mut Tree,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
+	{
+		operation.container(None, layout.bounds());
+		for ((content, tree), layout) in self.items
+			.iter_mut()
+			.zip(&mut tree.children)
+			.zip(layout.children())
+		{
+			operation.traverse(&mut |operation|
+			{
+				content
+					.as_widget_mut()
+					.operate(tree, layout, renderer, operation);
+			});
+		}
+	}
+
+	fn draw
+	(
+		&self,
+		_tree: &Tree,
+		_renderer: &mut Renderer,
+		_theme: &Theme,
+		_style: &renderer::Style,
+		_layout: Layout<'_>,
+		_cursor: mouse::Cursor,
+		_viewport: &Rectangle,
+	) { }
+
+	fn mouse_interaction(
+		&self,
+		_tree: &Tree,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		_viewport: &Rectangle,
+		_renderer: &Renderer,
+	) -> mouse::Interaction
+	{
+		// If the mouse is over the menu, say we interact with it
+		if cursor.is_over(layout.bounds())
+		{
+			mouse::Interaction::Idle
+		}
+		else
+		{
+			mouse::Interaction::default()
+		}
+	}
+}
+
+impl<'a, Message, Theme, Renderer> From<Menu<'a, Message, Theme, Renderer>>
+	for overlay::Element<'a, Message, Theme, Renderer>
+where
+	Message: 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
+{
+	fn from(menu: Menu<'a, Message, Theme, Renderer>) -> Self
+	{
+		Self::new(Box::new(menu))
+	}
+}
+
+impl State
+{
+	pub fn new() -> Self
+	{
+		Self
+		{
+			menuTree: Tree::empty(),
+			hoveredOption: None,
+		}
+	}
+
+	pub fn close(&mut self)
+	{
+		self.hoveredOption = None;
+	}
+}

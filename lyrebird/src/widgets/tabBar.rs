@@ -1,266 +1,704 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use itertools::Itertools;
-use ratatui::{buffer::Buffer, layout::Rect, style::{Style, Styled}, symbols, text::{Line, Span}, widgets::Widget};
-use unicode_segmentation::UnicodeSegmentation;
-use unicode_width::UnicodeWidthStr;
+
+use iced::mouse::{self, Cursor};
+use iced::
+{
+	Alignment, Background, Border, Color, Event, Length, Padding, Point, Rectangle, Shadow, Size, Task, overlay, touch, window
+};
+use iced::widget::text;
+use iced_core::widget::{Operation, Tree, tree};
+use iced_core::{Clipboard, Layout, Shell, Widget, layout, renderer};
+use iced_widget::{container, row};
+
+use crate::messages::Message;
+use crate::theme::{self, Theme};
+use crate::widgets::Element;
 
 /// A widget that draws a set of tabs providing equidistant space by default
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct TabBar<'a>
+pub struct TabBar<TabEnum>
+where
+	TabEnum: Default + TabBarEnum + Clone + Copy,
 {
-	/// Content of the various tabs to display
-	tabs: Vec<Line<'a>>,
-	/// The index of the selected tabs
-	selected: Option<usize>,
-	/// The style used to draw the text
-	style: Style,
-	/// Style to apply to the selected item
-	highlightedStyle: Style,
-	/// Tab divider
-	divider: Span<'a>,
-	/// Should we show the divider before the first tab?
-	firstTabDivider: bool,
-	/// Should we show the divider after the last tab?
-	lastTabDivider: bool,
+	/// The title for this tab bar, displayed on the left
+	title: &'static str,
+	/// The currently active tab on the bar
+	activeTab: TabEnum,
 }
 
-// Functions for TabBar that care about the lifetime component
-impl<'a> TabBar<'a>
+struct TabBarWidget<'a, Theme, Renderer = iced::Renderer>
+where
+	Theme: Catalog,
+	Renderer: iced_core::Renderer,
 {
-	/// Construct a new tab bar
-	pub fn new<Iter>(tabs: Iter) -> Self
-	where
-		Iter: IntoIterator,
-		Iter::Item: Into<Line<'a>>,
-	{
-		// Turn the tab title contents into
-		let tabs = tabs.into_iter().map(Into::into).collect_vec();
-		let selected = if tabs.is_empty() { None } else { Some(0) };
+	children: Vec<iced::Element<'a, Message, Theme, Renderer>>,
+	width: Length,
+	height: Length,
+	class: <Theme as Catalog>::Class<'a>,
+}
 
-		// Construct a tab bar state with defaults for everything else
+struct TabButton<'a, Message, Theme = theme::Theme, Renderer = iced::Renderer>
+where
+	Theme: Catalog,
+{
+	content: iced::Element<'a, Message, Theme, Renderer>,
+	onPress: Message,
+	width: Length,
+	height: Length,
+	padding: Padding,
+	class: Theme::Class<'a>,
+	state: State,
+}
+
+/// The possible states of a [`TabButton`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum State {
+    /// The [`TabButton`] can be pressed.
+    Normal,
+    /// The [`TabButton`] can be pressed and it is being hovered.
+    Hovered,
+    /// The [`TabButton`] is being pressed.
+    Pressed,
+    /// The [`TabButton`] represents the currently selected tab.
+    Selected,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+struct TabButtonState
+{
+	pressed: bool
+}
+
+pub trait TabBarEnum
+where Self:
+	Sized + PartialEq + Eq
+{
+	fn tabs<'a>() -> &'a[Self];
+	fn name(&self) -> &'static str;
+	fn value(&self) -> usize;
+	fn message_for(&self) -> Message;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Style
+{
+    pub background: Option<Background>,
+    pub titleColour: Color,
+    pub tabTextColour: Color,
+    pub tabNumberColour: Color,
+    pub seperatorColour: Color,
+    pub border: Border,
+}
+
+pub trait Catalog
+{
+	type Class<'a>;
+	fn default<'a>() -> Self::Class<'a>;
+	fn style(&self, class: &Self::Class<'_>, status: State) -> Style;
+}
+
+pub type StyleFn<'a, Theme> = Box<dyn Fn(&Theme, State) -> Style + 'a>;
+
+impl<TabEnum> TabBar<TabEnum>
+where
+	TabEnum: Default + TabBarEnum + Clone + Copy,
+{
+	pub fn new(title: &'static str) -> Self
+	{
 		Self
 		{
-			tabs,
-			selected,
-			style: Style::default(),
-			highlightedStyle: Style::default(),
-			divider: Span::raw(symbols::line::VERTICAL),
-			firstTabDivider: false,
-			lastTabDivider: false,
+			title,
+			activeTab: TabEnum::default(),
 		}
 	}
 
-	/// Set which tab is selected
-    #[must_use = "method moves the value of self and returns the modified value"]
-	pub fn select<T: Into<Option<usize>>>(mut self, selected: T) -> Self
+	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
-		self.selected = selected.into();
-		self
+		TabBarWidget::new(self.title, TabEnum::tabs(), self.activeTab).into()
 	}
 
-	/// Sets the normal style for the tabs
-    #[must_use = "method moves the value of self and returns the modified value"]
-	pub fn style<S: Into<Style>>(mut self, style: S) -> Self
+	pub fn switchTo(&mut self, tab: TabEnum) -> Task<Message>
 	{
-		self.style = style.into();
-		self
+		self.activeTab = tab;
+		Task::none()
 	}
 
-	/// Sets the highlighted tab style for the tabs
-    #[must_use = "method moves the value of self and returns the modified value"]
-	pub fn highlightedStyle<S: Into<Style>>(mut self, style: S) -> Self
+	pub fn activeTab(&self) -> TabEnum
 	{
-		self.highlightedStyle = style.into();
-		self
-	}
-
-	/// Sets the string to use as the divider between tabs (defaults to a line drawing vertical line)
-    #[must_use = "method moves the value of self and returns the modified value"]
-	pub fn divider<T>(mut self, divider: T) -> Self
-	where
-		T: Into<Span<'a>>
-	{
-		self.divider = divider.into();
-		self
-	}
-
-	/// Sets whether to show a divider before the first tab
-    #[must_use = "method moves the value of self and returns the modified value"]
-	pub fn firstTabDivider(mut self, show: bool) -> Self
-	{
-		self.firstTabDivider = show;
-		self
-	}
-
-	/// Sets the string to use as the divider between tabs (defaults to a line drawing vertical line)
-    #[must_use = "method moves the value of self and returns the modified value"]
-	pub fn lastTabDivider(mut self, show: bool) -> Self
-	{
-		self.lastTabDivider = show;
-		self
+		self.activeTab
 	}
 }
 
-// Trait so that default construction works
-impl Default for TabBar<'_>
-{
-	fn default() -> Self
-	{
-		Self::new(Vec::<Line>::new())
-	}
-}
-
-// Trait so we can construct a TabBar from an iterator of Line-able items
-impl<'a, Item> FromIterator<Item> for TabBar<'a>
+impl<'a, Renderer> TabBarWidget<'a, Theme, Renderer>
 where
-	Item: Into<Line<'a>>
+	Renderer: iced_core::text::Renderer + 'a,
 {
-	fn from_iter<T: IntoIterator<Item = Item>>(iter: T) -> Self
+	pub fn new<TabEnum>(title: &'a str, tabs: &[TabEnum], activeTab: TabEnum) -> Self
+	where
+		TabEnum: Default + TabBarEnum + Clone + Copy + PartialEq + Eq,
 	{
-		Self::new(iter)
-	}
-}
-
-// Trait so that ratatui styling works
-impl Styled for TabBar<'_>
-{
-	type Item = Self;
-
-	fn style(&self) -> Style
-	{
-		self.style
-	}
-
-	fn set_style<S: Into<Style>>(self, style: S) -> Self::Item
-	{
-		self.style(style)
-	}
-}
-
-// Trait so that ratatui widget rendering works (moved object variant)
-impl Widget for TabBar<'_>
-{
-	fn render(self, area: Rect, buf: &mut Buffer)
-	{
-		Widget::render(&self, area, buf);
-	}
-}
-
-// Trait so that ratatui widget rendering works (borrowed object variant)
-impl Widget for &TabBar<'_>
-{
-	fn render(self, area: Rect, buf: &mut Buffer)
-	{
-		// Set the tab bar's main style on the buffer and then defer to our internal renderTabs call
-		buf.set_style(area, self.style);
-		self.renderTabBar(area, buf);
-	}
-}
-
-// Functions for the tab bar that are agnostic of the lifetime component
-impl TabBar<'_>
-{
-	/// Compute how wide the divider span is in blocks
-	fn dividerWidth(&self) -> u16
-	{
-		// Get the actual string content of the divider
-		let string = self.divider.content.as_ref();
-		// Now turn that into graphemes
-		let graphemes = UnicodeSegmentation::graphemes(string, true);
-		// Now we have a bunch of graphemes, figure out if they're visible or not,
-		// and count how wide the whole lot is in total
-		graphemes
-			.filter(|symbol| !symbol.contains(char::is_control))
-			.map(UnicodeWidthStr::width)
-			.reduce(|a, b| a + b)
-			.unwrap_or(0)
-			.try_into()
-			.expect("divider width longer than 65535 characters")
-	}
-
-	/// Render the tab bar to the given surface area of the console
-	fn renderTabBar(&self, area: Rect, buf: &mut Buffer)
-	{
-		// Check if we have any area to draw into
-		if area.is_empty()
-		{
-			return;
-		}
-
-		// Count how many tabs we have to display
-		let tabCount = self.tabs.len();
-		// Extract the bounds of the area we have to work in
-		let mut left = area.left();
-		let mut right = area.right();
-		// Check we have enough room for all the tabs
-		if tabCount > (right - left) as usize
-		{
-			return;
-		}
-		// Compute how wide a divider is in blocks
-		let dividerWidth = self.dividerWidth();
-
-		// Deal with the first tab divider
-		if self.firstTabDivider
-		{
-			let remainingArea = right.saturating_sub(left);
-			let pos = buf.set_span(left, area.top(), &self.divider, remainingArea);
-			// The same amount of space will be taken by the other divider if used
-			if self.lastTabDivider
-			{
-				right -= dividerWidth;
-			}
-			left = pos.0;
-		}
-
-		assert!((1..=65535).contains(&tabCount), "tabCount out of range");
-
-		#[expect(clippy::unwrap_used, reason = "assert above should have fired")]
-		let tabCountU16 = tabCount.try_into().unwrap();
-
-		// Now we have the exact bounds of the area we can use, subtract out the dividers
-		let totalArea = (right - left).saturating_sub((tabCountU16 - 1) * dividerWidth);
-		// Now compute how wide each tab can be
-		let tabArea = totalArea.saturating_div(tabCountU16);
-
-		// Loop through all the tabs
-		for (idx, tab) in self.tabs.iter().enumerate()
-		{
-			// Draw out the tab into its space
-			buf.set_line(left, area.top(), tab, tabArea);
-			// Check if this is the selected tab, and if it is.. use the highlighted style
-			if self.selected == Some(idx)
-			{
-				buf.set_style
+		// Allocate a container for all the sub-elements of the tab bar
+		let mut children = Vec::with_capacity(tabs.len() + 1);
+		// Add in to the container the title
+		children.push
+		(
+			container(
+				text(title)
+					.style(tabBarTitleStyle)
+			)
+				.style(theme::container::transparent)
+				.width(Length::FillPortion(1))
+				.align_x(Alignment::Start)
+				.align_y(Alignment::Center)
+				.padding(Padding {
+					top: 2.0,
+					bottom: 2.0,
+					right: 5.0,
+					left: 15.0,
+				})
+				.into()
+		);
+		// Then add in all the tab buttons
+		children.extend
+		(
+		tabs
+				.iter()
+				.map
 				(
-					Rect
+					|tab: &TabEnum|
 					{
-						x: left,
-						y: area.top(),
-						width: tabArea,
-						height: 1,
-					},
-					self.highlightedStyle
-				);
-			}
-			left += tabArea;
+						TabButton::new
+						(
+							tab.value(),
+							tab.name(),
+							tab.message_for(),
+							&activeTab == tab
+						)
+							.into()
+					}
+				)
+		);
 
-			// If this is the last tab, exit the loop early
-			if idx == tabCount - 1
-			{
-				break;
-			}
-
-			// Otherwise, draw the divider for this tab
-			buf.set_span(left, area.top(), &self.divider, dividerWidth);
-			left += dividerWidth;
-		}
-
-		// Deal with the last tab divider
-		if self.lastTabDivider
+		Self
 		{
-			let remainingArea = right.saturating_sub(left);
-			buf.set_span(left, area.top(), &self.divider, remainingArea);
+			children,
+			width: Length::Fill,
+			height: Length::Shrink,
+			class: <Theme as Catalog>::default(),
 		}
+	}
+}
+
+impl<'a, Theme, Renderer> Widget<Message, Theme, Renderer> for TabBarWidget<'a, Theme, Renderer>
+where
+	Theme: Catalog,
+	Renderer: iced_core::Renderer,
+{
+	fn children(&self) -> Vec<Tree>
+	{
+		self.children.iter().map(Tree::new).collect()
+	}
+
+	fn diff(&self, tree: &mut Tree)
+	{
+		tree.diff_children(&self.children);
+	}
+
+	fn size(&self) -> Size<Length>
+	{
+		Size
+		{
+			width: self.width,
+			height: self.height
+		}
+	}
+
+	fn layout(
+		&mut self,
+		tree: &mut Tree,
+		renderer: &Renderer,
+		limits: &layout::Limits,
+	) -> layout::Node
+	{
+		layout::flex::resolve
+		(
+			layout::flex::Axis::Horizontal,
+			renderer,
+			limits,
+			self.width,
+			self.height,
+			Padding::ZERO,
+			2.0,
+			Alignment::Center,
+			&mut self.children,
+			&mut tree.children
+		)
+	}
+
+	fn operate
+	(
+		&mut self,
+		tree: &mut Tree,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
+	{
+		operation.container(None, layout.bounds());
+		for ((child, tree), layout) in self.children
+			.iter_mut()
+			.zip(&mut tree.children)
+			.zip(layout.children())
+		{
+			operation.traverse(&mut |operation|
+			{
+				child
+					.as_widget_mut()
+					.operate(tree, layout, renderer, operation);
+			});
+		}
+	}
+
+	fn update
+	(
+		&mut self,
+		tree: &mut Tree,
+		event: &Event,
+		layout: Layout<'_>,
+		cursor: Cursor,
+		renderer: &Renderer,
+		clipboard: &mut dyn Clipboard,
+		shell: &mut Shell<'_, Message>,
+		viewport: &Rectangle,
+	)
+	{
+		for ((child, tree), layout) in self.children
+			.iter_mut()
+			.zip(&mut tree.children)
+			.zip(layout.children())
+		{
+			child.as_widget_mut().update(tree, event, layout, cursor, renderer, clipboard, shell, viewport);
+		}
+	}
+
+	fn draw(
+		&self,
+		tree: &Tree,
+		renderer: &mut Renderer,
+		theme: &Theme,
+		style: &renderer::Style,
+		layout: Layout<'_>,
+		cursor: Cursor,
+		viewport: &Rectangle,
+	)
+	{
+		let bounds = layout.bounds();
+		let tabBarStyle = Catalog::style(theme, &self.class, State::Normal);
+
+		// Draw in the background for the bar
+		renderer.fill_quad
+		(
+			renderer::Quad
+			{
+				bounds: bounds,
+				border: Border::default(),
+				shadow: Shadow::default(),
+				snap: false
+			},
+			tabBarStyle.background.unwrap_or_else(|| Background::Color(Color::TRANSPARENT)),
+		);
+
+		// Draw in the tab seperators
+		for index in 0..self.children.len() - 1
+		{
+			// Get the bounds of the widgets left and right of this seperator position
+			let boundLeft = layout.child(index).bounds();
+			let boundRight = layout.child(index + 1).bounds();
+			let topLeft = Point::new(boundLeft.x + boundLeft.width , boundLeft.y);
+			let gapWidth = boundRight.x - topLeft.x;
+			// Calculate a new bounds that fills that gap
+			let bounds = Rectangle::new
+			(
+				topLeft,
+				Size::new(gapWidth, boundLeft.height)
+			);
+			// Draw a box in that spot using the seperator colour
+			renderer.fill_quad
+			(
+				renderer::Quad
+				{
+					bounds: bounds,
+					border: Border::default(),
+					shadow: Shadow::default(),
+					snap: false
+				},
+				Background::Color(tabBarStyle.seperatorColour)
+			);
+		}
+
+		// Draw in the individual tab widgets
+		for ((child, tree), layout) in self.children
+			.iter()
+			.zip(&tree.children)
+			.zip(layout.children())
+		{
+			child.as_widget().draw(tree, renderer, theme, style, layout, cursor, viewport);
+		}
+	}
+
+	fn mouse_interaction
+	(
+		&self,
+		tree: &Tree,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		viewport: &Rectangle,
+		renderer: &Renderer,
+	) -> mouse::Interaction
+	{
+		// Go through all the children of the tab bar and see if any of them have the mouse cursor over them
+		for ((child, tree), layout) in self.children
+			.iter()
+			.zip(&tree.children)
+			.zip(layout.children())
+		{
+			// Check the cursor is within the bounds of the child widget
+			if cursor.is_over(layout.bounds())
+			{
+				// See what the child wants to do with the cursor as it has the cursor over it
+				return child.as_widget().mouse_interaction(tree, layout, cursor, viewport, renderer)
+			}
+		}
+
+		// If none of the children are moused over, return the default interaction
+		mouse::Interaction::default()
+	}
+}
+
+impl<'a, Theme, Renderer> From<TabBarWidget<'a, Theme, Renderer>>
+	for iced::Element<'a, Message, Theme, Renderer>
+where
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + 'a,
+{
+	fn from(tabBarWidget: TabBarWidget<'a, Theme, Renderer>) -> Self
+	{
+		Self::new(tabBarWidget)
+	}
+}
+
+impl<'a, Message, Renderer> TabButton<'a, Message, Theme, Renderer>
+where
+	Message: 'a,
+	Theme: Catalog + text::Catalog + 'a,
+	Renderer: iced_core::text::Renderer + 'a,
+{
+	pub fn new(number: usize, value: &'a str, onPress: Message, selected: bool) -> Self
+	{
+		Self
+		{
+			content: row
+			(
+				[
+					text(number)
+						.style(tabButtonNumberStyle)
+						.align_x(Alignment::Center)
+						.into(),
+					text(value)
+						.align_x(Alignment::Start)
+						.into()
+				]
+			)
+				.spacing(10.0)
+				.into(),
+			onPress,
+			width: Length::FillPortion(1),
+			height: Length::Shrink,
+			padding: Padding {
+				top: 2.0,
+				bottom: 2.0,
+				right: 5.0,
+				left: 5.0,
+			},
+			class: <Theme as Catalog>::default(),
+			state: if selected { State::Selected } else { State::Normal },
+		}
+	}
+}
+
+impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer> for TabButton<'a, Message, Theme, Renderer>
+where
+	Message: Clone,
+	Renderer: iced_core::text::Renderer,
+	Theme: Catalog,
+{
+	fn tag(&self) -> tree::Tag
+	{
+		tree::Tag::of::<TabButtonState>()
+	}
+
+	fn state(&self) -> tree::State
+	{
+		tree::State::new(TabButtonState::default())
+	}
+
+	fn children(&self) -> Vec<Tree>
+	{
+		vec![Tree::new(&self.content)]
+	}
+
+	fn diff(&self, tree: &mut Tree)
+	{
+		tree.diff_children(&[&self.content]);
+	}
+
+	fn size(&self) -> Size<Length>
+	{
+		Size
+		{
+			width: self.width,
+			height: self.height
+		}
+	}
+
+	fn layout
+	(
+		&mut self,
+		tree: &mut Tree,
+		renderer: &Renderer,
+		limits: &layout::Limits,
+	) -> layout::Node
+	{
+		layout::padded
+		(
+			limits,
+			self.width,
+			self.height,
+			self.padding,
+			|limits|
+			{
+				self.content
+					.as_widget_mut()
+					.layout(&mut tree.children[0], renderer, limits)
+			},
+		)
+	}
+
+	fn operate
+	(
+		&mut self,
+		tree: &mut Tree,
+		layout: Layout<'_>,
+		renderer: &Renderer,
+		operation: &mut dyn Operation,
+	)
+	{
+		operation.container(None, layout.bounds());
+		operation.traverse(&mut |operation|
+		{
+			self.content
+				.as_widget_mut()
+				.operate(&mut tree.children[0], layout.child(0), renderer, operation);
+		});
+	}
+
+	fn update
+	(
+		&mut self,
+		tree: &mut Tree,
+		event: &Event,
+		layout: Layout<'_>,
+		cursor: Cursor,
+		renderer: &Renderer,
+		clipboard: &mut dyn Clipboard,
+		shell: &mut Shell<'_, Message>,
+		viewport: &Rectangle,
+	)
+	{
+		self.content
+			.as_widget_mut()
+			.update
+			(
+				&mut tree.children[0],
+				event,
+				layout.child(0),
+				cursor,
+				renderer,
+				clipboard,
+				shell,
+				viewport
+			);
+
+		if shell.is_event_captured()
+		{
+			return;
+		}
+
+		let bounds = layout.bounds();
+
+		match event
+		{
+			Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)) |
+			Event::Touch(touch::Event::FingerPressed { .. }) =>
+			{
+				if cursor.is_over(bounds)
+				{
+					let state = tree.state.downcast_mut::<TabButtonState>();
+					state.pressed = true;
+					shell.capture_event();
+				}
+			},
+			Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left)) |
+			Event::Touch(touch::Event::FingerLifted { .. }) =>
+			{
+				let state = tree.state.downcast_mut::<TabButtonState>();
+				if state.pressed
+				{
+					state.pressed = false;
+					if cursor.is_over(bounds)
+					{
+						shell.publish(self.onPress.clone());
+					}
+
+					shell.capture_event();
+				}
+			},
+			Event::Touch(touch::Event::FingerLost { .. }) =>
+				tree.state.downcast_mut::<TabButtonState>().pressed = false,
+			_ => {},
+		}
+
+		if self.state != State::Selected
+		{
+			let currentStatus = if cursor.is_over(bounds)
+			{
+				let state = tree.state.downcast_ref::<TabButtonState>();
+
+				if state.pressed
+				{
+					State::Pressed
+				}
+				else
+				{
+					State::Hovered
+				}
+			}
+			else
+			{
+				State::Normal
+			};
+
+			if let Event::Window(window::Event::RedrawRequested(_)) = event
+			{
+				self.state = currentStatus;
+			}
+			else if self.state != currentStatus
+			{
+				shell.request_redraw();
+			}
+		}
+	}
+
+	fn draw
+	(
+		&self,
+		tree: &Tree,
+		renderer: &mut Renderer,
+		theme: &Theme,
+		_style: &renderer::Style,
+		layout: Layout<'_>,
+		cursor: Cursor,
+		viewport: &Rectangle,
+	)
+	{
+		let style = theme.style(&self.class, self.state);
+
+		// Background and seperator drawing's taken care of in TabBarWidget, so just deal with the button content itself.
+		self.content
+			.as_widget()
+			.draw
+			(
+				&tree.children[0],
+				renderer,
+				theme,
+				&renderer::Style { text_color: style.tabTextColour },
+				layout.child(0),
+				cursor,
+				viewport,
+			);
+	}
+
+	fn mouse_interaction
+	(
+		&self,
+		_tree: &Tree,
+		layout: Layout<'_>,
+		cursor: mouse::Cursor,
+		_viewport: &Rectangle,
+		_renderer: &Renderer,
+	) -> mouse::Interaction
+	{
+		if cursor.is_over(layout.bounds())
+		{
+			mouse::Interaction::Pointer
+		}
+		else
+		{
+			mouse::Interaction::default()
+		}
+	}
+
+	fn overlay<'b>
+	(
+		&'b mut self,
+		tree: &'b mut Tree,
+		layout: Layout<'b>,
+		renderer: &Renderer,
+		viewport: &Rectangle,
+		translation: iced::Vector,
+	) -> Option<overlay::Element<'b, Message, Theme, Renderer>>
+	{
+		self.content.as_widget_mut().overlay
+		(
+			&mut tree.children[0],
+			layout.child(0),
+			renderer,
+			viewport,
+			translation
+		)
+	}
+}
+
+impl<'a, Message, Theme, Renderer> From<TabButton<'a, Message, Theme, Renderer>>
+	for iced::Element<'a, Message, Theme, Renderer>
+where
+	Message: Clone + 'a,
+	Theme: Catalog + 'a,
+	Renderer: iced_core::Renderer + iced_core::text::Renderer + 'a,
+{
+	fn from(tabButton: TabButton<'a, Message, Theme, Renderer>) -> Self
+	{
+		Self::new(tabButton)
+	}
+}
+
+fn tabButtonNumberStyle(theme: &Theme) -> text::Style
+{
+	let class = <Theme as Catalog>::default();
+	let style = Catalog::style(theme, &class, State::Normal);
+
+	text::Style
+	{
+		color: Some(style.tabNumberColour)
+	}
+}
+
+fn tabBarTitleStyle(theme: &Theme) -> text::Style
+{
+	let class = <Theme as Catalog>::default();
+	let style = Catalog::style(theme, &class, State::Normal);
+
+	text::Style
+	{
+		color: Some(style.titleColour),
 	}
 }

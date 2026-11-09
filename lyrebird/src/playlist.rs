@@ -1,93 +1,173 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::path::{Path, PathBuf};
 
-use ratatui::widgets::ListItem;
-use serde::{Deserialize, Serialize};
+use std::{collections::BTreeMap, ops::AddAssign};
+use std::ops::Add;
 
-#[derive(Clone, Serialize, Deserialize)]
+use crate::{library::{DirectoryID, MusicLibrary}, messages::PlayPosition, track::TrackID};
+
 pub struct Playlist
 {
 	name: String,
-	entries: Vec<PathBuf>,
-
-	#[serde(skip)]
-	currentEntry: usize,
+	entries: BTreeMap<PlaylistEntryID, TrackID>,
+	nextEntryID: PlaylistEntryID,
+	currentEntry: Option<PlaylistEntryID>,
 }
+
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PlaylistEntryID(usize);
 
 impl Playlist
 {
-	pub fn new(name: String) -> Self
+	pub fn new<S: Into<String>>(name: S) -> Self
 	{
 		Self
 		{
-			name,
-			entries: Vec::new(),
-			currentEntry: 0,
+			name: name.into(),
+			entries: BTreeMap::new(),
+			nextEntryID: PlaylistEntryID::default(),
+			currentEntry: None,
 		}
 	}
 
 	pub fn name(&self) -> &str
 	{
-		self.name.as_str()
+		&self.name
 	}
 
-	pub fn add(&mut self, fileName: &Path)
+	pub fn add(&mut self, trackID: TrackID, playPosition: PlayPosition)
 	{
-		self.entries.push(fileName.to_path_buf());
+		let entryID = match playPosition
+		{
+			PlayPosition::Now => {
+				// If the tune is to be played now, replace the playlist with it
+				self.clear();
+				self.nextEntryID.fetch_inc()
+			}
+			PlayPosition::Next => {
+				// If it should go after the curently playing track, figure out what that is,
+				// move everything else down, and then add the new track
+				let entryID = self.currentEntry.map_or_default(|entryID| entryID + 1);
+				// Extract the list of tracks that follow the new entry ID
+				let tracks = self.entries.split_off(&entryID);
+				// Compute the resulting next entry ID for future additions
+				self.nextEntryID = entryID + tracks.len() + 1;
+				// Add the new track and then re-add all the following tracks
+				self.entries.insert(entryID, trackID);
+				for (offset, track) in tracks.into_values().enumerate()
+				{
+					self.entries.insert(entryID + offset + 1, track);
+				}
+				entryID
+			}
+			PlayPosition::Last => {
+				// If it should go on the end, figure out the ID of the end entry
+				self.nextEntryID.fetch_inc()
+			}
+		};
+		self.entries.insert(entryID, trackID);
 	}
 
-	pub fn replaceWith(&mut self, fileName: &Path)
+	pub fn addFrom(&mut self, library: &MusicLibrary, directoryID: DirectoryID, playPosition: PlayPosition)
+	{
+		// Extract the list of tracks to playlist
+		let directory = library.directoryFor(directoryID);
+		let tracks = directory.contents();
+		// Process the request based on the mode selected
+		match playPosition
+		{
+			PlayPosition::Now =>
+			{
+				// If this is a request to playlist the list now, replace the playlist contents with it
+				self.clear();
+				// Compute the new next entry ID and store that, keeping the original for the insert
+				let entryID = self.nextEntryID;
+				self.nextEntryID += tracks.len();
+				// Insert all the new tracks into the playlist
+				for (offset, &track) in tracks.into_iter().enumerate()
+				{
+					self.entries.insert(entryID + offset, track);
+				}
+			},
+			_ => {},
+		};
+	}
+
+	pub fn clear(&mut self)
 	{
 		self.entries.clear();
-		self.currentEntry = 0;
-		self.add(fileName);
+		self.nextEntryID = PlaylistEntryID::default();
+		self.currentEntry = None;
 	}
 
-	pub fn contents(&self) -> impl Iterator<Item = ListItem<'_>>
+	pub fn tracks(&self) -> impl Iterator<Item = &TrackID>
 	{
-		self.entries
-			.iter()
-			.map
-			(
-				|fileName| ListItem::new(fileName.to_string_lossy())
-			)
+		self.entries.values()
 	}
 
-	pub fn entry(&self, index: usize) -> &Path
-	{
-		self.entries[index].as_path()
-	}
-
-	pub fn nextEntry(&mut self, index: usize)
-	{
-		self.currentEntry = index;
-	}
-
-	pub fn currentEntry(&self) -> usize
-	{
-		self.currentEntry
-	}
-
-	pub fn next(&mut self) -> Option<PathBuf>
+	pub fn next(&mut self) -> Option<TrackID>
 	{
 		// If there are no entries in this playlist, we're done.. nothing comes next
 		if self.entries.is_empty()
 		{
 			return None;
 		}
-		// If there are entries, figure out how many vs currentEntry
-		let count = self.entries.len();
-		if self.currentEntry < count
+		// Try finding the next entry, if we're not already at the end
+		loop
 		{
-			// Increment the current entry counter if there's room to
-			self.currentEntry += 1;
+			let currentEntry = match self.currentEntry
+			{
+				// If the current entry is None, pick the first entry in the list
+				None => PlaylistEntryID::default(),
+				// Otherwise if there are entries, try and find the next one
+				Some(currentEntry) => if currentEntry < self.nextEntryID
+				{
+					// Increment the current entry counter if there's room to
+					currentEntry + 1
+				}
+				else
+				{
+					currentEntry
+				}
+			};
+			self.currentEntry = Some(currentEntry);
+			// If this landed on a valid entry, then we want to emit it, and be done
+			if self.entries.contains_key(&currentEntry)
+			{
+				return Some(self.entries[&currentEntry]);
+			}
+			// Now check if we're done and there's nothing left to give
+			else if currentEntry >= self.nextEntryID
+			{
+				return None;
+			}
 		}
-		// Now check if we're done
-		if self.currentEntry >= count
-		{
-			return None;
-		}
-		// Finally, we get to the happy path - give them what they want, a new entry from the playlist!
-		Some(self.entries[self.currentEntry].clone())
+	}
+}
+
+impl PlaylistEntryID
+{
+	pub fn fetch_inc(&mut self) -> Self
+	{
+		let result = *self;
+		self.0 += 1;
+		result
+	}
+}
+
+impl Add<usize> for PlaylistEntryID
+{
+	type Output = Self;
+
+	fn add(self, rhs: usize) -> Self
+	{
+		PlaylistEntryID(self.0 + rhs)
+	}
+}
+
+impl AddAssign<usize> for PlaylistEntryID
+{
+	fn add_assign(&mut self, rhs: usize)
+	{
+		self.0 += rhs;
 	}
 }

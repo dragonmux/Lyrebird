@@ -1,209 +1,232 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Constraint, Layout, Rect};
-use ratatui::style::Style;
-use ratatui::widgets::{Block, BorderType, List, ListDirection, ListItem, ListState, Padding, StatefulWidget, Widget};
-use serde::{Deserialize, Serialize};
 
-use crate::window::Operation;
+use std::collections::BTreeMap;
+use std::fmt::{self, Display};
+use std::sync::{Arc, RwLock};
+
+use iced::{Length, Padding, Task};
+use iced_widget::scrollable::{Direction, Scrollbar};
+use iced_widget::{Row, scrollable};
+
+use crate::library::MusicLibrary;
+use crate::messages::{self, Message};
 use crate::playlist::Playlist;
+use crate::track::TrackID;
+use crate::widgets::listView::{ListItem, ListView};
+use crate::widgets::{Element, groupBox::GroupBox};
 
-#[derive(Serialize, Deserialize)]
 pub struct Playlists
 {
-	nowPlaying: Playlist,
-	#[expect(clippy::struct_field_names, reason = "naming is hard, okay")]
-	playlists: Vec<Playlist>,
-	#[serde(skip)]
-	activeEntry: Style,
-	#[serde(skip)]
-	activeSide: Side,
-	#[serde(skip)]
-	currentPlaylistState: ListState,
-	#[serde(skip)]
-	playlistsState: ListState,
+	library: Arc<RwLock<MusicLibrary>>,
+	lists: BTreeMap<PlaylistID, Playlist>,
+	selectedPlaylist: PlaylistID,
 }
 
-#[derive(Clone, Copy, Default)]
-enum Side
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PlaylistID(u64);
+
+struct ListEntry
 {
-	#[default]
-	Playlists,
-	PlaylistContents,
+	id: PlaylistID,
+	name: String,
+}
+
+struct TrackEntry
+{
+	id: TrackID,
+	name: String,
 }
 
 impl Playlists
 {
-	pub fn new(activeEntry: Style) -> Self
+	pub fn new(musicLibrary: Arc<RwLock<MusicLibrary>>) -> Self
 	{
-		Self
+		let mut result = Self
 		{
-			nowPlaying: Playlist::new("Now Playing".into()),
-			playlists: Vec::new(),
-			activeEntry,
-			activeSide: Side::Playlists,
-			currentPlaylistState: ListState::default(),
-			playlistsState: ListState::default(),
-		}
-	}
+			library: musicLibrary,
+			lists: BTreeMap::new(),
+			// Default "Now Playing" to being selected
+			selectedPlaylist: PlaylistID::nowPlaying(),
+		};
 
-	pub fn handleKeyEvent(&mut self, key: &KeyEvent) -> Operation
-	{
-		if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
-		{
-			match key.code
-			{
-				KeyCode::Left => self.moveLeft(),
-				KeyCode::Right => self.moveRight(),
-				KeyCode::Up => self.moveUp(),
-				KeyCode::Down => self.moveDown(),
-				KeyCode::Enter => { return self.makeSelection(); },
-				_ => {},
-			}
-		}
-		Operation::None
+		result.lists.insert(PlaylistID::nowPlaying(), Playlist::new("Now Playing"));
+
+		result
 	}
 
 	pub fn nowPlaying(&mut self) -> &mut Playlist
-		{ &mut self.nowPlaying }
+		{ self.playlist(PlaylistID::nowPlaying()).expect("Now playing playlist is always valid") }
 
-	const fn moveLeft(&mut self)
-		{ self.activeSide = Side::Playlists; }
+	pub fn playlist(&mut self, playlistID: PlaylistID) -> Option<&mut Playlist>
+		{ self.lists.get_mut(&playlistID) }
 
-	const fn moveRight(&mut self)
-		{ self.activeSide = Side::PlaylistContents; }
-
-	fn moveUp(&mut self)
+	pub fn update(&mut self, message: messages::Playlist) -> Task<Message>
 	{
-		match self.activeSide
+		use messages::Playlist;
+
+		match message
 		{
-			Side::Playlists =>
+			Playlist::SelectPlaylist(playlistID) =>
 			{
-				self.playlistsState.select_previous();
-				self.currentPlaylistState = ListState::default();
-			}
-			Side::PlaylistContents =>
-			{
-				self.currentPlaylistState.select_previous();
-			}
-		}
+				self.selectedPlaylist = playlistID
+			},
+		};
+
+		Task::none()
 	}
 
-	fn moveDown(&mut self)
+	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
-		match self.activeSide
-		{
-			Side::Playlists =>
-			{
-				self.playlistsState.select_next();
-				self.currentPlaylistState = ListState::default();
-			}
-			Side::PlaylistContents =>
-			{
-				self.currentPlaylistState.select_next();
-			}
-		}
-	}
+		let library = &self.library.read()
+			.expect("Failed to lock library for read");
+		let playlistList = ListEntry::forPlaylists(&self.lists);
+		let selectedPlaylist = &self.lists[&self.selectedPlaylist];
+		let playlistTracks = TrackEntry::forPlaylist(selectedPlaylist, &library);
 
-	fn makeSelection(&mut self) -> Operation
-	{
-		match self.activeSide
-		{
-			Side::Playlists => Operation::None,
-			Side::PlaylistContents =>
-			{
-				// Figure out which file this is from the list, starting by looking up
-				// which entry is currently selected (if any)
-				match self.currentPlaylistState.selected()
+		let layout = Row::with_children
+		([
+			GroupBox::new
+			(
+				"Playlists",
+				scrollable
+				(
+					ListView::new(&playlistList)
+						.width(Length::Fill)
+						.onDoubeClick(|nodeID| Message::Playlist(messages::Playlist::SelectPlaylist(nodeID)))
+				)
+					.width(Length::Fill)
+					.height(Length::Fill)
+					.spacing(5.0)
+					.direction(Direction::Vertical(Scrollbar::default()))
+			)
+				.width(Length::FillPortion(1))
+				.height(Length::Fill)
+				.titleMargin(5.0)
+				.titlePadding(5.0)
+				.padding(Padding
 				{
-					// If we have a valid selection
-					Some(index) =>
-					{
-						// Look that up in the now playing list
-						let fileName = self.nowPlaying.entry(index).to_path_buf();
-						// Set it as the next thing to play, and ask the file to be switched to
-						self.nowPlaying.nextEntry(index);
-						Operation::PlayNext(fileName)
-					},
-					None => Operation::None,
-				}
-			}
-		}
+					top: 2.0,
+					bottom: 2.0,
+					right: 2.0,
+					left: 5.0,
+				})
+				.into(),
+			GroupBox::new
+			(
+				selectedPlaylist.name(),
+				scrollable
+				(
+					ListView::new(&playlistTracks)
+						.width(Length::Fill)
+				)
+					.width(Length::Fill)
+					.height(Length::Fill)
+					.spacing(5.0)
+					.direction(Direction::Vertical(Scrollbar::default()))
+			)
+				.width(Length::FillPortion(2))
+				.height(Length::Fill)
+				.titleMargin(5.0)
+				.titlePadding(5.0)
+				.padding(Padding
+				{
+					top: 2.0,
+					bottom: 2.0,
+					right: 2.0,
+					left: 5.0,
+				})
+				.into(),
+		]);
+
+		layout
+			.width(Length::Fill)
+			.height(Length::Fill)
+			.spacing(5.0)
+			.padding(5.0)
+			.into()
 	}
 }
 
-impl Widget for &mut Playlists
+impl PlaylistID
 {
-	fn render(self, area: Rect, buf: &mut Buffer)
-	where
-		Self: Sized
+	/// Constant special playlist ID for the Now Playing playlist
+	pub const fn nowPlaying() -> Self
 	{
-		// Split the area up so we can display a listing of all the user's playlists, and what's currently queued
-		let layout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(2)])
-			.split(area);
+		Self(0)
+	}
+}
 
-		// Render the playlist listing using the internal state object
-		StatefulWidget::render
-		(
-			// Build a list of playlists currently available to the user
-			List::new
-			(
-				self.playlists
-					.iter()
-					.map(|playlist| ListItem::new(playlist.name()))
-			)
-				// Put it in a bordered block for presentation
-				.block
-				(
-					Block::bordered()
-						.title(" Playlists ")
-						.title_alignment(Alignment::Left)
-						.title_style
-						(
-							match self.activeSide
-							{
-								Side::Playlists => self.activeEntry,
-								Side::PlaylistContents => Style::default(),
-							}
-						)
-						.border_type(BorderType::Rounded)
-						.padding(Padding::horizontal(1))
-				)
-				.highlight_style(self.activeEntry)
-				.direction(ListDirection::TopToBottom),
-			layout[0],
-			buf,
-			&mut self.playlistsState
-		);
+impl Display for PlaylistID
+{
+	fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result
+	{
+		self.0.fmt(fmt)
+	}
+}
 
-		// Render the now playing playlist using the internal state object
-		StatefulWidget::render
-		(
-			// Build a list of all the files in the Now Playing playlist
-			List::new(self.nowPlaying.contents())
-				// Put it in a bordered block for presentation
-				.block
-				(
-					Block::bordered()
-						.title(" Now Playing ")
-						.title_alignment(Alignment::Left)
-						.title_style
-						(
-							match self.activeSide
-							{
-								Side::PlaylistContents => self.activeEntry,
-								Side::Playlists => Style::default(),
-							}
-						)
-						.border_type(BorderType::Rounded)
-						.padding(Padding::horizontal(1))
-				)
-				.highlight_style(self.activeEntry)
-				.direction(ListDirection::TopToBottom),
-			layout[1],
-			buf,
-			&mut self.currentPlaylistState
-		);
+impl ListEntry
+{
+	pub fn forPlaylists(lists: &BTreeMap<PlaylistID, Playlist>) -> Vec<Self>
+	{
+		let mut playlists = Vec::new();
+		for (&playlistID, playlist) in lists
+		{
+			playlists.push(Self
+			{
+				id: playlistID,
+				name: playlist.name().into(),
+			});
+		}
+
+		playlists
+	}
+}
+
+impl ListItem for ListEntry
+{
+	type ItemID = PlaylistID;
+
+	fn nodeID(&self) -> PlaylistID
+	{
+		self.id
+	}
+
+	fn displayText(&self) -> String
+	{
+		self.name.clone()
+	}
+}
+
+impl TrackEntry
+{
+	pub fn forPlaylist(playlist: &Playlist, library: &MusicLibrary) -> Vec<Self>
+	{
+		let mut tracks = Vec::new();
+		for &trackID in playlist.tracks()
+		{
+			let track = library.trackFor(trackID);
+			tracks.push(Self
+			{
+				id: trackID,
+				name: track.title().into()
+			});
+		}
+
+		tracks
+	}
+}
+
+impl ListItem for TrackEntry
+{
+	type ItemID = TrackID;
+
+	fn nodeID(&self) -> TrackID
+	{
+		self.id
+	}
+
+	fn displayText(&self) -> String
+	{
+		self.name.clone()
 	}
 }

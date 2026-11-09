@@ -1,51 +1,59 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-use crossterm::event::KeyEvent;
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Rect};
-use ratatui::widgets::{Block, BorderType, Padding, Widget};
+use std::sync::{Arc, RwLock};
 
-use crate::window::Operation;
+use iced::{Alignment, Length};
+use iced_widget::{Column, Row, button, text, text_input};
+
+use crate::{config::Config, messages::Message, widgets::Element};
 
 pub struct OptionsPanel
 {
+	settings: Arc<RwLock<Config>>,
 }
 
 impl OptionsPanel
 {
-	pub fn new() -> Self
+	pub fn new(settings: Arc<RwLock<Config>>) -> Self
 	{
 		Self
 		{
+			settings,
 		}
 	}
 
-	#[expect(clippy::unused_self, reason = "dummy function for now")]
-	pub fn handleKeyEvent(&mut self, _key: &KeyEvent) -> Operation
+	pub fn view<'a>(&'a self) -> Element<'a, Message>
 	{
-		Operation::None
-	}
-}
+		let settings = self.settings
+			.read()
+			.expect("Concurrency error with settings object");
 
-impl Default for OptionsPanel
-{
-    fn default() -> Self
-	{
-        Self::new()
-    }
-}
+		let layout = Column::with_children
+		([
+			text("Library Path")
+				.width(Length::Fill)
+				.align_x(Alignment::Start)
+				.into(),
+			Row::with_children
+			([
+				text_input("<path>", &settings.libraryPath.to_string_lossy())
+					.width(Length::Fill)
+					.align_x(Alignment::Start)
+					.into(),
+				button("Rescan")
+					.on_press(Message::LibraryDiscover)
+					.into(),
+			])
+				.width(Length::Fill)
+				.spacing(5.0)
+				.into(),
+		]);
 
-impl Widget for &mut OptionsPanel
-{
-	fn render(self, area: Rect, buf: &mut Buffer)
-	where
-		Self: Sized
-	{
-		Block::bordered()
-			.title(" Options ")
-			.title_alignment(Alignment::Left)
-			.border_type(BorderType::Rounded)
-			.padding(Padding::horizontal(1))
-			.render(area, buf);
+		layout
+			.width(Length::Fill)
+			.height(Length::Fill)
+			.spacing(5.0)
+			.padding(5.0)
+			.into()
 	}
 }

@@ -5,47 +5,50 @@
 #![warn(clippy::pedantic)]
 
 use color_eyre::{eyre, Result};
-use config::Config;
 use directories::ProjectDirs;
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 use window::MainWindow;
 
+mod albumList;
+mod artistList;
+mod cache;
 mod config;
 mod library;
 mod libraryTree;
+mod messages;
 mod options;
 mod playback;
 mod playlist;
 mod playlists;
+mod theme;
+mod track;
 mod widgets;
 mod window;
 
-#[tokio::main(flavor = "multi_thread")]
-async fn main() -> Result<()>
+fn main() -> Result<()>
 {
+	color_eyre::install()?;
 	tracing_subscriber::registry()
+		.with(tracing_subscriber::fmt::layer())
 		.with
 		(
-			tracing_subscriber::fmt::layer()
-				.with_filter(LevelFilter::INFO)
+			EnvFilter::builder()
+				.with_env_var("LYREBIRD_LOG")
+				.with_default_directive(LevelFilter::INFO.into())
+				.from_env()?,
 		)
 		.init();
 
 	// Try to get the application paths available
 	let paths = ProjectDirs::from("com", "rachelmant", "Lyrebird").
 		ok_or_else(|| eyre::eyre!("Failed to get program working paths"))?;
-	// Now try to get a configuration object so we know where to find things and such
-	let mut config = Config::read(&paths)?;
 
-	// Aquire the terminal to use and set up the main window w/ the configuration
-	let mut terminal = ratatui::init();
-	let mut mainWindow = MainWindow::new(&paths, &mut config, terminal.size()?)?;
+	// Set up the main window w/ the configuration
+	let mainWindow = MainWindow::new(&paths)?;
 	// Now run the main window of Lyrebird till the user exits the program
-	let result = mainWindow.run(&mut terminal).await;
-	// Give the terminal back and return the result of running the main window
-	ratatui::restore();
-	// Re-serialise the user's config as our last step
-	config.write(&paths)?;
-	result
+    let result = iced_winit::run(mainWindow);
+	Ok(result?)
 }

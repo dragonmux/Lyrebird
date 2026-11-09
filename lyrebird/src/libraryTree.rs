@@ -1,316 +1,326 @@
 // SPDX-License-Identifier: BSD-3-Clause
-use std::path::{Path, PathBuf};
+
+use std::collections::BTreeMap;
+use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
-use color_eyre::eyre::{self, Result};
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Constraint, Layout, Margin, Rect, Size};
-use ratatui::style::Style;
-use ratatui::symbols::scrollbar;
-use ratatui::widgets::{Block, BorderType, List, ListDirection, ListState, Padding, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget};
+use iced::{Length, Padding, Task};
+use iced_widget::scrollable::{Direction, Scrollbar};
+use iced_widget::{Row, scrollable};
+use itertools::Itertools;
 
-use crate::library::MusicLibrary;
-use crate::window::Operation;
+use crate::library::{Directory, DirectoryID, MusicLibrary};
+use crate::messages::{self, DirectoryMenuItem, EntityID, Message, PlayPosition, TrackMenuItem};
+use crate::playlists::PlaylistID;
+use crate::track::TrackID;
+use crate::widgets::Element;
+use crate::widgets::contextMenu::{ContextMenu, ContextMenuState};
+use crate::widgets::groupBox::GroupBox;
+use crate::widgets::listView::{ListItem, ListView};
+use crate::widgets::treeView::{TreeItem, TreeView};
 
 pub struct LibraryTree
 {
-	activeEntry: Style,
-	activeSide: Side,
-	dirListState: ListState,
-	dirListScrollbar: ScrollbarState,
-	filesListState: ListState,
-	filesListScrollbar: ScrollbarState,
-	viewportSize: Size,
-
 	library: Arc<RwLock<MusicLibrary>>,
+	selectedDirectory: DirectoryID,
+	directoryMenu: ContextMenuState<DirectoryID>,
+	trackMenu: ContextMenuState<TrackID>,
 }
 
-#[derive(Clone, Copy)]
-enum Side
+struct DirectoryTree
 {
-	DirectoryTree,
-	Files,
+	id: DirectoryID,
+	name: String,
+	children: Vec<DirectoryTree>,
+}
+
+struct TrackEntry
+{
+	id: TrackID,
+	name: String,
 }
 
 impl LibraryTree
 {
-	pub fn new(activeEntry: Style, cacheFile: &Path, libraryPath: &Path, viewportSize: Size) -> Result<Self>
+	pub fn new(musicLibrary: Arc<RwLock<MusicLibrary>>) -> Self
 	{
-		Ok(Self
+		Self
 		{
-			activeEntry,
-			activeSide: Side::DirectoryTree,
-			dirListState: ListState::default().with_selected(Some(0)),
-			dirListScrollbar: ScrollbarState::default(),
-			filesListState: ListState::default(),
-			filesListScrollbar: ScrollbarState::default(),
-			viewportSize,
-
-			library: MusicLibrary::new(cacheFile, libraryPath)?,
-		})
+			library: musicLibrary,
+			selectedDirectory: DirectoryID::new(0),
+			directoryMenu: ContextMenuState::new(),
+			trackMenu: ContextMenuState::new(),
+		}
 	}
 
-	pub fn writeCache(&self) -> Result<()>
+	pub fn update(&mut self, message: messages::LibraryTree) -> Task<Message>
 	{
-		self.library.read()
-			.map_err
+		use messages::LibraryTree;
+
+		match message
+		{
+			LibraryTree::SelectDirectory(directoryID) =>
+				self.selectedDirectory = directoryID,
+			LibraryTree::DirectoryMenuOpen(directoryID, position, entryHeight) =>
+				self.directoryMenu.open(directoryID, position, entryHeight),
+			LibraryTree::DirectoryMenuClose =>
+				self.directoryMenu.close(),
+			LibraryTree::DirectoryAction(directoryID, menuEntry) =>
+			{
+				return Task::done(match menuEntry
+				{
+					DirectoryMenuItem::Play =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Directory(directoryID), PlayPosition::Now),
+					DirectoryMenuItem::AddNextToNowPlaying =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Directory(directoryID), PlayPosition::Next),
+					DirectoryMenuItem::AddLastToNowPlaying =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Directory(directoryID), PlayPosition::Last),
+				});
+			},
+			LibraryTree::TrackMenuOpen(trackID, position, entryHeight) =>
+				self.trackMenu.open(trackID, position, entryHeight),
+			LibraryTree::TrackMenuClose =>
+				self.trackMenu.close(),
+			LibraryTree::TrackAction(trackID, menuEntry) =>
+			{
+				return Task::done(match menuEntry
+				{
+					TrackMenuItem::PlayNow =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Track(trackID), PlayPosition::Now),
+					TrackMenuItem::PlayNext =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Track(trackID), PlayPosition::Next),
+					TrackMenuItem::PlayLast =>
+						Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Track(trackID), PlayPosition::Last),
+				});
+			},
+		};
+
+		Task::none()
+	}
+
+	pub fn view<'a>(&'a self) -> Element<'a, Message>
+	{
+		let library = &self.library.read()
+			.expect("Failed to lock library for read");
+		let directoryTree = DirectoryTree::from(library.deref());
+		let trackList = TrackEntry::forDirectory(self.selectedDirectory, &library);
+
+		let layout = Row::with_children
+		([
+			GroupBox::new
 			(
-				|error|
-					eyre::eyre!("While writing library cache: {}", error.to_string())
-			)?
-			.writeCache()
+				"Directory Tree",
+				ContextMenu::new
+				(
+					scrollable
+					(
+						TreeView::new(&directoryTree, Some(self.selectedDirectory))
+							.onSelect(|nodeID| Message::LibraryTree(messages::LibraryTree::SelectDirectory(nodeID)))
+							.onRightClick(
+								|nodeID, position, nodeHeight|
+										Message::LibraryTree(messages::LibraryTree::DirectoryMenuOpen(nodeID, position, nodeHeight))
+							)
+					)
+						.width(Length::Fill)
+						.height(Length::Fill)
+						.spacing(5.0)
+						.direction(Direction::Vertical(Scrollbar::default())),
+					[
+						DirectoryMenuItem::Play,
+						DirectoryMenuItem::AddNextToNowPlaying,
+						DirectoryMenuItem::AddLastToNowPlaying,
+					],
+					&self.directoryMenu,
+					|item, directoryID|
+						Message::LibraryTree(messages::LibraryTree::DirectoryAction(directoryID, item)),
+					|| Message::LibraryTree(messages::LibraryTree::DirectoryMenuClose),
+				)
+			)
+				.width(Length::FillPortion(1))
+				.height(Length::Fill)
+				.titleMargin(5.0)
+				.titlePadding(5.0)
+				.padding(Padding
+				{
+					top: 2.0,
+					bottom: 2.0,
+					right: 2.0,
+					left: 5.0,
+				})
+				.into(),
+			GroupBox::new
+			(
+				"Tracks",
+				ContextMenu::new
+				(
+					scrollable
+					(
+						ListView::new(&trackList)
+							.width(Length::Fill)
+							.onDoubeClick
+							(
+								|nodeID|
+									Message::AddToPlaylist(PlaylistID::nowPlaying(), EntityID::Track(nodeID), PlayPosition::Now)
+							)
+							.onRightClick
+							(
+								|nodeID, position, nodeHeight|
+										Message::LibraryTree(messages::LibraryTree::TrackMenuOpen(nodeID, position, nodeHeight))
+							)
+					)
+						.width(Length::Fill)
+						.height(Length::Fill)
+						.spacing(5.0)
+						.direction(Direction::Vertical(Scrollbar::default())),
+					[TrackMenuItem::PlayNow, TrackMenuItem::PlayNext, TrackMenuItem::PlayLast],
+					&self.trackMenu,
+					|item, trackID| Message::LibraryTree(messages::LibraryTree::TrackAction(trackID, item)),
+					|| Message::LibraryTree(messages::LibraryTree::TrackMenuClose),
+				)
+			)
+				.width(Length::FillPortion(2))
+				.height(Length::Fill)
+				.titleMargin(5.0)
+				.titlePadding(5.0)
+				.padding(Padding
+				{
+					top: 2.0,
+					bottom: 2.0,
+					right: 2.0,
+					left: 5.0,
+				})
+				.into(),
+		]);
+
+		layout
+			.width(Length::Fill)
+			.height(Length::Fill)
+			.spacing(5.0)
+			.padding(5.)
+			.into()
 	}
 
-	pub fn isDiscovering(&self) -> bool
+	pub fn library(&self) -> Arc<RwLock<MusicLibrary>>
 	{
-		self.library.read().expect("Library lock in bad state").isDiscovering()
+		self.library.clone()
 	}
+}
 
-	pub async fn maybeJoinDiscovery(&self) -> Result<()>
+impl DirectoryTree
+{
+	/// Convert the entry given by directoryID from the map into a DirectoryTree
+	pub fn from_map(map: &BTreeMap<DirectoryID, Directory>, directoryID: DirectoryID) -> Self
 	{
-		MusicLibrary::maybeJoinDiscoveryThread(&self.library).await
-	}
-
-	pub fn handleKeyEvent(&mut self, key: &KeyEvent) -> Operation
-	{
-		if key.kind == KeyEventKind::Press || key.kind == KeyEventKind::Repeat
+		// Find the directory to convert, and map all its subdirectories into DirectoryTree objects
+		let directory = &map[&directoryID];
+		let children = directory.subdirs()
+			.into_iter()
+			.map(|&directoryID| Self::from_map(map, directoryID))
+			.sorted_by(|a, b| a.name.cmp(&b.name))
+			.collect();
+		// Calculate the name of this directory
+		let path = directory.path();
+		let name = if directory.id() == DirectoryID::new(0)
 		{
-			match key.code
-			{
-				KeyCode::Left => self.moveLeft(),
-				KeyCode::Right => self.moveRight(),
-				KeyCode::Up => self.moveUp(),
-				KeyCode::Down => self.moveDown(),
-				KeyCode::PageUp => self.movePageUp(),
-				KeyCode::PageDown => self.movePageDown(),
-				KeyCode::Enter => { return self.playSelection(); },
-				KeyCode::Char('+') => { return Operation::playlist(self.makeSelection()); },
-				_ => {},
-			}
+			path.as_os_str()
 		}
-		Operation::None
-	}
-
-	pub fn handleResize(&mut self, newSize: Size)
-		{ self.viewportSize = newSize; }
-
-	const fn moveLeft(&mut self)
-		{ self.activeSide = Side::DirectoryTree; }
-
-	const fn moveRight(&mut self)
-		{ self.activeSide = Side::Files; }
-
-	fn moveUp(&mut self)
-	{
-		match self.activeSide
+		else
 		{
-			Side::DirectoryTree =>
-			{
-				self.dirListState.select_previous();
-				self.filesListState = ListState::default();
-			}
-			Side::Files =>
-			{
-				self.filesListState.select_previous();
-			}
+			path.file_name().unwrap_or_else(|| path.as_os_str())
 		}
-	}
-
-	fn moveDown(&mut self)
-	{
-		match self.activeSide
+			.to_string_lossy()
+			.to_string();
+		// Turn the whole thing into a final DirectoryTree object
+		Self
 		{
-			Side::DirectoryTree =>
-			{
-				self.dirListState.select_next();
-				self.filesListState = ListState::default();
-			}
-			Side::Files =>
-			{
-				self.filesListState.select_next();
-			}
-		}
-	}
-
-	fn movePageUp(&mut self)
-	{
-		match self.activeSide
-		{
-			Side::DirectoryTree =>
-			{
-				self.dirListState.scroll_up_by(self.viewportSize.height);
-				self.filesListState = ListState::default();
-			}
-			Side::Files =>
-			{
-				self.filesListState.scroll_up_by(self.viewportSize.height);
-			}
-		}
-	}
-
-	fn movePageDown(&mut self)
-	{
-		match self.activeSide
-		{
-			Side::DirectoryTree =>
-			{
-				self.dirListState.scroll_down_by(self.viewportSize.height);
-				self.filesListState = ListState::default();
-			}
-			Side::Files =>
-			{
-				self.filesListState.scroll_down_by(self.viewportSize.height);
-			}
-		}
-	}
-
-	/// If the currently sellected side is the directory listing, switch to that directory's file listing
-	/// otherwise, if it's the file listing, figure out which one and make a `SongState` for it
-	fn makeSelection(&mut self) -> Option<PathBuf>
-	{
-		match self.activeSide
-		{
-			Side::DirectoryTree => self.activeSide = Side::Files,
-			Side::Files =>
-			{
-				// Lock open access to the library
-				let library = self.library.read().ok()?;
-				// Extract the current directory selection
-				let dir = library.directoryAt(self.dirListState.selected()?)?;
-				// Extract the current file selection
-				let file = library.fileIn(dir, self.filesListState.selected()?)?;
-				// Now make a new SongState object for that file if possible
-				return Some(dir.join(file));
-			}
-		}
-		None
-	}
-
-	fn playSelection(&mut self) -> Operation
-	{
-		let selection = self.makeSelection();
-		match selection
-		{
-			Some(selection) => Operation::Play(selection),
-			None => Operation::None,
+			id: directoryID,
+			name,
+			children,
 		}
 	}
 }
 
-impl Widget for &mut LibraryTree
+impl From<&MusicLibrary> for DirectoryTree
 {
-	fn render(self, area: Rect, buf: &mut Buffer)
-		where Self: Sized
+	/// Convert a directory map into a DirectoryTree structure
+	fn from(library: &MusicLibrary) -> Self
 	{
-		// Split the display area up to display the user's library tree on the left, and the files in a given
-		// directory on the right
-		let layout = Layout::horizontal([Constraint::Fill(1), Constraint::Fill(2)])
-			.split(area);
+		let map = library.directories();
+		// If the directory map is empty, synthesise a fake entry
+		if map.is_empty()
+		{
+			Self
+			{
+				id: DirectoryID::new(0),
+				name: library.libraryPath().to_string_lossy().into(),
+				children: Vec::new(),
+			}
+		}
+		// Otherwise turn the map into a DirectoryTree normally
+		else
+		{
+			Self::from_map(map, DirectoryID::new(0))
+		}
+	}
+}
 
-		// Get a lock on the library so we get a consistent view of it for rendering
-		let libraryLock = self.library.read().expect("Library lock in bad state");
+impl TreeItem for DirectoryTree
+{
+	type ItemID = DirectoryID;
 
-		// Render the directory list using the internal state object
-		StatefulWidget::render
-		(
-			// Build a list of directories currently in the library
-			List::new(libraryLock.directories())
-				// Put it in a bordered block for presentation
-				.block
-				(
-					Block::bordered()
-						.title(" Directory Tree ")
-						.title_alignment(Alignment::Left)
-						.title_style
-						(
-							match self.activeSide
-							{
-								Side::DirectoryTree => self.activeEntry,
-								Side::Files => Style::default(),
-							}
-						)
-						.border_type(BorderType::Rounded)
-						// Make sure the contents are padded one space on the sides for presentation
-						.padding(Padding::horizontal(1))
-				)
-				.highlight_style(self.activeEntry)
-				.direction(ListDirection::TopToBottom),
-			layout[0],
-			buf,
-			&mut self.dirListState
-		);
+	fn nodeID(&self) -> DirectoryID
+	{
+		self.id
+	}
 
-		// Rebuild the directory scroll bar to take into account any library changes that
-		// occured since last redraw, and figure out where the user is currently scrolled to
-		self.dirListScrollbar = self.dirListScrollbar
-			.content_length(libraryLock.directoryCount().saturating_sub(self.viewportSize.height.into()))
-			.position(self.dirListState.selected().unwrap_or_default().saturating_sub(self.viewportSize.height.into()));
-		// Render the scroll location of the directory list
-		StatefulWidget::render
-		(
-			Scrollbar::new(ScrollbarOrientation::VerticalRight)
-				.symbols(scrollbar::VERTICAL)
-				.begin_symbol(None)
-				.end_symbol(None),
-			layout[0].inner(Margin::new(0, 1)),
-			buf,
-			&mut self.dirListScrollbar,
-		);
+	fn displayText(&self) -> String
+	{
+		self.name.clone()
+	}
 
-		// Build a list of files in the current directory being displayed
-		let filesList = libraryLock.filesFor(self.dirListState.selected())
-			.map(List::new)
-			.unwrap_or_default()
-			// Put it in a bordered block for presentation
-			.block
-			(
-				Block::bordered()
-					.title(" Files ")
-					.title_alignment(Alignment::Left)
-					.border_type(BorderType::Rounded)
-					.title_style
-					(
-						match self.activeSide
-						{
-							Side::Files => self.activeEntry,
-							Side::DirectoryTree => Style::default(),
-						}
-					)
-					// Make sure the contents are padded one space on the sides for presentation
-					.padding(Padding::horizontal(1))
-			)
-			.highlight_style(self.activeEntry)
-			.direction(ListDirection::TopToBottom);
+	fn children(&self) -> &[Self]
+	{
+		&self.children
+	}
+}
 
-		StatefulWidget::render(filesList, layout[1], buf, &mut self.filesListState);
+impl TrackEntry
+{
+	pub fn forDirectory(directoryID: DirectoryID, library: &MusicLibrary) -> Vec<Self>
+	{
+		// Set up tracking for the tracks in the directory selected, and ask the library for the dir
+		let mut tracks = Vec::new();
+		if !library.isEmpty()
+		{
+			let directory = library.directoryFor(directoryID);
 
-		// Rebuild the files scroll bar to take into account any library changes that
-		// occured since last redraw, and figure out where the user is currently scrolled to
-		self.filesListScrollbar = self.filesListScrollbar
-			.content_length
-			(
-				libraryLock
-					.filesCount(self.dirListState.selected())
-					.saturating_sub(self.viewportSize.height.into())
-			)
-			.position
-			(
-				self.filesListState
-					.selected()
-					.unwrap_or_default()
-					.saturating_sub(self.viewportSize.height.into())
-			);
-		// Render the scroll location of the files list
-		StatefulWidget::render
-		(
-			Scrollbar::new(ScrollbarOrientation::VerticalRight)
-				.symbols(scrollbar::VERTICAL)
-				.begin_symbol(None)
-				.end_symbol(None),
-			layout[1].inner(Margin::new(0, 1)),
-			buf,
-			&mut self.filesListScrollbar,
-		);
+			// Loop through making each track into a track list item
+			for &trackID in directory.contents()
+			{
+				let track = library.trackFor(trackID);
+				tracks.push(Self
+				{
+					id: track.id(),
+					name: track.title().into()
+				});
+			}
+		}
+		tracks.sort_by(|a, b| a.name.cmp(&b.name));
+		tracks
+	}
+}
+
+impl ListItem for TrackEntry
+{
+	type ItemID = TrackID;
+
+	fn nodeID(&self) -> TrackID
+	{
+		self.id
+	}
+
+	fn displayText(&self) -> String
+	{
+		self.name.clone()
 	}
 }
